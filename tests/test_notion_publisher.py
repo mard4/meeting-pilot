@@ -37,6 +37,7 @@ class _DataSources:
     def __init__(self, destination_schema: dict) -> None:
         self.destination_schema = destination_schema
         self.queries: list[dict] = []
+        self.updates: list[dict] = []
 
     def retrieve(self, data_source_id: str):
         if data_source_id == "source-series-database":
@@ -53,6 +54,13 @@ class _DataSources:
     def query(self, **payload):
         self.queries.append(payload)
         return {"results": []}
+
+    def update(self, data_source_id: str, properties: dict):
+        self.updates.append(properties)
+        for name, definition in properties.items():
+            kind = next(iter(definition))
+            self.destination_schema[name] = {"type": kind, kind: {}}
+        return {"id": data_source_id, "properties": self.destination_schema}
 
 
 class _FakeNotion:
@@ -117,20 +125,12 @@ class NotionPublisherTests(unittest.TestCase):
 
             self.assertEqual(page["id"], "page-1")
             self.assertEqual(len(fake.pages.created), 1)
+            properties = fake.pages.created[0]["properties"]
             self.assertEqual(
-                fake.pages.created[0]["properties"],
-                {
-                    "Meeting": {
-                        "title": [
-                            {
-                                "text": {
-                                    "content": "Sprint Review - 2026-07-28",
-                                }
-                            }
-                        ]
-                    }
-                },
+                properties["Meeting"],
+                {"title": [{"text": {"content": "Sprint Review - 2026-07-28"}}]},
             )
+            self.assertNotIn("Name", properties)
             self.assertEqual(fake.pages.updated, [])
             self.assertEqual(fake.data_sources.queries, [])
             self.assertTrue((root / "notion_receipt.json").exists())
@@ -165,6 +165,29 @@ class NotionPublisherTests(unittest.TestCase):
         self.assertNotIn("Project", properties)
         self.assertNotIn("Series", properties)
         self.assertNotIn("Series Key", properties)
+
+    def test_adds_missing_metadata_columns_to_a_title_only_database(self) -> None:
+        fake = _FakeNotion({"Name": {"type": "title", "title": {}}})
+        with tempfile.TemporaryDirectory() as temporary:
+            self._publish(fake, Path(temporary))
+
+        added = fake.data_sources.updates[-1]
+        self.assertEqual(added["Date"], {"date": {}})
+        self.assertEqual(added["Project"], {"select": {}})
+        self.assertEqual(added["Tema"], {"multi_select": {}})
+        self.assertNotIn("Name", added)
+        properties = fake.pages.created[-1]["properties"]
+        self.assertEqual(properties["Project"], {"select": {"name": "Atlas"}})
+        self.assertIn("Date", properties)
+
+    def test_local_meeting_time_is_sent_with_its_utc_offset(self) -> None:
+        from transcribe_to_notion.notion_publisher import _notion_date
+
+        self.assertEqual(_notion_date("2026-09-30"), "2026-09-30")
+        self.assertEqual(_notion_date("2026-07-28T10:00:00Z"), "2026-07-28T10:00:00+00:00")
+        local = _notion_date("2026-09-30T10:00:00")
+        self.assertTrue(local.startswith("2026-09-30T10:00:00"))
+        self.assertRegex(local, r"[+-]\d{2}:\d{2}$")
 
     def test_writes_theme_as_one_item_multi_select(self) -> None:
         fake = _FakeNotion(

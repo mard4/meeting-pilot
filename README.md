@@ -1,28 +1,67 @@
 # Meeting Pilot
 
-Automatic pipeline for capturing Teams meetings on macOS, processing them locally with FluidAudio or Apple On-Device, generating a summary with an OpenAI-compatible provider, and saving the result to a local Diary, Notion, Obsidian, or Apple Notes.
+Local-first meeting notes for macOS. When a Teams call starts, Meeting Pilot offers to record it, shows a live transcript with speakers while you take notes, transcribes locally with FluidAudio or Apple On-Device, summarizes with the model you choose, and publishes the result to a local Diary, Notion, Obsidian, or Apple Notes. No bot joins the call.
 
 ## Preview
+
+<p align="center">
+  <img src="src/assets/readme/chat-demo.gif" alt="Meeting chat filtered on one project and three topics, answering with cited sources" width="100%" />
+  <br />
+  <em>Ask across meetings: pick a project and its topics, get an answer that cites every source</em>
+</p>
 
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="src/assets/Screenshot%202026-07-22%20alle%2000.49.11.png" alt="App preview" width="100%" />
+      <img src="src/assets/readme/overview.png" alt="Overview with today's meetings, their project, topic and publish targets" width="100%" />
       <br />
-      <em>App preview</em>
+      <em>Overview: today's meetings, processing status and where each one was published</em>
     </td>
     <td align="center" width="50%">
-      <img src="src/assets/notion_page.png" alt="Notion page preview" width="100%" />
+      <img src="src/assets/readme/journal.png" alt="Local Diary with searchable meeting notes" width="100%" />
       <br />
-      <em>Notion page preview</em>
+      <em>Local Diary: searchable Markdown notes on your Mac</em>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="src/assets/readme/obsidian.png" alt="Meeting note in Obsidian with date, participants, project and summary" width="100%" />
+      <br />
+      <em>Obsidian: the same meeting as Markdown with front matter</em>
+    </td>
+    <td align="center" width="50%">
+      <img src="src/assets/readme/live-sidebar.png" alt="Live sidebar with transcript, speakers and notes" width="60%" />
+      <br />
+      <em>Live sidebar: transcript, speakers and your notes during the call</em>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <img src="src/assets/notion_page.png" alt="Meeting page published to Notion" width="70%" />
+      <br />
+      <em>Notion: one table with date, project, topic, participants and duration as columns</em>
     </td>
   </tr>
 </table>
 
+## Features
+
+- **No meeting bot**: audio is recorded locally on the Mac; nobody joins the call.
+- **Local transcription** with FluidAudio (speaker separation) or Apple On-Device.
+- **Live sidebar** with the running transcript, speakers and a notes field that the summary builds on.
+- **Structured summaries**: summary, topics, decisions, action items with owners and due dates, open questions, risks.
+- **Your choice of model**: Apple Intelligence, oMLX, Ollama, LM Studio, or any OpenAI-compatible API.
+- **Publish anywhere**: local Diary (default), Notion, Obsidian, Apple Notes — one or several at once.
+- **Meeting chat**: filter by project, topic, date and source, and get answers that cite the meetings they come from.
 
 ## Quick Start
 
-1. Download the current `.dmg` from the [GitHub Releases page](../../releases).
+1. Download the current `.dmg` from the [GitHub Releases page](https://github.com/mard4/meeting-pilot/releases), or install it from the terminal:
+
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/scripts/install.sh | bash
+   ```
+
 2. Open the `.dmg`.
 3. Drag the app into `Applications`.
 4. Open Meeting Pilot from `Applications`. The app is not notarized yet, so macOS blocks the first launch: open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to Meeting Pilot, then confirm. This is needed only once.
@@ -44,12 +83,13 @@ Automatic pipeline for capturing Teams meetings on macOS, processing them locall
 ## Flow
 
 ```text
-Teams on macOS
-  -> macOS recorder saves an audio file into inbox_audio
-  -> watcher detects the stable file
+Teams call starts on macOS
+  -> banner offers to record; the built-in recorder saves audio into inbox_audio
+  -> live sidebar shows transcript, speakers and your notes during the call
+  -> watcher detects the finished recording
   -> FluidAudio or Apple On-Device generates the transcript
-  -> OpenAI-compatible provider generates structured JSON summary
-  -> local Diary (default), Notion, Obsidian, or Apple Notes receives the generated meeting page
+  -> the chosen model (Apple Intelligence, local, or OpenAI-compatible API) writes a structured summary
+  -> local Diary (default), Notion, Obsidian, or Apple Notes receives the meeting page
   -> session is archived in done or failed
 ```
 
@@ -106,6 +146,12 @@ transcribe-to-notion teams-scrape --output ~/TeamsMeetings/teams-runtime.json
 
 If you do not pass `--output`, the command writes to the file configured by `TEAMS_RUNTIME_METADATA_FILE`, and the next processing run uses it to populate the Notion page with subject and participants.
 
+Ask a question across processed meetings, filtered by project and topics:
+
+```bash
+transcribe-to-notion chat --question "What did we decide about offline mode?" --project "Atlas App" --theme Roadmap --theme Launch
+```
+
 Dry-run mode without Notion:
 
 ```bash
@@ -150,10 +196,12 @@ tail -f ~/Library/Logs/transcribe-to-notion.err.log
 - `APPLE_INTELLIGENCE_TIMEOUT_SECONDS`: Maximum duration for an on-device summary, default `1800`.
 
 Notion setup reuses a matching table or a matching named page containing a
-table. When neither exists, it creates one named page with one table containing
-only the required title column. Meeting Pilot never creates series/occurrence
-sections or optional columns; during publication it fills only compatible
-columns already present in the selected table.
+table. When neither exists, it creates one named page with one table. The first
+time a meeting is published, Meeting Pilot adds the metadata columns it needs
+(`Date`, `Project`, `Tema`, `Participants`, `Duration`, `Source`, `Status`,
+`Model`, `Language`, `Session ID`) if they are missing. Existing columns are
+never renamed or retyped: a column with an incompatible type is simply left
+empty. Meeting Pilot never creates series/occurrence sections.
 - `LOCAL_MODELS_DIR`: Local oMLX models folder, default `~/.omlx/models`.
 - `SUMMARY_BASE_URL`: OpenAI-compatible endpoint, local or remote.
 - `SUMMARY_MODEL`: Model used for the summary.
@@ -192,14 +240,12 @@ Meeting Pilot processes meeting audio and Teams/Calendar metadata. Understand wh
 
 If you record meetings other people are in, make sure you have the right to do so under your organization's policy and applicable law.
 
-
-
+The permission prompts shown by macOS:
 
 <img width="568" height="142" alt="Screenshot 2026-08-01 at 08 40 05" src="https://github.com/user-attachments/assets/46c5b4e1-03b1-4eb9-a951-13eb659b51fc" />
 <img width="272" height="356" alt="Screenshot 2026-08-01 at 08 39 45" src="https://github.com/user-attachments/assets/691b38c5-3ec4-4625-b4ac-cbc32e1a227f" />
 <img width="283" height="264" alt="Screenshot 2026-08-01 at 08 39 35" src="https://github.com/user-attachments/assets/90105f67-68bd-4629-b9a8-50c9650908b7" />
 <img width="697" height="389" alt="Screenshot 2026-08-01 at 08 39 07" src="https://github.com/user-attachments/assets/7a1af0b8-0a75-4b80-90df-ce2a0b9f399d" />
-
 
 ## License
 

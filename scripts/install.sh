@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Installs the latest Meeting Pilot release into /Applications.
-#   curl -fsSL https://raw.githubusercontent.com/mard4/transcribe-to-notion/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/scripts/install.sh | bash
 set -euo pipefail
 
-REPO="mard4/transcribe-to-notion"
+REPO="mard4/meeting-pilot"
 DMG_URL="${MEETING_PILOT_DMG_URL:-https://github.com/$REPO/releases/latest/download/MeetingPilot.dmg}"
 APP_NAME="Meeting Pilot.app"
 

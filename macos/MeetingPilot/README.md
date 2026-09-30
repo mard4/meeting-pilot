@@ -6,7 +6,7 @@ E' una menu bar app: resta nella barra in alto di macOS, non nel Dock.
 ## Build locale
 
 ```bash
-cd /path/to/transcribe-to-notion
+cd /path/to/meeting-pilot
 chmod +x macos/MeetingPilot/Scripts/*.sh
 macos/MeetingPilot/Scripts/build_app.sh
 open "macos/MeetingPilot/build-current/Meeting Pilot.app"

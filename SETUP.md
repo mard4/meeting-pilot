@@ -21,7 +21,7 @@ FluidAudio is bundled with the app; it doesn't require external installation.
 From the repository root:
 
 ```bash
-cd /path/to/transcribe-to-notion
+cd /path/to/meeting-pilot
 python3 -m venv .venv311
 .venv311/bin/python -m pip install --upgrade pip setuptools wheel
 .venv311/bin/python -m pip install -e .
@@ -264,7 +264,7 @@ launchctl unload ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
 ## 10. Quick check
 
 ```bash
-cd /path/to/transcribe-to-notion
+cd /path/to/meeting-pilot
 .venv311/bin/meeting-pilot --help
 .venv311/bin/transcribe-to-notion --help
 curl -sS http://127.0.0.1:8000/v1/models -H "Authorization: Bearer $(awk -F= '/^SUMMARY_API_KEY=/{print $2}' .env)"

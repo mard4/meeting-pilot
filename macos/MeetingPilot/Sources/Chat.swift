@@ -1032,7 +1032,7 @@ struct ChatCitationLinks: View {
                     Button { openCitation(citation) } label: {
                         HStack(spacing: 4) {
                             ChatCitationSourceIcon(destination: citation.destination)
-                            Text("[\\(number)]")
+                            Text("[\(number)]")
                                 .font(.system(size: 10, weight: .bold))
                         }
                         .foregroundStyle(accent)

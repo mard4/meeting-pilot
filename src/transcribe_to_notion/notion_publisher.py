@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import Any
 
 from .artifacts import MeetingArtifacts, write_notion_receipt
@@ -42,9 +43,11 @@ def publish_to_notion(config: Config, artifacts: MeetingArtifacts) -> dict[str, 
     occurrences_source = _data_source(notion, config.notion_database_id)
     occurrences_source_id = str(occurrences_source["id"])
     occurrences_schema = occurrences_source.get("properties") or {}
+    wanted = _build_properties(config, artifacts, title, schema=occurrences_schema, keep_unsupported=True)
+    occurrences_schema = _ensure_properties(notion, occurrences_source_id, occurrences_schema, wanted)
     page = notion.pages.create(
         parent={"type": "data_source_id", "data_source_id": occurrences_source_id},
-        properties=_build_properties(config, artifacts, title, schema=occurrences_schema),
+        properties=_properties_supported_by_schema(wanted, occurrences_schema),
         icon={"type": "emoji", "emoji": "🗒️"},
         children=_build_blocks(config, artifacts),
     )
@@ -57,6 +60,7 @@ def _build_properties(
     artifacts: MeetingArtifacts,
     title: str,
     schema: dict[str, Any] | None = None,
+    keep_unsupported: bool = False,
 ) -> dict[str, Any]:
     summary = artifacts.omlx_summary or {}
     metadata = artifacts.meeting_metadata or {}
@@ -67,7 +71,7 @@ def _build_properties(
     properties: dict[str, Any] = {title_property: {"title": [{"text": {"content": title[:2000]}}]}}
     date = metadata.get("start") or summary.get("date") or frontmatter.get("date")
     if date:
-        properties["Date"] = {"date": {"start": str(date)}}
+        properties["Date"] = {"date": {"start": _notion_date(str(date))}}
     project = metadata.get("project") or frontmatter.get("project")
     project_select_name = _notion_select_name(project)
     if project_select_name:
@@ -96,7 +100,19 @@ def _build_properties(
     if duration:
         properties["Duration"] = {"rich_text": [_rich_text(str(duration))]}
 
-    return _properties_supported_by_schema(properties, schema)
+    return properties if keep_unsupported else _properties_supported_by_schema(properties, schema)
+
+
+def _notion_date(value: str) -> str:
+    """Recording times are local wall-clock times; Notion reads a bare datetime as UTC,
+    which shifts the meeting by the Mac's offset. Attach the local offset explicitly."""
+    if "T" not in value:
+        return value
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return value
+    return parsed.isoformat() if parsed.tzinfo else parsed.astimezone().isoformat()
 
 
 def _notion_select_name(value: object) -> str:
@@ -133,6 +149,29 @@ def _title_property_name(schema: dict[str, Any], preferred: str) -> str:
         if isinstance(value, dict) and value.get("type") == "title":
             return str(name)
     return preferred
+
+
+def _ensure_properties(
+    notion: Any, data_source_id: str, schema: dict[str, Any], properties: dict[str, Any]
+) -> dict[str, Any]:
+    """Databases created by notion-setup start with only a title; add the metadata
+    columns the first time they are needed so date, project and topic are visible
+    in table views. Existing columns are never changed, even with a different type."""
+    missing = {
+        name: {requested_type: {}}
+        for name, value in properties.items()
+        if name not in schema
+        for requested_type in [next(iter(value), "") if isinstance(value, dict) else ""]
+        if requested_type and requested_type != "title"
+    }
+    if not missing:
+        return schema
+    try:
+        updated = notion.data_sources.update(data_source_id=data_source_id, properties=missing)
+    except Exception as error:  # A read-only integration still publishes the page body.
+        print(f"Notion columns not added ({', '.join(missing)}): {error}", flush=True)
+        return schema
+    return (updated or {}).get("properties") or {**schema, **missing}
 
 
 def _properties_supported_by_schema(
