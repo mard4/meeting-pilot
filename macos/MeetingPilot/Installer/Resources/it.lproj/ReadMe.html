@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font: 12px -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.42; color: #1f1f1f; }
+    h1 { font-size: 18px; margin: 0 0 10px; }
+    h2 { font-size: 14px; margin: 14px 0 6px; }
+    p, ul { margin: 0 0 8px; }
+    ul { padding-left: 18px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <h1>Guida rapida di configurazione</h1>
+
+  <h2>Notion</h2>
+  <ul>
+    <li>Apri Meeting Pilot, poi Settings &gt; Notion.</li>
+    <li>Crea un Personal access token Notion e incollalo nell'app.</li>
+    <li>Condividi una pagina parent Notion con l'integrazione.</li>
+    <li>Incolla URL o ID della pagina parent, salva, poi premi Crea spazio Meeting Pilot.</li>
+  </ul>
+
+  <h2>Provider AI</h2>
+  <ul>
+    <li>Apple Intelligence: provider on-device predefinito sui Mac compatibili con macOS 26 o successivo.</li>
+    <li>Locale: endpoint compatibile OpenAI, per esempio <code>http://127.0.0.1:8000/v1</code>.</li>
+    <li>OpenAI-compatible: endpoint, modello e API key del provider scelto.</li>
+    <li>Su Mac non compatibili, con modello non pronto o lingua non supportata, Meeting Pilot disabilita Apple Intelligence e mantiene il provider locale come alternativa.</li>
+    <li>Usa Testa connessione prima di salvare.</li>
+  </ul>
+
+  <h2>Recorder e trascrizione</h2>
+  <ul>
+    <li>TranscribeX: usa il flusso esistente di TranscribeX.</li>
+    <li>Recorder macOS con prompt: Meeting Pilot mostra un banner quando rileva Teams.</li>
+    <li>Altro recorder/cartella: Meeting Pilot monitora la cartella dove arrivano gli audio.</li>
+    <li>FluidAudio è incluso con diarizzazione speaker; Apple On-Device è locale e semplice.</li>
+  </ul>
+
+  <h2>Permessi macOS</h2>
+  <ul>
+    <li>Accessibilita': lettura finestra Teams.</li>
+    <li>Registrazione schermo: OCR e screenshot Teams.</li>
+    <li>Calendario: titolo, orario e partecipanti.</li>
+    <li>Microfono: recorder macOS integrato.</li>
+    <li>Riconoscimento vocale: trascrizione Apple On-Device.</li>
+  </ul>
+
+  <p>Dopo aver concesso un permesso, potrebbe essere necessario riavviare Meeting Pilot.</p>
+</body>
+</html>

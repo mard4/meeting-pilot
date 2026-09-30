@@ -1,0 +1,19 @@
+excluded:
+  - build
+  - build-current
+  - .build
+  - Tests
+
+opt_in_rules:
+  - force_unwrapping
+  - force_cast
+  - force_try
+
+disabled_rules:
+  - line_length
+  - file_length
+  - type_body_length
+  - function_body_length
+
+# MeetingPilot.swift is a large legacy file (~12k lines); the rules above are
+# opt-in warnings to guide new code, not a mandate to fix the whole file at once.

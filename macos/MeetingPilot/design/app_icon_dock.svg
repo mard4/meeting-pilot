@@ -1,0 +1,55 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+<title>Meeting Pilot dock icon</title>
+<desc>Edge-to-edge chrome/neon-pink headphone + waveform mark, sized for macOS Dock/Launchpad/Finder icon use. Content bounding box touches all four edges within a couple percent; no Apple-HIG safe margin applied by design.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#170910"/>
+    <stop offset="100%" stop-color="#09090b"/>
+  </linearGradient>
+  <linearGradient id="metal" gradientUnits="userSpaceOnUse" x1="380" y1="40" x2="680" y2="1000">
+    <stop offset="0%" stop-color="#ffffff"/>
+    <stop offset="9%" stop-color="#ffb8d2"/>
+    <stop offset="30%" stop-color="#ff4a8a"/>
+    <stop offset="60%" stop-color="#d81f52"/>
+    <stop offset="100%" stop-color="#3a0917"/>
+  </linearGradient>
+  <linearGradient id="rim" gradientUnits="userSpaceOnUse" x1="380" y1="40" x2="680" y2="1000">
+    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+    <stop offset="35%" stop-color="#ffe1ec" stop-opacity="0.55"/>
+    <stop offset="70%" stop-color="#ff8fb8" stop-opacity="0.15"/>
+    <stop offset="100%" stop-color="#ff8fb8" stop-opacity="0"/>
+  </linearGradient>
+  <radialGradient id="glint" gradientUnits="userSpaceOnUse" cx="130" cy="770" r="185">
+    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+    <stop offset="55%" stop-color="#ffffff" stop-opacity="0.25"/>
+    <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="glintR" gradientUnits="userSpaceOnUse" cx="786" cy="770" r="185">
+    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+    <stop offset="55%" stop-color="#ffffff" stop-opacity="0.25"/>
+    <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+
+<rect x="0" y="0" width="1024" height="1024" rx="228" ry="228" fill="url(#bg)"/>
+
+<!-- waveform bars: base fill + a narrower rim-light capsule on the left third of each -->
+<rect x="376" y="340" width="80" height="560" rx="40" fill="url(#metal)"/>
+<rect x="386" y="352" width="26" height="536" rx="13" fill="url(#rim)"/>
+
+<rect x="472" y="180" width="80" height="820" rx="40" fill="url(#metal)"/>
+<rect x="482" y="192" width="26" height="796" rx="13" fill="url(#rim)"/>
+
+<rect x="568" y="340" width="80" height="560" rx="40" fill="url(#metal)"/>
+<rect x="578" y="352" width="26" height="536" rx="13" fill="url(#rim)"/>
+
+<!-- headphone band: base stroke + a thinner rim-light stroke along the same curve -->
+<path d="M 184 700 C 184 110, 840 110, 840 700" fill="none" stroke="url(#metal)" stroke-width="170" stroke-linecap="round"/>
+<path d="M 184 700 C 184 110, 840 110, 840 700" fill="none" stroke="url(#rim)" stroke-width="56" stroke-linecap="round"/>
+
+<!-- ear cups -->
+<circle cx="184" cy="840" r="160" fill="url(#metal)"/>
+<circle cx="840" cy="840" r="160" fill="url(#metal)"/>
+<circle cx="184" cy="840" r="160" fill="url(#glint)"/>
+<circle cx="840" cy="840" r="160" fill="url(#glintR)"/>
+</svg>

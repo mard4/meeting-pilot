@@ -1,0 +1,10 @@
+<svg width="100%" viewBox="0 0 512 512" role="img" xmlns="http://www.w3.org/2000/svg">
+<title>Meeting Pilot mark, white on transparent</title>
+<desc>Compact headphone + waveform mark, minimal padding, tuned for legibility from 16px app-icon sizes up to large liquid-metal renders. Red center bar carries the brand accent.</desc>
+<path d="M 110 262 C 110 68, 402 68, 402 262" fill="none" stroke="#f4f4f6" stroke-width="46" stroke-linecap="round"/>
+<circle cx="110" cy="322" r="72" fill="#f4f4f6"/>
+<circle cx="402" cy="322" r="72" fill="#f4f4f6"/>
+<rect x="187" y="227" width="38" height="190" rx="19" fill="#f4f4f6"/>
+<rect x="237" y="147" width="38" height="350" rx="19" fill="#c81e33"/>
+<rect x="287" y="227" width="38" height="190" rx="19" fill="#f4f4f6"/>
+</svg>

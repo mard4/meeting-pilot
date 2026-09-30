@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python-tests:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: |
+          python3 -m venv .venv311
+          source .venv311/bin/activate
+          pip install -e .
+          pip install pytest
+      - name: Run tests
+        run: |
+          source .venv311/bin/activate
+          pytest tests/
+
+  swift-build:
+    runs-on: macos-14
+    # The macOS app depends on a local FluidAudio checkout (see macos/MeetingPilot/Package.swift
+    # and FLUID_AUDIO_SOURCE) that isn't vendored in this repo, so a full `swift build` isn't
+    # possible in CI yet. This job is informational until that dependency is resolved.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build (best-effort)
+        working-directory: macos/MeetingPilot
+        run: swift build

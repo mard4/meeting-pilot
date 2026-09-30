@@ -1,0 +1,8 @@
+Meeting Pilot third-party components
+====================================
+
+FluidAudio
+Source: https://github.com/FluidInference/FluidAudio
+
+FluidAudio and its Core ML models are included in Meeting Pilot for local
+transcription and speaker diarization.

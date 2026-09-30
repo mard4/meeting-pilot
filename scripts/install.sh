@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Installs the latest Meeting Pilot release into /Applications.
+#   curl -fsSL https://raw.githubusercontent.com/mard4/transcribe-to-notion/main/scripts/install.sh | bash
+set -euo pipefail
+
+REPO="mard4/transcribe-to-notion"
+DMG_URL="${MEETING_PILOT_DMG_URL:-https://github.com/$REPO/releases/latest/download/MeetingPilot.dmg}"
+APP_NAME="Meeting Pilot.app"
+
+if [[ "$(uname -s)" != "Darwin" ]]; then
+  echo "Meeting Pilot runs on macOS only." >&2
+  exit 1
+fi
+
+macos_major="$(sw_vers -productVersion | cut -d. -f1)"
+if (( macos_major < 14 )); then
+  echo "Meeting Pilot requires macOS 14 or later (found $(sw_vers -productVersion))." >&2
+  exit 1
+fi
+
+# /Applications is writable for admin users; fall back to ~/Applications otherwise.
+DEST="/Applications"
+if [[ ! -w "$DEST" ]]; then
+  DEST="$HOME/Applications"
+  mkdir -p "$DEST"
+fi
+
+work="$(mktemp -d)"
+mount_point="$work/mnt"
+cleanup() {
+  hdiutil detach "$mount_point" -quiet 2>/dev/null || true
+  rm -rf "$work"
+}
+trap cleanup EXIT
+
+echo "==> Downloading Meeting Pilot"
+curl -fL --progress-bar "$DMG_URL" -o "$work/MeetingPilot.dmg"
+
+echo "==> Mounting disk image"
+mkdir -p "$mount_point"
+hdiutil attach "$work/MeetingPilot.dmg" -nobrowse -readonly -quiet -mountpoint "$mount_point"
+
+if [[ ! -d "$mount_point/$APP_NAME" ]]; then
+  echo "$APP_NAME not found in the disk image." >&2
+  exit 1
+fi
+
+if pgrep -xq "Meeting Pilot"; then
+  echo "==> Quitting the running copy"
+  osascript -e 'quit app "Meeting Pilot"' 2>/dev/null || true
+  sleep 2
+fi
+
+echo "==> Installing to $DEST"
+rm -rf "$DEST/$APP_NAME"
+ditto "$mount_point/$APP_NAME" "$DEST/$APP_NAME"
+
+codesign --verify --deep --strict "$DEST/$APP_NAME" >/dev/null 2>&1 \
+  || echo "Warning: the app signature could not be verified." >&2
+
+echo "==> Meeting Pilot installed in $DEST"
+open "$DEST/$APP_NAME"

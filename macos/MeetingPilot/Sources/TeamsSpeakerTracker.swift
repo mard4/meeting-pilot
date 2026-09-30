@@ -1,0 +1,229 @@
+import AppKit
+import ApplicationServices
+import Foundation
+
+/// Records who is talking in the Teams call while the meeting is being recorded, so the
+/// pipeline can put real names on FluidAudio's anonymous speaker clusters.
+///
+/// New Teams is a Chromium web view: each remote participant's tile is an `AXMenuItem`
+/// titled "<Name>, <context menu hint>", and while that person talks a direct child group
+/// gains the `vdi-frame-occlusion` DOM class (the coloured speaking border). The user's own
+/// preview has no such border; their voice is already identified from the microphone track.
+/// Times are seconds of recorded audio (pauses excluded), written to the sidecar as
+/// `teams_speakers.json` — a contract with `speaker_names.py`.
+final class TeamsSpeakerTracker {
+    private static let teamsBundleIDs: Set<String> = ["com.microsoft.teams2", "com.microsoft.teams"]
+    private static let speakingClass = "vdi-frame-occlusion"
+    private static let pollInterval: DispatchTimeInterval = .milliseconds(300)
+    /// Tiles appear, move and disappear as people join or the layout changes.
+    private static let rescanInterval: TimeInterval = 3
+
+    private let outputURL: URL
+    private let queue = DispatchQueue(label: "\(AppIdentity.bundleID).teams-speakers", qos: .utility)
+    private var timer: DispatchSourceTimer?
+    private var teamsPID: pid_t?
+    private var tileContainers: [AXUIElement] = []
+    private var lastScan: TimeInterval = 0
+    private var recordedBeforePause: TimeInterval = 0
+    private var activeSince: TimeInterval?
+    private var talkingSince: [String: TimeInterval] = [:]
+    private var segments: [(name: String, start: TimeInterval, end: TimeInterval)] = []
+
+    init(outputURL: URL) {
+        self.outputURL = outputURL
+    }
+
+    func start() {
+        activeSince = ProcessInfo.processInfo.systemUptime
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        timer.schedule(deadline: .now(), repeating: Self.pollInterval, leeway: .milliseconds(50))
+        timer.setEventHandler { [weak self] in self?.poll() }
+        self.timer = timer
+        timer.resume()
+    }
+
+    func pause() {
+        queue.async {
+            guard let activeSince = self.activeSince else { return }
+            let now = self.recordedTime()
+            self.closeAll(at: now)
+            self.recordedBeforePause += ProcessInfo.processInfo.systemUptime - activeSince
+            self.activeSince = nil
+        }
+    }
+
+    func resume() {
+        queue.async {
+            guard self.activeSince == nil else { return }
+            self.activeSince = ProcessInfo.processInfo.systemUptime
+        }
+    }
+
+    /// Stops polling and writes what was seen. Synchronous, so the file exists before the
+    /// recording's lock is removed and the watcher moves the sidecar away.
+    func finish() {
+        queue.sync {
+            timer?.cancel()
+            timer = nil
+            if activeSince != nil {
+                closeAll(at: recordedTime())
+                activeSince = nil
+            }
+            write()
+        }
+    }
+
+    private func recordedTime() -> TimeInterval {
+        recordedBeforePause + (activeSince.map { ProcessInfo.processInfo.systemUptime - $0 } ?? 0)
+    }
+
+    private func poll() {
+        guard activeSince != nil, AXIsProcessTrusted() else { return }
+        guard let teams = NSWorkspace.shared.runningApplications.first(where: {
+            Self.teamsBundleIDs.contains($0.bundleIdentifier ?? "")
+        }) else {
+            closeAll(at: recordedTime())
+            teamsPID = nil
+            return
+        }
+        let app = AXUIElementCreateApplication(teams.processIdentifier)
+        AXUIElementSetMessagingTimeout(app, 0.5)
+        if teamsPID != teams.processIdentifier {
+            // Chromium only builds the web content's accessibility tree for clients that ask.
+            AXUIElementSetAttributeValue(app, "AXManualAccessibility" as CFString, kCFBooleanTrue)
+            teamsPID = teams.processIdentifier
+            tileContainers = []
+        }
+
+        let uptime = ProcessInfo.processInfo.systemUptime
+        if tileContainers.isEmpty || uptime - lastScan >= Self.rescanInterval {
+            tileContainers = findTileContainers(in: app)
+            lastScan = uptime
+        }
+
+        var talking = Set<String>()
+        for container in tileContainers {
+            for tile in children(of: container) {
+                guard let name = tileName(tile) else { continue }
+                if children(of: tile).contains(where: { hasSpeakingBorder($0) }) {
+                    talking.insert(name)
+                }
+            }
+        }
+
+        let now = recordedTime()
+        for name in talking where talkingSince[name] == nil {
+            talkingSince[name] = now
+        }
+        for (name, start) in talkingSince where !talking.contains(name) {
+            segments.append((name, start, now))
+            talkingSince[name] = nil
+        }
+    }
+
+    private func closeAll(at time: TimeInterval) {
+        for (name, start) in talkingSince {
+            segments.append((name, start, time))
+        }
+        talkingSince = [:]
+    }
+
+    /// Parents of the participant tiles. A tile is confirmed by its name also appearing as a
+    /// text label inside it, which keeps other context-menu items (chat, roster) out and
+    /// doesn't depend on the Teams UI language.
+    private func findTileContainers(in app: AXUIElement) -> [AXUIElement] {
+        var containers: [AXUIElement] = []
+        var visited = 0
+        func walk(_ element: AXUIElement, depth: Int) {
+            guard depth < 60, visited < 6_000 else { return }
+            visited += 1
+            let role = string(element, kAXRoleAttribute)
+            if role == kAXMenuBarRole || role == kAXMenuRole { return }
+            if role == kAXMenuItemRole, let name = tileName(element), containsText(name, in: element, depth: 0) {
+                if let parent = parent(of: element), !containers.contains(where: { CFEqual($0, parent) }) {
+                    containers.append(parent)
+                }
+                return
+            }
+            for child in children(of: element) {
+                walk(child, depth: depth + 1)
+            }
+        }
+        walk(app, depth: 0)
+        return containers
+    }
+
+    private func tileName(_ element: AXUIElement) -> String? {
+        guard string(element, kAXRoleAttribute) == kAXMenuItemRole else { return nil }
+        let title = string(element, kAXTitleAttribute) ?? string(element, kAXDescriptionAttribute) ?? ""
+        guard let comma = title.firstIndex(of: ",") else { return nil }
+        let name = normalized(String(title[..<comma]))
+        return name.isEmpty ? nil : name
+    }
+
+    private func containsText(_ text: String, in element: AXUIElement, depth: Int) -> Bool {
+        guard depth < 10 else { return false }
+        for child in children(of: element) {
+            if string(child, kAXRoleAttribute) == kAXStaticTextRole,
+               normalized(string(child, kAXValueAttribute) ?? "") == text {
+                return true
+            }
+            if containsText(text, in: child, depth: depth + 1) { return true }
+        }
+        return false
+    }
+
+    private func hasSpeakingBorder(_ element: AXUIElement) -> Bool {
+        var raw: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, "AXDOMClassList" as CFString, &raw) == .success,
+              let classes = raw as? [String]
+        else { return false }
+        return classes.contains(Self.speakingClass)
+    }
+
+    private func write() {
+        guard !segments.isEmpty else { return }
+        let payload: [String: Any] = [
+            "source": "teams_accessibility",
+            "segments": segments.sorted { $0.start < $1.start }.map {
+                ["name": $0.name, "start": rounded($0.start), "end": rounded($0.end)]
+            },
+        ]
+        do {
+            let data = try JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys])
+            try data.write(to: outputURL, options: .atomic)
+        } catch {
+            AppLog.append("Speaker Teams non salvati: \(error.localizedDescription)")
+        }
+    }
+
+    private func rounded(_ value: TimeInterval) -> Double {
+        (value * 100).rounded() / 100
+    }
+
+    private func normalized(_ value: String) -> String {
+        value.replacingOccurrences(of: "’", with: "'").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func string(_ element: AXUIElement, _ attribute: String) -> String? {
+        var raw: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &raw) == .success,
+              let text = raw as? String, !text.isEmpty
+        else { return nil }
+        return text
+    }
+
+    private func children(of element: AXUIElement) -> [AXUIElement] {
+        var raw: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &raw) == .success else { return [] }
+        return raw as? [AXUIElement] ?? []
+    }
+
+    private func parent(of element: AXUIElement) -> AXUIElement? {
+        var raw: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXParentAttribute as CFString, &raw) == .success,
+              let raw, CFGetTypeID(raw) == AXUIElementGetTypeID()
+        else { return nil }
+        return (raw as! AXUIElement)
+    }
+}

@@ -1,0 +1,23 @@
+.venv/
+.venv311/
+__pycache__/
+*.egg-info/
+*.pyc
+.env
+.DS_Store
+.idea/
+.build/
+macos/MeetingPilot/build/*
+macos/MeetingPilot/build-current/*
+macos/MeetingPilot/.build/
+.superdesign/
+.superpowers
+.claude/
+CLAUDE.md
+teams_probe_*/
+macos/MeetingPilot/build*/
+
+
+# Internal notes (kept in the private dev repo)
+PLAN.md
+docs/superpowers/
