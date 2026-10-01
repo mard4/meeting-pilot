@@ -3,7 +3,7 @@
 **Local-first meeting notes for macOS.** When a Teams call starts, Meeting Pilot offers to record it, shows a live transcript with speakers while you take notes, transcribes on your Mac, summarizes with the model you choose, and publishes the notes to a local Diary, Notion, Obsidian, or Apple Notes. No bot joins the call.
 
 <p align="center">
-  <img src="src/assets/readme/hero-demo.gif" alt="A Teams call is detected, recorded with a live transcript and notes, then published to Notion and Obsidian" width="100%" />
+  <img src="src/assets/readme/hero-demo.gif" alt="A Teams call is detected, recorded with a live transcript and notes, then published to Notion and Obsidian, and the meeting chat answers a question about it with sources" width="100%" />
 </p>
 
 <p align="center">
