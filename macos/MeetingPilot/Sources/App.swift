@@ -117,12 +117,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         model.refresh()
         model.startAutoRefresh()
         model.openDiaryWindow = { [weak self] in self?.showDiaryWindow() }
-        model.recording.startMeetingDetectionMonitor()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
-            self?.model.startInstalledServicesAutomatically()
+#if DEBUG
+        // Marketing recording of the chat: no detection, watcher or permission prompts.
+        let demoChat = ProcessInfo.processInfo.environment["MEETING_PILOT_DEMO_CHAT"].map { !$0.isEmpty } ?? false
+        if demoChat {
+            model.selectedSection = .chat
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                self?.showMainWindow()
+                if let window = self?.mainWindow, let screen = window.screen ?? NSScreen.main {
+                    let size = NSSize(width: 1280, height: 820)
+                    let origin = NSPoint(x: screen.visibleFrame.midX - size.width / 2, y: screen.visibleFrame.midY - size.height / 2)
+                    window.setFrame(NSRect(origin: origin, size: size), display: true)
+                }
+            }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
-            self?.showMissingPermissionsIfNeeded()
+#else
+        let demoChat = false
+#endif
+        if !demoChat {
+            model.recording.startMeetingDetectionMonitor()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+                self?.model.startInstalledServicesAutomatically()
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+                self?.showMissingPermissionsIfNeeded()
+            }
         }
 
         let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)

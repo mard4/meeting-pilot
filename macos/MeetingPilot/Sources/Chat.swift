@@ -51,6 +51,9 @@ struct ChatView: View {
         chatContent
             .onAppear {
                 model.refreshChatFilterValues()
+#if DEBUG
+                runScriptedDemoIfRequested()
+#endif
             }
             .onChange(of: model.chatProjects) { values in
                 projects.formIntersection(values)
@@ -430,6 +433,37 @@ struct ChatView: View {
             question = ""
         }
     }
+
+#if DEBUG
+    /// Marketing recordings: MEETING_PILOT_DEMO_CHAT=<question> picks
+    /// MEETING_PILOT_DEMO_PROJECT and the comma-separated MEETING_PILOT_DEMO_THEMES
+    /// one by one, types the question and asks it through the real pipeline.
+    private func runScriptedDemoIfRequested() {
+        let env = ProcessInfo.processInfo.environment
+        guard let demoQuestion = env["MEETING_PILOT_DEMO_CHAT"], !demoQuestion.isEmpty, question.isEmpty, answer.isEmpty else { return }
+        let project = env["MEETING_PILOT_DEMO_PROJECT"] ?? ""
+        let demoThemes = (env["MEETING_PILOT_DEMO_THEMES"] ?? "").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        var time = Double(env["MEETING_PILOT_DEMO_DELAY"] ?? "") ?? 3
+        func at(_ delay: Double, _ action: @escaping () -> Void) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { action() } }
+        }
+        if !project.isEmpty {
+            at(time) { projects = [project] }
+            time += 1.0
+        }
+        for theme in demoThemes {
+            at(time) { themes.insert(theme) }
+            time += 0.7
+        }
+        time += 0.5
+        for index in demoQuestion.indices {
+            let prefix = String(demoQuestion[...index])
+            DispatchQueue.main.asyncAfter(deadline: .now() + time) { question = prefix }
+            time += 0.045
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + time + 0.6) { ask() }
+    }
+#endif
 
     private func indexMongoDB() {
         model.indexMongoDBKnowledgeBase(

@@ -19,7 +19,7 @@ enum DebugSnapshots {
         if !empty { populate(model) }
         if let lang = ProcessInfo.processInfo.environment["MEETING_PILOT_SNAPSHOT_LANG"], !lang.isEmpty { model.appLanguage = lang }
 
-        let sections: [AppSection] = [.dashboard, .chat, .journal, .publicationTargets, .recorder, .settings]
+        let sections: [AppSection] = [.dashboard, .history, .chat, .journal, .publicationTargets, .notion, .obsidian, .recorder, .provider, .settings]
         for theme in MeetingPilotTheme.allCases {
             model.appTheme = theme
             let suffix = theme.rawValue
@@ -41,7 +41,7 @@ enum DebugSnapshots {
         }
         if only == nil || only!.contains("prompt") {
             capture(
-                RecordingPromptView(meetingTitle: "Weekly product sync", timeoutSeconds: 20, onClose: {}, onRecord: {}),
+                RecordingPromptView(meetingTitle: "Q4 Product Roadmap Sync", timeoutSeconds: 20, onClose: {}, onRecord: {}),
                 size: NSSize(width: 440, height: 82), theme: .dark, name: "recording-prompt", in: directory
             )
         }
@@ -51,35 +51,51 @@ enum DebugSnapshots {
                 segments: [
                     LiveSidebarSegment(speakerId: "S1", startSeconds: 0, endSeconds: 42, qualityScore: 0.9),
                     LiveSidebarSegment(speakerId: "S2", startSeconds: 42, endSeconds: 71, qualityScore: 0.8),
+                    LiveSidebarSegment(speakerId: "S3", startSeconds: 71, endSeconds: 118, qualityScore: 0.85),
+                    LiveSidebarSegment(speakerId: "S1", startSeconds: 118, endSeconds: 160, qualityScore: 0.9),
                 ],
                 transcript: [
-                    LiveSidebarTranscriptEntry(text: "Partiamo dalla roadmap del Q4, poi passiamo ai rilasci.", kind: "final", atSeconds: 4),
-                    LiveSidebarTranscriptEntry(text: "Il blocco principale è la documentazione.", kind: "partial", atSeconds: 48),
+                    LiveSidebarTranscriptEntry(text: "Goal today: leave this call with a Q4 roadmap we actually believe in.", kind: "final", atSeconds: 4, speaker: "me"),
+                    LiveSidebarTranscriptEntry(text: "Churn interviews were clear: eleven of eighteen accounts lost work offline.", kind: "final", atSeconds: 48, speaker: "them"),
+                    LiveSidebarTranscriptEntry(text: "That matches support tickets. Sync errors are up twenty percent since August.", kind: "final", atSeconds: 77, speaker: "them"),
+                    LiveSidebarTranscriptEntry(text: "So offline mode moves ahead of the Salesforce connector.", kind: "final", atSeconds: 121, speaker: "me"),
+                    LiveSidebarTranscriptEntry(text: "I can live with that if we tell Northwind early", kind: "partial", atSeconds: 150, speaker: "them"),
                 ]
             )
+            store.notes = "- Offline mode → priority #1\n- Salesforce connector slips to Q1\n- Call Northwind this week"
             capture(LiveSidebarView(store: store, onClose: {}), size: NSSize(width: 340, height: 560), theme: .dark, name: "live-sidebar", in: directory)
         }
     }
 
     private static func populate(_ model: AppModel) {
         let now = Date()
+        if let diary = ProcessInfo.processInfo.environment["MEETING_PILOT_SNAPSHOT_DIARY"], !diary.isEmpty { model.journalRoot = diary }
         model.watcher.watcherActive = true
-        model.todayProcessed = 3
+        model.accessibilityGranted = true
+        model.publicationTargets = ["journal", "notion", "obsidian"]
+        model.obsidianVaultPath = NSString(string: "~/Meeting Pilot Demo Vault").expandingTildeInPath
+        model.notion.token = "demo"
+        model.notion.occurrencesDatabaseId = "demo"
+        model.notion.pageName = "Atlas Team"
+        model.todayProcessed = 2
         model.queueCount = 1
         model.pipelineStage = 2
+        let all: [MeetingPublicationTarget] = [.init(service: .journal, actionURL: nil), .init(service: .notion, actionURL: nil), .init(service: .obsidian, actionURL: nil)]
+        func item(_ id: String, _ title: String, _ subtitle: String, _ dateText: String, _ hoursAgo: Double, _ project: String, _ theme: String) -> MeetingItem {
+            MeetingItem(id: id, title: title, subtitle: subtitle, dateText: dateText, date: now.addingTimeInterval(-hoursAgo * 3600),
+                        publicationTargets: all, project: project, theme: theme, themes: [theme])
+        }
         model.recentMeetings = [
-            MeetingItem(id: "1", title: "Weekly product sync", subtitle: "Roadmap Q4 e priorità rilascio", dateText: "Oggi, 10:30", date: now.addingTimeInterval(-3600),
-                        publicationTargets: [MeetingPublicationTarget(service: .journal, actionURL: nil), MeetingPublicationTarget(service: .notion, actionURL: nil)],
-                        project: "Meeting Pilot", theme: "Roadmap", themes: ["Roadmap", "Release"]),
-            MeetingItem(id: "2", title: "Design review — onboarding", subtitle: "Tour in-app e dati di esempio", dateText: "Oggi, 09:00", date: now.addingTimeInterval(-7200),
-                        publicationTargets: [MeetingPublicationTarget(service: .obsidian, actionURL: nil)],
-                        project: "Onboarding", theme: "Design", themes: ["Design"]),
-            MeetingItem(id: "3", title: "Client call — Northwind", subtitle: "Pricing e tempistiche di implementazione", dateText: "Ieri, 16:00", date: now.addingTimeInterval(-86400),
-                        publicationTargets: [MeetingPublicationTarget(service: .appleNotes, actionURL: nil)],
-                        project: "Sales", theme: nil, themes: []),
+            item("1", "Design Review — Onboarding Flow", "3-step onboarding with a sample workspace", "Today, 14:30", 1, "Atlas App", "Design"),
+            item("2", "Q4 Product Roadmap Sync", "Offline mode first, Salesforce connector to Q1", "Today, 10:00", 5, "Atlas App", "Roadmap"),
+            item("3", "Client Call — Northwind Traders", "Expansion to 300 seats, Okta SSO, EU residency", "Yesterday, 16:00", 22, "Northwind", "Sales"),
+            item("4", "Weekly Engineering Standup", "4.1.3 hotfix shipped, CI down to 11 minutes", "Yesterday, 09:30", 29, "Platform", "Engineering"),
+            item("5", "Hiring Debrief — Senior iOS Engineer", "Offer pending one reference call", "Mon, 17:00", 45, "People", "Hiring"),
+            item("6", "Launch Plan — Atlas 4.2", "December 3 launch, \"Your work, even without Wi-Fi\"", "Fri, 11:00", 120, "Atlas App", "Launch"),
+            item("7", "Q4 Budget Review", "$60k reallocated to launch and infrastructure", "Thu, 15:00", 144, "Finance", "Budget"),
         ]
         model.processingSessions = [
-            ProcessingSession(id: "p1", title: "Standup team piattaforma", date: now, stage: .summarization, updatedAt: now, failureMessage: nil, canRetry: false),
+            ProcessingSession(id: "p1", title: "Customer Advisory Board — prep", date: now, stage: .summarization, updatedAt: now, failureMessage: nil, canRetry: false),
         ]
     }
 
