@@ -622,3 +622,10 @@
 "Altri" = "Altri";
 "Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e risultano come \"Io\"." = "Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e risultano come \"Io\".";
 "Abilita Registrazione audio di sistema" = "Abilita Registrazione audio di sistema";
+"Nessun riconoscimento dei parlanti" = "Nessun riconoscimento dei parlanti";
+"Resta su FluidAudio" = "Resta su FluidAudio";
+"Usa Apple" = "Usa Apple";
+"Con Apple On‑Device la trascrizione non riconosce i singoli parlanti. FluidAudio invece li riconosce ed è comunque locale e privato: l'audio non lascia il Mac." = "Con Apple On‑Device la trascrizione non riconosce i singoli parlanti. FluidAudio invece li riconosce ed è comunque locale e privato: l'audio non lascia il Mac.";
+"Il transcript verrà inviato al cloud" = "Il transcript verrà inviato al cloud";
+"Usa Cloud" = "Usa Cloud";
+"Con un provider cloud, il transcript di ogni riunione viene inviato al servizio scelto (OpenAI, Gemini, Claude o compatibile) per generare la sintesi. Con Apple Intelligence o un modello locale resta tutto sul Mac." = "Con un provider cloud, il transcript di ogni riunione viene inviato al servizio scelto (OpenAI, Gemini, Claude o compatibile) per generare la sintesi. Con Apple Intelligence o un modello locale resta tutto sul Mac.";

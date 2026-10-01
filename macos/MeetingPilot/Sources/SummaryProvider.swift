@@ -30,6 +30,7 @@ struct SummaryConfigurationForm: View {
     @State private var autoSaveTask: DispatchWorkItem?
     @State private var showAdvanced = false
     @State private var localRuntime = LocalRuntime.omlx.rawValue
+    @State private var confirmingCloudProvider = false
 
     private var selectedRuntime: LocalRuntime { LocalRuntime(rawValue: localRuntime) ?? .omlx }
     private var runtimeModels: [String]? { model.localRuntimeModels[localRuntime] }
@@ -56,9 +57,20 @@ struct SummaryConfigurationForm: View {
                     fallbackSymbol: "cloud",
                     selected: mode == "api"
                 ) {
-                    selectProviderMode("api")
+                    // Cloud is the only mode where meeting content leaves the Mac, so confirm first.
+                    if mode != "api" {
+                        confirmingCloudProvider = true
+                    }
                 }
                 .frame(maxHeight: .infinity)
+                .alert("Il transcript verrà inviato al cloud", isPresented: $confirmingCloudProvider) {
+                    Button("Annulla", role: .cancel) {}
+                    Button("Usa Cloud") {
+                        selectProviderMode("api")
+                    }
+                } message: {
+                    Text("Con un provider cloud, il transcript di ogni riunione viene inviato al servizio scelto (OpenAI, Gemini, Claude o compatibile) per generare la sintesi. Con Apple Intelligence o un modello locale resta tutto sul Mac.")
+                }
             }
             .fixedSize(horizontal: false, vertical: true)
 

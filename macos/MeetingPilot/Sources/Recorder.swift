@@ -18,6 +18,7 @@ struct RecorderView: View {
     @State private var openTarget = ""
     @State private var transcriptionProvider = "fluid"
     @State private var transcriptionLocale = "it-IT"
+    @State private var confirmingAppleTranscription = false
 
     var body: some View {
         ContentPane(title: "Pipeline", subtitle: "Come Meeting Pilot registra, trascrive e sintetizza le riunioni.") {
@@ -98,12 +99,23 @@ struct RecorderView: View {
                         selected: transcriptionProvider == "apple",
                         recommended: false
                     ) {
-                        if transcriptionLocale.isEmpty {
-                            transcriptionLocale = "it-IT"
+                        // Switching away from FluidAudio loses speaker diarization, so confirm first.
+                        if transcriptionProvider != "apple" {
+                            confirmingAppleTranscription = true
                         }
-                        selectTranscriptionProvider("apple")
                     }
                     .frame(maxHeight: .infinity)
+                    .alert("Nessun riconoscimento dei parlanti", isPresented: $confirmingAppleTranscription) {
+                        Button("Resta su FluidAudio", role: .cancel) {}
+                        Button("Usa Apple") {
+                            if transcriptionLocale.isEmpty {
+                                transcriptionLocale = "it-IT"
+                            }
+                            selectTranscriptionProvider("apple")
+                        }
+                    } message: {
+                        Text("Con Apple On‑Device la trascrizione non riconosce i singoli parlanti. FluidAudio invece li riconosce ed è comunque locale e privato: l'audio non lascia il Mac.")
+                    }
                     RecorderChoiceCard(
                         title: "FluidAudio",
                         subtitle: "Riconosce chi parla.",
