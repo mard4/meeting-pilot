@@ -328,102 +328,132 @@ enum NativeNotionProvisioner {
 
 /// Tokens and API keys live in the login Keychain, not in `.env`: the app reads them
 /// back through `EnvFile.load` and hands them to the CLI as environment variables.
+/// They share a single item, so macOS asks for access at most once instead of once per key.
 enum SecretStore {
     private static let service = AppIdentity.bundleID
     /// Pre-release builds stored secrets under the old placeholder bundle ID.
     private static let legacyService = "it.local.MeetingPilot"
+    private static let account = "secrets"
     private static let queue = DispatchQueue(label: "\(AppIdentity.bundleID).secrets")
-    private static var cache: [String: String?] = [:]
+    /// Read lazily, on the first secret anyone asks for.
+    private static var cache: [String: String]?
+    /// A denied read is not retried until the user saves a secret, so one "Deny" means
+    /// one prompt, not one per refresh.
+    private static var readFailed = false
 
     static func value(for key: String) -> String? {
-        queue.sync {
-            if let cached = cache[key] { return cached }
-            var value: String?
-            switch read(key, service: service) {
-            case .found(let found):
-                value = found
-            case .missing:
-                value = migrateLegacy(key)
-            case .failed(let status):
-                AppLog.append("Lettura Keychain \(key) non riuscita: \(status)")
-                return nil  // Not cached: a denied prompt shouldn't stick for the session.
-            }
-            cache[key] = value
-            return value
-        }
+        queue.sync { loadAll()?[key] }
     }
 
-    private enum ReadResult {
-        case found(String?)
-        case missing
-        case failed(OSStatus)
-    }
-
-    private static func read(_ key: String, service: String) -> ReadResult {
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(query(for: key, service: service).merging([
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]) { $1 } as CFDictionary, &result)
-        if status == errSecSuccess, let data = result as? Data {
-            return .found(String(data: data, encoding: .utf8))
-        }
-        return status == errSecItemNotFound ? .missing : .failed(status)
-    }
-
-    /// Moves an item from the legacy service; the old item is only deleted once the copy is written.
-    private static func migrateLegacy(_ key: String) -> String? {
-        guard case .found(let legacy?) = read(key, service: legacyService) else { return nil }
-        let status = SecItemAdd(query(for: key).merging([
-            kSecValueData as String: Data(legacy.utf8),
-            kSecAttrLabel as String: "Meeting Pilot \(key)",
-        ]) { $1 } as CFDictionary, nil)
-        if status == errSecSuccess || status == errSecDuplicateItem {
-            SecItemDelete(query(for: key, service: legacyService) as CFDictionary)
-        } else {
-            AppLog.append("Migrazione Keychain \(key) non riuscita: \(status)")
-        }
-        return legacy
-    }
-
-    /// An empty value deletes the item.
+    /// Writes all values in one Keychain update. An empty value deletes the key.
     @discardableResult
-    static func set(_ value: String, for key: String) -> Bool {
+    static func set(_ values: [String: String]) -> Bool {
         queue.sync {
-            let base = query(for: key)
-            let status: OSStatus
-            if value.isEmpty {
-                // Otherwise the next read would migrate the legacy value back.
-                SecItemDelete(query(for: key, service: legacyService) as CFDictionary)
-                let deleted = SecItemDelete(base as CFDictionary)
-                status = deleted == errSecItemNotFound ? errSecSuccess : deleted
-            } else {
-                let data = Data(value.utf8)
-                let updated = SecItemUpdate(base as CFDictionary, [kSecValueData as String: data] as CFDictionary)
-                if updated == errSecItemNotFound {
-                    status = SecItemAdd(base.merging([
-                        kSecValueData as String: data,
-                        kSecAttrLabel as String: "Meeting Pilot \(key)",
-                    ]) { $1 } as CFDictionary, nil)
-                } else {
-                    status = updated
-                }
-            }
-            guard status == errSecSuccess else {
-                AppLog.append("Salvataggio Keychain \(key) non riuscito: \(status)")
-                cache[key] = nil
-                return false
-            }
-            cache[key] = .some(value.isEmpty ? nil : value)
+            readFailed = false
+            // Without the current contents a write would drop the secrets we couldn't read.
+            guard var secrets = loadAll() else { return false }
+            for (key, value) in values { secrets[key] = value.isEmpty ? nil : value }
+            guard write(secrets) else { return false }
+            cache = secrets
             return true
         }
     }
 
-    private static func query(for key: String, service: String = service) -> [String: Any] {
+    private static func loadAll() -> [String: String]? {
+        if let cache { return cache }
+        if readFailed { return nil }
+        switch read(account: account, service: service) {
+        case .found(let data):
+            if let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
+                cache = decoded
+            } else {
+                AppLog.append("Segreti nel Portachiavi illeggibili, verranno sovrascritti al prossimo salvataggio")
+                cache = [:]
+            }
+        case .missing:
+            cache = migratePerKeyItems()
+        case .failed(let status):
+            AppLog.append("Lettura Keychain non riuscita: \(status)")
+        }
+        readFailed = cache == nil
+        return cache
+    }
+
+    /// Older versions kept one item per key, under the current or the legacy service.
+    /// They are folded into the shared item and deleted only once it is written.
+    private static func migratePerKeyItems() -> [String: String]? {
+        var secrets: [String: String] = [:]
+        var found: [(key: String, service: String)] = []
+        for key in EnvFile.secretKeys {
+            for itemService in [service, legacyService] {
+                switch read(account: key, service: itemService) {
+                case .found(let data):
+                    found.append((key, itemService))
+                    if secrets[key] == nil, let value = String(data: data, encoding: .utf8), !value.isEmpty {
+                        secrets[key] = value
+                    }
+                case .missing:
+                    continue
+                case .failed(let status):
+                    AppLog.append("Migrazione Keychain \(key) non riuscita: \(status)")
+                    return nil
+                }
+            }
+        }
+        guard !found.isEmpty else { return [:] }
+        guard write(secrets) else { return nil }
+        for item in found {
+            SecItemDelete(query(account: item.key, service: item.service) as CFDictionary)
+        }
+        AppLog.append("Segreti del Portachiavi riuniti in un solo elemento: \(secrets.keys.sorted().joined(separator: ", "))")
+        return secrets
+    }
+
+    private enum ReadResult {
+        case found(Data)
+        case missing
+        case failed(OSStatus)
+    }
+
+    private static func read(account: String, service: String) -> ReadResult {
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query(account: account, service: service).merging([
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]) { $1 } as CFDictionary, &result)
+        if status == errSecSuccess, let data = result as? Data { return .found(data) }
+        return status == errSecItemNotFound ? .missing : .failed(status)
+    }
+
+    private static func write(_ secrets: [String: String]) -> Bool {
+        let base = query(account: account, service: service)
+        let status: OSStatus
+        if secrets.isEmpty {
+            let deleted = SecItemDelete(base as CFDictionary)
+            status = deleted == errSecItemNotFound ? errSecSuccess : deleted
+        } else {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = .sortedKeys
+            guard let data = try? encoder.encode(secrets) else { return false }
+            let updated = SecItemUpdate(base as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+            if updated == errSecItemNotFound {
+                status = SecItemAdd(base.merging([
+                    kSecValueData as String: data,
+                    kSecAttrLabel as String: "Meeting Pilot",
+                ]) { $1 } as CFDictionary, nil)
+            } else {
+                status = updated
+            }
+        }
+        if status != errSecSuccess { AppLog.append("Salvataggio Keychain non riuscito: \(status)") }
+        return status == errSecSuccess
+    }
+
+    private static func query(account: String, service: String) -> [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
+            kSecAttrAccount as String: account,
         ]
     }
 }
@@ -444,10 +474,13 @@ enum EnvFile {
         "NOTION_TOKEN", "SUMMARY_API_KEY", "LOCAL_SUMMARY_API_KEY", "REMOTE_SUMMARY_API_KEY", "OMLX_API_KEY",
     ]
 
+    /// The only secrets the Python CLI reads; the per-mode keys are app-side state.
+    private static let cliSecretKeys = ["NOTION_TOKEN", "SUMMARY_API_KEY", "OMLX_API_KEY"]
+
     /// Secrets for a CLI child process. Passed through the environment, never on the
     /// command line, where `ps` would show them to every account on the Mac.
     static func secretEnvironment() -> [String: String] {
-        secretKeys.reduce(into: [:]) { environment, key in
+        cliSecretKeys.reduce(into: [:]) { environment, key in
             if let value = SecretStore.value(for: key), !value.isEmpty { environment[key] = value }
         }
     }
@@ -465,10 +498,9 @@ enum EnvFile {
     static func migrateSecretsToKeychain(at url: URL) {
         let plaintext = parse(readExisting(url) ?? "").filter { secretKeys.contains($0.key) && !$0.value.isEmpty }
         guard !plaintext.isEmpty else { return }
-        let moved = plaintext.filter { key, value in SecretStore.set(value, for: key) }
-        guard !moved.isEmpty else { return }
-        updateFile(at: url, values: moved.mapValues { _ in "" })
-        AppLog.append("Segreti spostati da .env al Keychain: \(moved.keys.sorted().joined(separator: ", "))")
+        guard SecretStore.set(plaintext) else { return }
+        updateFile(at: url, values: plaintext.mapValues { _ in "" })
+        AppLog.append("Segreti spostati da .env al Keychain: \(plaintext.keys.sorted().joined(separator: ", "))")
     }
 
     /// Set by AppModel to surface config failures in the UI; every failure is logged
@@ -550,14 +582,14 @@ enum EnvFile {
     static func update(at url: URL, values: [String: String]) -> Bool {
         let secrets = values.filter { secretKeys.contains($0.key) }
         var values = values.filter { !secretKeys.contains($0.key) }
-        for (key, value) in secrets {
-            if SecretStore.set(value, for: key) {
-                // Drop any plaintext copy; an empty line is harmless for the CLI loader.
-                values[key] = ""
-            } else {
-                report("Non riesco a salvare nel Portachiavi", url: url, error: KeychainWriteError(key: key))
+        if !secrets.isEmpty {
+            guard SecretStore.set(secrets) else {
+                let keys = secrets.keys.sorted().joined(separator: ", ")
+                report("Non riesco a salvare nel Portachiavi", url: url, error: KeychainWriteError(key: keys))
                 return false
             }
+            // Drop any plaintext copy; an empty line is harmless for the CLI loader.
+            for key in secrets.keys { values[key] = "" }
         }
         return updateFile(at: url, values: values)
     }
