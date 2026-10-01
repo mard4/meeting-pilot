@@ -1,13 +1,13 @@
 # Development
 
-This guide is for developers who want to run Meeting Pilot's pipeline from source, use it headless, or contribute. If you just want to use the app, [download it](https://github.com/mard4/meeting-pilot/releases) and follow the [README](README.md).
+This guide is for developers who want to run Meeting Pilot's pipeline from source, use it headless, or contribute. If you just want to use the app, [download it](https://github.com/mard4/meeting-pilot/releases) and follow the [README](../README.md).
 
 Meeting Pilot has two parts:
 
 - **macOS app** (`macos/MeetingPilot/`, Swift Package Manager): menu bar app, meeting detection, recorder, live sidebar, settings and chat UI.
 - **Python pipeline** (`src/transcribe_to_notion/`): transcription, summarization and publishing, exposed as the `transcribe-to-notion` CLI.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for code style, tests and pull requests, and [SETUP.md](SETUP.md) for the full step-by-step bootstrap.
+See [CONTRIBUTING.md](../.github/CONTRIBUTING.md) for code style, tests and pull requests, and [SETUP.md](SETUP.md) for the full step-by-step bootstrap.
 
 ## Run from source
 
@@ -35,7 +35,7 @@ To start the watcher at login without the app:
 
 ```bash
 mkdir -p ~/Library/LaunchAgents
-cp launchd/com.transcribe-to-notion.watch.plist.example ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
+cp extras/launchd/com.transcribe-to-notion.watch.plist.example ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
 launchctl load ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
 tail -f ~/Library/Logs/transcribe-to-notion.log ~/Library/Logs/transcribe-to-notion.err.log
 ```

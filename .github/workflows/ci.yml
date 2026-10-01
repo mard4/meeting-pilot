@@ -9,8 +9,8 @@ jobs:
   python-tests:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: Install package
@@ -25,15 +25,16 @@ jobs:
           pytest tests/
 
   swift-build:
-    # Package.swift needs swift-tools-version 6.0, which macos-14 (Swift 5.10) lacks.
-    runs-on: macos-15
+    # Sources import FoundationModels (Apple Intelligence), which ships only in the
+    # macOS 26 SDK (Xcode 26); older runner images fail with "no such module".
+    runs-on: macos-26
     env:
       # The app depends on a local FluidAudio checkout (see macos/MeetingPilot/Package.swift).
       # The directory must be named `source`: Package.swift refers to it by that package identity.
       FLUID_AUDIO_SOURCE: ${{ github.workspace }}/../FluidAudio/source
       FLUID_AUDIO_REV: b68f484789d81fda21efbf81e2ca9fcfd9dc22aa
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Fetch FluidAudio
         run: |
           git init "$FLUID_AUDIO_SOURCE"

@@ -13,7 +13,7 @@ pip install -e .
 cp .env.example .env
 ```
 
-macOS app: see [macos/MeetingPilot/README.md](macos/MeetingPilot/README.md) and [SETUP.md](SETUP.md) for the full bootstrap process, including the FluidAudio dependency.
+macOS app: see [macos/MeetingPilot/README.md](../macos/MeetingPilot/README.md) and [SETUP.md](../docs/SETUP.md) for the full bootstrap process, including the FluidAudio dependency.
 
 ## Making changes
 
@@ -49,7 +49,7 @@ Please use the GitHub issue templates. Include steps to reproduce, expected vs. 
 
 ## License of contributions
 
-Meeting Pilot is licensed under the [GPL-3.0-or-later](LICENSE). By submitting a pull request you confirm that you wrote the contribution (or have the right to submit it), and you agree that it is licensed under the GPL-3.0-or-later and that the maintainer may also distribute it under other license terms, including commercial ones.
+Meeting Pilot is licensed under the [GPL-3.0-or-later](../LICENSE). By submitting a pull request you confirm that you wrote the contribution (or have the right to submit it), and you agree that it is licensed under the GPL-3.0-or-later and that the maintainer may also distribute it under other license terms, including commercial ones.
 
 ## Code of Conduct
 

@@ -34,9 +34,9 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/scripts/in
 
 <p align="center">
   <a href="https://meetingpilot.pages.dev/">Website</a> ·
-  <a href="SETUP.md">Setup</a> ·
-  <a href="CHANGELOG.md">Changelog</a> ·
-  <a href="DEVELOPMENT.md">Developers</a>
+  <a href="docs/SETUP.md">Setup</a> ·
+  <a href="docs/CHANGELOG.md">Changelog</a> ·
+  <a href="docs/DEVELOPMENT.md">Developers</a>
 </p>
 
 
@@ -189,7 +189,7 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/scripts/in
 | ✨ **Summaries** | Apple Intelligence & local models run on-device. API mode sends transcript text only to the provider you choose. |
 | 🏷️ **Meeting metadata** | From the Teams window (Accessibility), on-device OCR as fallback, plus Calendar / Outlook if enabled. |
 | 💾 **Storage** | Archived in `~/TeamsMeetings`; published only to destinations you pick. |
-| 🔗 **Notion connect** | One-click OAuth goes through a stateless [Cloudflare Worker](cloudflare/meeting-pilot-oauth.js) that never sees your meetings. Or paste your own token. |
+| 🔗 **Notion connect** | One-click OAuth goes through a stateless [Cloudflare Worker](extras/cloudflare/meeting-pilot-oauth.js) that never sees your meetings. Or paste your own token. |
 
 **macOS permissions** — asked only when a feature needs them:
 
@@ -211,7 +211,7 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/scripts/in
 
 ## 🛠️ For developers
 
-Run from source, headless CLI, environment config → [DEVELOPMENT.md](DEVELOPMENT.md). Contributing → [CONTRIBUTING.md](CONTRIBUTING.md).
+Run from source, headless CLI, environment config → [DEVELOPMENT.md](docs/DEVELOPMENT.md). Contributing → [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
 ## License
 
