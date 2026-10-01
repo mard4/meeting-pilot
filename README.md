@@ -9,8 +9,30 @@
 <p align="center">
   <a href="https://github.com/mard4/meeting-pilot/releases"><b>Download</b></a> ·
   <a href="SETUP.md">Setup guide</a> ·
-  <a href="CHANGELOG.md">Changelog</a>
+  <a href="CHANGELOG.md">Changelog</a> ·
+  <a href="DEVELOPMENT.md">For developers</a>
 </p>
+
+## What is Meeting Pilot?
+
+Meeting Pilot is a macOS menu bar app that turns your Teams calls into clean, structured meeting notes — without inviting a bot into the call and without sending your audio to the cloud.
+
+It sits quietly in the menu bar and watches for Teams meetings. When one starts, it asks whether to record. During the call you get a live transcript with speakers and a place to jot your own notes. When the call ends, it does the rest on its own: transcribes the recording on your Mac, works out who said what, writes a summary with the decisions and action items, and files the note where you keep your work — tagged with the date, project, topic and participants it read from Teams and your calendar.
+
+Afterwards, every meeting is searchable in one place. You can browse them in the Diary, or ask questions across them in the meeting chat ("what did we decide about offline mode in the Atlas meetings?") and get answers that link back to the meetings they came from.
+
+**Who it's for:** anyone who spends the day in Teams calls and wants reliable notes without a recording bot, a SaaS subscription, or meeting audio leaving their Mac.
+
+### What you get after each meeting
+
+- A **summary** of what was discussed and the main **topics**
+- **Decisions** that were made
+- **Action items** with owners and due dates
+- **Open questions** and **risks** still on the table
+- The full **transcript** with speaker labels
+- **Metadata**: date, duration, project, topic and participants
+
+You choose which of these sections each destination includes.
 
 ## How it works
 
@@ -105,66 +127,18 @@ Everything is set up inside the app.
 - **Obsidian**: choose your vault; notes go into a `Meeting Pilot` folder named `{date} - {title}.md`.
 - **Summary model**: Apple Intelligence (default where available), a local model (oMLX, Ollama, LM Studio), or an OpenAI-compatible API key. Only the API option sends transcript text off the Mac.
 
-## Run from source
+## For developers
 
-For development or headless use, the pipeline is also a Python CLI:
-
-```bash
-python3 -m venv .venv311
-source .venv311/bin/activate
-pip install -e .
-cp .env.example .env   # then fill it in
-```
-
-```bash
-transcribe-to-notion run-once /path/to/audio.m4a            # process one file
-transcribe-to-notion run-once /path/to/audio.m4a --dry-run  # without publishing
-transcribe-to-notion watch                                  # watch the inbox folder
-transcribe-to-notion teams-scrape --output ~/TeamsMeetings/teams-runtime.json
-transcribe-to-notion chat --question "What did we decide about offline mode?" \
-  --project "Atlas App" --theme Roadmap --theme Launch
-```
-
-Meetings move through `~/TeamsMeetings/{inbox_audio,processing,done,failed}`. `teams-scrape` reads the meeting title and participants from the Teams window (Accessibility first, on-device OCR as a fallback); the next processing run uses them.
-
-To start the watcher at login without the app:
-
-```bash
-mkdir -p ~/Library/LaunchAgents
-cp launchd/com.transcribe-to-notion.watch.plist.example ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
-launchctl load ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
-tail -f ~/Library/Logs/transcribe-to-notion.log ~/Library/Logs/transcribe-to-notion.err.log
-```
-
-The full step-by-step bootstrap is in [SETUP.md](SETUP.md).
-
-### Main environment variables
-
-The app writes these for you; set them by hand only when running from source. See `.env.example` for the complete list.
-
-| Variable | Purpose |
-| --- | --- |
-| `PUBLISH_TARGETS` | `journal`, `notion`, `obsidian`, `apple_notes` (comma-separated). Defaults to the local Diary. |
-| `JOURNAL_ROOT` | Diary root, default `~/Library/Application Support/Meeting Pilot/Diary` (Markdown by year/month plus a rebuildable `index.sqlite`). |
-| `NOTION_TOKEN`, `NOTION_PARENT_PAGE_ID` | Notion integration token and the page Meeting Pilot publishes under. |
-| `NOTION_DATABASE_ID`, `NOTION_PAGE_NAME` | The meetings table (found or created by setup) and its page name, default `Meeting Pilot`. |
-| `NOTION_PROJECT_PROPERTY`, `NOTION_INCLUDE_*` | Project column name (default `Project`) and which sections each page includes. |
-| `OBSIDIAN_VAULT_PATH`, `OBSIDIAN_FOLDER`, `OBSIDIAN_FILENAME_TEMPLATE` | Vault root, folder inside it (default `Meeting Pilot`) and filename template (default `{date} - {title}.md`). |
-| `SUMMARY_PROVIDER_MODE` | `apple` (Apple Intelligence), `local` (oMLX/Ollama/LM Studio) or `api`. |
-| `SUMMARY_BASE_URL`, `SUMMARY_MODEL`, `SUMMARY_API_KEY` | OpenAI-compatible endpoint, model and key. |
-| `SUMMARY_PROMPT` | Optional extra instructions applied to every summary. |
-| `TRANSCRIPTION_PROVIDER` | `fluid` (bundled, with speaker separation) or `apple`. |
-| `MEETINGS_ROOT`, `INBOX_AUDIO_DIR` | Archive root (default `~/TeamsMeetings`) and the folder the watcher reads recordings from. |
-| `RECORDER_MODE`, `RECORDING_PROMPT_ENABLED`, `RECORDING_PROMPT_DELAY_SECONDS` | Recorder mode (`macos_prompt` by default) and the banner shown when a meeting starts. |
+To run the pipeline from source, use it headless as a CLI, or configure it through environment variables, see [DEVELOPMENT.md](DEVELOPMENT.md). Contribution guidelines are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Privacy & Permissions
 
 Meeting Pilot processes meeting audio and Teams/Calendar metadata. Understand what it touches before installing:
 
-- **Audio & transcripts**: recorded locally into `INBOX_AUDIO_DIR` and transcribed on-device (FluidAudio or Apple On-Device). Nothing audio-related is uploaded.
-- **Summaries**: generated by the provider you choose. `apple` and `local` run entirely on-device. `api` sends the transcript text to the endpoint in `SUMMARY_BASE_URL` — review that provider's data policy before enabling it.
+- **Audio & transcripts**: recorded and transcribed on your Mac (FluidAudio or Apple On-Device). Audio is never uploaded.
+- **Summaries**: Apple Intelligence and local models (oMLX, Ollama, LM Studio) run entirely on-device. If you pick an API provider, the transcript text is sent to that provider — review its data policy before enabling it.
 - **Meeting metadata**: read from the Teams window via Accessibility, or from a screenshot with on-device OCR (Apple Vision) if that fails. Calendar and Outlook lookups, when enabled, read local data to match a meeting's subject and participants.
-- **Storage**: meetings and transcripts are archived under `MEETINGS_ROOT` (default `~/TeamsMeetings`) and written to the Diary, Obsidian vault, Apple Notes or Notion workspace you choose.
+- **Storage**: recordings and transcripts are archived locally (by default in `~/TeamsMeetings`); notes are written only to the Diary, Obsidian vault, Apple Notes or Notion workspace you choose.
 - **macOS permissions**: Accessibility (read the Teams UI), Screen Recording (OCR fallback), Calendar (meeting metadata) and Automation (Outlook lookup, if configured), each requested only when the feature is used.
 
 If you record meetings other people are in, make sure you have the right to do so under your organization's policy and applicable law.
