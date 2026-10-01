@@ -1,6 +1,4 @@
 from pathlib import Path
-import subprocess
-import tempfile
 import unittest
 
 
@@ -29,8 +27,6 @@ def _section(source: str, start: str, end: str) -> str:
 SOURCE = _AppSources()
 APPLE_TRANSCRIBER = Path(__file__).parents[1] / "macos/MeetingPilot/Sources/AppleTranscriber.swift"
 INFO_PLIST = Path(__file__).parents[1] / "macos/MeetingPilot/Info.plist"
-THEME_SOURCE = Path(__file__).parents[1] / "macos/MeetingPilot/Sources/Theme.swift"
-THEME_TEST = Path(__file__).parents[1] / "macos/MeetingPilot/Tests/ThemeTests.swift"
 
 
 class MeetingPilotUILayoutTests(unittest.TestCase):
@@ -71,20 +67,6 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         self.assertIn("model.saveAppTheme($0)", settings)
         self.assertIn('themeButton(.light, symbol: "sun.max.fill", label: "Chiaro")', picker)
         self.assertIn(".preferredColorScheme(model.appTheme == .light ? .light : .dark)", source)
-
-    def test_theme_values_accept_only_supported_modes(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            binary = Path(tmp) / "theme-tests"
-            build = subprocess.run(
-                ["xcrun", "swiftc", str(THEME_SOURCE), str(THEME_TEST), "-o", str(binary)],
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(build.returncode, 0, build.stderr)
-
-            result = subprocess.run([str(binary)], capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(result.stdout.strip(), "theme tests passed")
 
     def test_app_opens_a_visible_main_window_on_launch(self):
         source = SOURCE.read_text()

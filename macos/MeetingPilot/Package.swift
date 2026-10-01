@@ -45,6 +45,11 @@ let package = Package(
                 .linkedFramework("UserNotifications"),
                 .unsafeFlags(["-Xlinker", "-weak_framework", "-Xlinker", "FoundationModels"]),
             ]
-        )
+        ),
+        .testTarget(
+            name: "MeetingPilotTests",
+            dependencies: ["MeetingPilot"],
+            path: "Tests/MeetingPilotTests"
+        ),
     ]
 )
