@@ -25,13 +25,23 @@ jobs:
           pytest tests/
 
   swift-build:
-    runs-on: macos-14
-    # The macOS app depends on a local FluidAudio checkout (see macos/MeetingPilot/Package.swift
-    # and FLUID_AUDIO_SOURCE) that isn't vendored in this repo, so a full `swift build` isn't
-    # possible in CI yet. This job is informational until that dependency is resolved.
-    continue-on-error: true
+    # Package.swift needs swift-tools-version 6.0, which macos-14 (Swift 5.10) lacks.
+    runs-on: macos-15
+    env:
+      # The app depends on a local FluidAudio checkout (see macos/MeetingPilot/Package.swift).
+      # The directory must be named `source`: Package.swift refers to it by that package identity.
+      FLUID_AUDIO_SOURCE: ${{ github.workspace }}/../FluidAudio/source
+      FLUID_AUDIO_REV: b68f484789d81fda21efbf81e2ca9fcfd9dc22aa
     steps:
       - uses: actions/checkout@v4
-      - name: Build (best-effort)
+      - name: Fetch FluidAudio
+        run: |
+          git init "$FLUID_AUDIO_SOURCE"
+          git -C "$FLUID_AUDIO_SOURCE" fetch --depth=1 https://github.com/FluidInference/FluidAudio.git "$FLUID_AUDIO_REV"
+          git -C "$FLUID_AUDIO_SOURCE" checkout FETCH_HEAD
+      - name: Build
         working-directory: macos/MeetingPilot
         run: swift build
+      - name: Test
+        working-directory: macos/MeetingPilot
+        run: swift test
