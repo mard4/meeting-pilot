@@ -487,6 +487,9 @@ final class SystemMeetingAudioRecorder: NSObject {
                 self.startLiveMicrophone()
                 let speakerTracker = TeamsSpeakerTracker(outputURL: MeetingSidecar.teamsSpeakersURL(for: finalURL))
                 speakerTracker.start()
+                self.livePipeline?.setSpeakerResolver { [weak speakerTracker] start, end in
+                    speakerTracker?.dominantSpeaker(from: start, to: end)
+                }
                 self.speakerTracker = speakerTracker
                 completion(.success(finalURL))
             } catch {

@@ -30,11 +30,14 @@ struct LiveSidebarTranscriptEntry: Codable, Identifiable {
     let kind: String  // "partial" or "final" — see LiveMeetingPipeline.LiveTranscriptEntry
     let atSeconds: Double
     let speaker: String?  // "me" or "them"; absent in files written before the microphone leg
+    let name: String?  // Teams participant talking, for "them" lines when known
 }
 
 struct LiveSidebarState: Codable {
     var segments: [LiveSidebarSegment] = []
     var transcript: [LiveSidebarTranscriptEntry] = []
+    /// Set when the system-audio tap delivers only zeros (see `LiveMeetingPipeline`).
+    var systemAudioSilent: Bool?
 }
 
 /// Polls `live_state.json` on disk rather than being wired directly to `LiveMeetingPipeline`
@@ -194,12 +197,14 @@ struct LiveSidebarView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var livePulse = false
 
+    /// No red: that's the "Io" colour.
     private static let speakerPalette: [Color] = [
-        MeetingPilotDesign.accent, .orange, .pink, .purple, .teal, .yellow,
+        .orange, .pink, .purple, .teal, .yellow,
     ]
 
-    private func speakerColor(_ speakerId: String) -> Color {
-        let index = abs(speakerId.hashValue) % Self.speakerPalette.count
+    /// Stable within a session, so each participant keeps one colour down the transcript.
+    private func speakerColor(_ name: String) -> Color {
+        let index = abs(name.hashValue) % Self.speakerPalette.count
         return Self.speakerPalette[index]
     }
 
@@ -207,8 +212,8 @@ struct LiveSidebarView: View {
         VStack(alignment: .leading, spacing: 0) {
             header
             Divider().overlay(Color.white.opacity(0.08))
-            if !store.state.segments.isEmpty {
-                speakerStrip
+            if store.state.systemAudioSilent == true {
+                silentSystemAudioBanner
                 Divider().overlay(Color.white.opacity(0.08))
             }
             transcriptList
@@ -270,25 +275,29 @@ struct LiveSidebarView: View {
         .background(Color.white.opacity(0.05))
     }
 
-    /// Speaker turns and transcript lines come from two independent live passes
-    /// (diarization and streaming ASR) that aren't time-aligned yet, so they're shown as
-    /// separate sections rather than merged into per-line speaker attribution.
-    private var speakerStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(store.state.segments.suffix(12)) { segment in
-                    Text("\(segment.speakerId) · \(Int(segment.startSeconds))s")
-                        .font(.system(size: 11, weight: .semibold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(speakerColor(segment.speakerId).opacity(0.22))
-                        .foregroundStyle(speakerColor(segment.speakerId))
-                        .clipShape(Capsule())
+    /// Without the system-audio permission every voice reaches us through the microphone,
+    /// so the others are labelled "Io"; say so instead of showing a wrong transcript silently.
+    private var silentSystemAudioBanner: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "speaker.slash.fill")
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(localized("Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e risultano come \"Io\"."))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(localized("Abilita Registrazione audio di sistema")) {
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                        NSWorkspace.shared.open(url)
+                    }
                 }
+                .font(.system(size: 11, weight: .semibold))
+                .buttonStyle(.link)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
         }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.orange.opacity(0.12))
     }
 
     /// Granola-style notes: the summary treats each line typed here as a point it must
@@ -361,11 +370,21 @@ struct LiveSidebarView: View {
                     }
                     ForEach(store.state.transcript) { entry in
                         VStack(alignment: .leading, spacing: 2) {
-                            if let speaker = entry.speaker {
-                                Text(speaker == "me" ? localized("Io") : localized("Altri"))
+                            if entry.speaker == "me" {
+                                Text(localized("Io"))
                                     .font(.mpEyebrow(9))
                                     .tracking(0.6)
-                                    .foregroundStyle(speaker == "me" ? MeetingPilotDesign.accentStrong : .white.opacity(0.5))
+                                    .foregroundStyle(MeetingPilotDesign.accentStrong)
+                            } else if let name = entry.name {
+                                Text(name)
+                                    .font(.mpEyebrow(9))
+                                    .tracking(0.6)
+                                    .foregroundStyle(speakerColor(name))
+                            } else if entry.speaker != nil {
+                                Text(localized("Altri"))
+                                    .font(.mpEyebrow(9))
+                                    .tracking(0.6)
+                                    .foregroundStyle(.white.opacity(0.5))
                             }
                             Text(entry.text)
                                 .font(.system(size: 13, weight: entry.kind == "final" ? .medium : .regular))

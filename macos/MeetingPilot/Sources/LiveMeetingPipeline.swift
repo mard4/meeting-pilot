@@ -5,7 +5,9 @@ import Foundation
 
 /// Feeds the raw system-audio tap into FluidAudio's `DiarizerManager` while a meeting is
 /// still recording, so speaker turns can be surfaced before the meeting ends, and runs
-/// streaming ASR on both legs: system audio ("them") and the microphone ("me").
+/// streaming ASR on both legs: system audio ("them") and the microphone ("me"). Lines from
+/// the system leg are named after the Teams participant who was talking while they were
+/// spoken (see `TeamsSpeakerTracker`).
 ///
 /// This is best-effort and additive: any failure here (missing models, conversion errors,
 /// a slow diarization pass) must never affect the primary recording path in
@@ -28,6 +30,8 @@ final class LiveMeetingPipeline: @unchecked Sendable {
         let kind: String  // "partial" (ghost text, may be revised) or "final" (line closed on a pause)
         let atSeconds: Double
         let speaker: String  // "me" (microphone) or "them" (system audio)
+        /// The Teams participant who was talking, for "them" lines when the tracker saw one.
+        let name: String?
     }
 
     /// Diarization runs a few seconds behind real time (one call per window), so the
@@ -46,6 +50,15 @@ final class LiveMeetingPipeline: @unchecked Sendable {
     /// carries room noise, so its floor is higher.
     private static let systemSilenceRMS: Float = 0.005
     private static let microphoneSilenceRMS: Float = 0.015
+    /// Without the "system audio recording" permission macOS still creates the tap but
+    /// feeds it exact zeros, so the others' voices only reach the microphone (through the
+    /// speakers) and every line comes out as "me". Exact silence this long while the
+    /// microphone hears speech means that, not a quiet call.
+    private static let silentTapCheckSeconds: Double = 20
+    /// Teams moves the speaking border a little after the audio starts and drops it a
+    /// little after it stops, so a line's span is widened by these before matching.
+    private static let speakerLeadSeconds: TimeInterval = 0.5
+    private static let speakerTrailSeconds: TimeInterval = 1.0
     /// 1120 ms is FluidAudio's smallest chunk that keeps punctuation stable over long
     /// sessions (the 560 ms tier drifts, see its `downloadAndPreloadShared` docs).
     private static let asrChunkMs = 1120
@@ -74,6 +87,17 @@ final class LiveMeetingPipeline: @unchecked Sendable {
     /// Created on the first microphone buffer, since only then is its format known.
     private var microphoneAsr: AsrLeg?
     private var finalized = false
+    private var systemSeconds: Double = 0
+    private var systemHeardSignal = false
+    private var microphoneHeardSpeech = false
+    private var systemAudioSilent = false
+    /// Names the participant talking between two system-uptime instants.
+    private var speakerResolver: ((TimeInterval, TimeInterval) -> String?)?
+    /// Both legs share one download + preload. FluidAudio doesn't coordinate concurrent
+    /// calls, so on a Mac without the model cached two legs downloading into the same
+    /// folder at once could fail one of them — typically leaving the system leg dead, so
+    /// the others were only heard through the microphone and labelled "me".
+    private var sharedAsrModels: Task<SharedNemotronMultilingualModels, Error>!
 
     /// One streaming ASR manager per audio leg: Nemotron keeps per-utterance decoder
     /// state, so interleaving two speakers through one manager would garble both.
@@ -88,6 +112,8 @@ final class LiveMeetingPipeline: @unchecked Sendable {
         let input: AsyncStream<AsrChunk>.Continuation
         let stream: AsyncStream<AsrChunk>
         var ready = false  // confined to the pipeline's queue
+        /// System uptime when the open line's first speech was captured; confined to the queue.
+        var utteranceStartedAt: TimeInterval?
 
         init(speaker: String, sampleRate: Double, silenceRMS: Float) {
             self.speaker = speaker
@@ -101,6 +127,8 @@ final class LiveMeetingPipeline: @unchecked Sendable {
         let pcm: AVAudioPCMBuffer
         let seconds: Double
         let isSilent: Bool
+        /// System uptime when the chunk's last sample was captured.
+        let capturedAt: TimeInterval
     }
 
     /// Returns nil (rather than throwing) when the system audio format can't be bridged
@@ -125,6 +153,11 @@ final class LiveMeetingPipeline: @unchecked Sendable {
         self.asrLanguage = Self.appLanguageCode()
 
         queue.async { [self] in loadDiarizationModels() }
+        let language = asrLanguage
+        sharedAsrModels = Task {
+            try await StreamingNemotronMultilingualAsrManager.downloadAndPreloadShared(
+                languageCode: language, chunkMs: Self.asrChunkMs)
+        }
         let systemLeg = AsrLeg(speaker: "them", sampleRate: sourceFormat.sampleRate, silenceRMS: Self.systemSilenceRMS)
         systemAsr = systemLeg
         startAsr(systemLeg)
@@ -165,30 +198,33 @@ final class LiveMeetingPipeline: @unchecked Sendable {
     /// `Nemotron-3.5-ASR-Streaming-Multilingual-0.6b-CoreML`) and reuses the cache after.
     private func loadAsrModels(_ leg: AsrLeg) async {
         let speaker = leg.speaker
-        await leg.manager.setPartialCallback { [weak self] text in
-            self?.recordTranscript(text, kind: "partial", speaker: speaker)
+        await leg.manager.setPartialCallback { [weak self, weak leg] text in
+            guard let leg else { return }
+            self?.recordTranscript(text, kind: "partial", leg: leg)
         }
         do {
-            let shared = try await StreamingNemotronMultilingualAsrManager.downloadAndPreloadShared(
-                languageCode: asrLanguage, chunkMs: Self.asrChunkMs)
+            let shared = try await sharedAsrModels.value
             try await leg.manager.loadFromShared(shared)
             await leg.manager.setLanguage(asrLanguage)
             queue.sync { leg.ready = true }
             NSLog("LiveMeetingPipeline: streaming ASR ready for \(speaker)")
         } catch {
-            NSLog("LiveMeetingPipeline: streaming ASR models unavailable for \(speaker), live transcript disabled: \(error)")
+            AppLog.append("Trascrizione dal vivo non disponibile per \(speaker == "me" ? "microfono" : "audio di sistema"): \(error.localizedDescription)")
         }
     }
 
     /// Partials carry the whole utterance so far, so each one replaces that speaker's
     /// trailing partial instead of stacking a new line; the final that closes the line
     /// replaces it too. The other leg may have appended lines in between.
-    private func recordTranscript(_ text: String, kind: String, speaker: String) {
+    private func recordTranscript(_ text: String, kind: String, leg: AsrLeg) {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        let speaker = leg.speaker
         queue.async { [self] in
             let atSeconds = Date().timeIntervalSince(sessionStartedAt)
-            let entry = LiveTranscriptEntry(text: text, kind: kind, atSeconds: atSeconds, speaker: speaker)
+            let now = ProcessInfo.processInfo.systemUptime
+            let name = speakerName(for: leg, from: leg.utteranceStartedAt ?? now, to: now)
+            let entry = LiveTranscriptEntry(text: text, kind: kind, atSeconds: atSeconds, speaker: speaker, name: name)
             if let index = openPartialIndex(for: speaker) {
                 transcript[index] = entry
             } else {
@@ -196,6 +232,17 @@ final class LiveMeetingPipeline: @unchecked Sendable {
             }
             writeLiveState()
         }
+    }
+
+    /// Called by the recorder once the Teams tracker is running.
+    func setSpeakerResolver(_ resolver: @escaping (TimeInterval, TimeInterval) -> String?) {
+        queue.async { [self] in speakerResolver = resolver }
+    }
+
+    /// Only remote voices get a Teams name; the microphone is always the local user.
+    private func speakerName(for leg: AsrLeg, from start: TimeInterval, to end: TimeInterval) -> String? {
+        guard leg.speaker == "them" else { return nil }
+        return speakerResolver?(start - Self.speakerLeadSeconds, end + Self.speakerTrailSeconds)
     }
 
     private func openPartialIndex(for speaker: String) -> Int? {
@@ -210,6 +257,7 @@ final class LiveMeetingPipeline: @unchecked Sendable {
         var utteranceSeconds: Double = 0
         var pauseSeconds: Double = 0
         var heardSpeech = false
+        var lastSpeechAt: TimeInterval?
         for await chunk in leg.stream {
             do {
                 _ = try await leg.manager.process(audioBuffer: chunk.pcm)
@@ -221,22 +269,28 @@ final class LiveMeetingPipeline: @unchecked Sendable {
                 pauseSeconds += chunk.seconds
             } else {
                 pauseSeconds = 0
+                if !heardSpeech {
+                    let start = chunk.capturedAt - chunk.seconds
+                    queue.sync { leg.utteranceStartedAt = start }
+                }
                 heardSpeech = true
+                lastSpeechAt = chunk.capturedAt
             }
             let paused = heardSpeech && pauseSeconds >= Self.pauseSecondsToCloseLine
             if paused || utteranceSeconds >= Self.maxUtteranceSeconds {
-                await closeLine(leg)
+                await closeLine(leg, lastSpeechAt: lastSpeechAt)
                 utteranceSeconds = 0
                 pauseSeconds = 0
                 heardSpeech = false
+                lastSpeechAt = nil
             }
         }
-        await closeLine(leg)
+        await closeLine(leg, lastSpeechAt: lastSpeechAt)
     }
 
     /// Flushes the buffered audio into a "final" line and starts a fresh utterance, so
     /// the next partial opens a new sidebar line instead of extending this one.
-    private func closeLine(_ leg: AsrLeg) async {
+    private func closeLine(_ leg: AsrLeg, lastSpeechAt: TimeInterval?) async {
         var text = ""
         do {
             text = try await leg.manager.finish().trimmingCharacters(in: .whitespacesAndNewlines)
@@ -249,11 +303,17 @@ final class LiveMeetingPipeline: @unchecked Sendable {
             // An empty flush (noise that produced only a stray partial) drops that
             // partial, so it isn't silently overwritten by the next line.
             let partial = openPartialIndex(for: speaker)
+            let startedAt = leg.utteranceStartedAt
+            leg.utteranceStartedAt = nil
             if text.isEmpty {
                 if let partial { transcript.remove(at: partial) }
             } else {
                 let atSeconds = Date().timeIntervalSince(sessionStartedAt)
-                let entry = LiveTranscriptEntry(text: text, kind: "final", atSeconds: atSeconds, speaker: speaker)
+                // The whole line's span decides the name; a partial's guess is only the fallback.
+                let end = lastSpeechAt ?? ProcessInfo.processInfo.systemUptime
+                let name = speakerName(for: leg, from: startedAt ?? end, to: end) ?? partial.flatMap { transcript[$0].name }
+                let entry = LiveTranscriptEntry(
+                    text: text, kind: "final", atSeconds: atSeconds, speaker: speaker, name: name)
                 if let partial {
                     transcript[partial] = entry
                 } else {
@@ -288,6 +348,7 @@ final class LiveMeetingPipeline: @unchecked Sendable {
                 microphoneAsr = leg
                 startAsr(leg)
             }
+            if !microphoneHeardSpeech, Self.rms(copy) >= Self.microphoneSilenceRMS { microphoneHeardSpeech = true }
             feedAsr(copy, into: leg)
         }
     }
@@ -299,8 +360,25 @@ final class LiveMeetingPipeline: @unchecked Sendable {
     func ingest(_ bufferList: UnsafePointer<AudioBufferList>, frameCount: UInt32) {
         guard frameCount > 0, let pcmCopy = copyToPCMBuffer(bufferList, frameCount: frameCount) else { return }
         queue.async { [self] in
+            checkSystemSignal(pcmCopy)
             processDiarization(pcmCopy)
             feedAsr(pcmCopy, into: systemAsr)
+        }
+    }
+
+    private func checkSystemSignal(_ pcm: AVAudioPCMBuffer) {
+        systemSeconds += Double(pcm.frameLength) / sourceFormat.sampleRate
+        if Self.rms(pcm) > 0 {
+            systemHeardSignal = true
+            if systemAudioSilent {
+                systemAudioSilent = false
+                writeLiveState()
+            }
+        } else if !systemHeardSignal, !systemAudioSilent, microphoneHeardSpeech,
+                  systemSeconds >= Self.silentTapCheckSeconds {
+            systemAudioSilent = true
+            AppLog.append("Audio di sistema muto da \(Int(systemSeconds))s mentre il microfono sente parlato: permesso Registrazione audio di sistema mancante?")
+            writeLiveState()
         }
     }
 
@@ -329,7 +407,8 @@ final class LiveMeetingPipeline: @unchecked Sendable {
             AsrChunk(
                 pcm: pcm,
                 seconds: Double(pcm.frameLength) / leg.sampleRate,
-                isSilent: Self.rms(pcm) < leg.silenceRMS))
+                isSilent: Self.rms(pcm) < leg.silenceRMS,
+                capturedAt: ProcessInfo.processInfo.systemUptime))
     }
 
     /// Interleaved float buffers keep every channel in `floatChannelData[0]`; a
@@ -406,12 +485,13 @@ final class LiveMeetingPipeline: @unchecked Sendable {
     private struct LiveState: Codable {
         let segments: [LiveSpeakerSegment]
         let transcript: [LiveTranscriptEntry]
+        let systemAudioSilent: Bool
     }
 
     private func writeLiveState() {
         let url = sessionFolder.appendingPathComponent("live_state.json")
         do {
-            let data = try JSONEncoder().encode(LiveState(segments: segments, transcript: transcript))
+            let data = try JSONEncoder().encode(LiveState(segments: segments, transcript: transcript, systemAudioSilent: systemAudioSilent))
             try data.write(to: url, options: .atomic)
         } catch {
             NSLog("LiveMeetingPipeline: failed to write live_state.json: \(error)")

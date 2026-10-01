@@ -10,7 +10,9 @@ import Foundation
 /// gains the `vdi-frame-occlusion` DOM class (the coloured speaking border). The user's own
 /// preview has no such border; their voice is already identified from the microphone track.
 /// Times are seconds of recorded audio (pauses excluded), written to the sidecar as
-/// `teams_speakers.json` — a contract with `speaker_names.py`.
+/// `teams_speakers.json` — a contract with `speaker_names.py`. The live sidebar asks
+/// `dominantSpeaker(from:to:)` in system-uptime seconds instead, so it can name lines
+/// while the meeting is still going.
 final class TeamsSpeakerTracker {
     private static let teamsBundleIDs: Set<String> = ["com.microsoft.teams2", "com.microsoft.teams"]
     private static let speakingClass = "vdi-frame-occlusion"
@@ -28,6 +30,10 @@ final class TeamsSpeakerTracker {
     private var activeSince: TimeInterval?
     private var talkingSince: [String: TimeInterval] = [:]
     private var segments: [(name: String, start: TimeInterval, end: TimeInterval)] = []
+    /// The same turns on the uptime clock, kept only as long as the sidebar can ask about them.
+    private var liveTalkingSince: [String: TimeInterval] = [:]
+    private var liveTurns: [(name: String, start: TimeInterval, end: TimeInterval)] = []
+    private static let liveHistorySeconds: TimeInterval = 120
 
     init(outputURL: URL) {
         self.outputURL = outputURL
@@ -73,6 +79,21 @@ final class TeamsSpeakerTracker {
         }
     }
 
+    /// The participant whose speaking border overlapped `[start, end]` (system uptime) the
+    /// longest, or nil when nobody's did. Thread-safe.
+    func dominantSpeaker(from start: TimeInterval, to end: TimeInterval) -> String? {
+        queue.sync {
+            let now = ProcessInfo.processInfo.systemUptime
+            let ongoing = liveTalkingSince.map { (name: $0.key, start: $0.value, end: now) }
+            var overlap: [String: TimeInterval] = [:]
+            for turn in liveTurns + ongoing {
+                let shared = min(end, turn.end) - max(start, turn.start)
+                if shared > 0 { overlap[turn.name, default: 0] += shared }
+            }
+            return overlap.max { $0.value < $1.value }?.key
+        }
+    }
+
     private func recordedTime() -> TimeInterval {
         recordedBeforePause + (activeSince.map { ProcessInfo.processInfo.systemUptime - $0 } ?? 0)
     }
@@ -114,11 +135,16 @@ final class TeamsSpeakerTracker {
         let now = recordedTime()
         for name in talking where talkingSince[name] == nil {
             talkingSince[name] = now
+            liveTalkingSince[name] = uptime
         }
         for (name, start) in talkingSince where !talking.contains(name) {
             segments.append((name, start, now))
             talkingSince[name] = nil
+            if let liveStart = liveTalkingSince.removeValue(forKey: name) {
+                liveTurns.append((name, liveStart, uptime))
+            }
         }
+        liveTurns.removeAll { uptime - $0.end > Self.liveHistorySeconds }
     }
 
     private func closeAll(at time: TimeInterval) {
@@ -126,6 +152,11 @@ final class TeamsSpeakerTracker {
             segments.append((name, start, time))
         }
         talkingSince = [:]
+        let uptime = ProcessInfo.processInfo.systemUptime
+        for (name, start) in liveTalkingSince {
+            liveTurns.append((name, start, uptime))
+        }
+        liveTalkingSince = [:]
     }
 
     /// Parents of the participant tiles. A tile is confirmed by its name also appearing as a

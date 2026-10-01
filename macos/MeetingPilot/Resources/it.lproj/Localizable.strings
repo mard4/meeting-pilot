@@ -620,3 +620,5 @@
 "Riunione senza titolo" = "Riunione senza titolo";
 "Io" = "Io";
 "Altri" = "Altri";
+"Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e risultano come \"Io\"." = "Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e risultano come \"Io\".";
+"Abilita Registrazione audio di sistema" = "Abilita Registrazione audio di sistema";
