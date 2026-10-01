@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/mard4/meeting-pilot/releases/latest/download/MeetingPilot.dmg"><b>⬇ Download</b></a> ·
-  <a href="https://meetingpilot.pages.dev/">Website</a> 
+  <a href="https://meetingpilotapp.com/">Website</a> 
 </p>
 
 
@@ -33,7 +33,7 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
 </table>
 
 <p align="center">
-  <a href="https://meetingpilot.pages.dev/">Website</a> ·
+  <a href="https://meetingpilotapp.com/">Website</a> ·
   <a href="docs/SETUP.md">Setup</a> ·
   <a href="docs/CHANGELOG.md">Changelog</a> ·
   <a href="docs/DEVELOPMENT.md">Developers</a>
