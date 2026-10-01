@@ -17,7 +17,7 @@ For development or headless use, the pipeline is also a Python CLI:
 python3 -m venv .venv311
 source .venv311/bin/activate
 pip install -e .
-cp .env.example .env   # then fill it in
+cp docs/env.example .env   # then fill it in
 ```
 
 ```bash
@@ -35,7 +35,7 @@ To start the watcher at login without the app:
 
 ```bash
 mkdir -p ~/Library/LaunchAgents
-cp extras/launchd/com.transcribe-to-notion.watch.plist.example ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
+cp docs/launchd/com.transcribe-to-notion.watch.plist.example ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
 launchctl load ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
 tail -f ~/Library/Logs/transcribe-to-notion.log ~/Library/Logs/transcribe-to-notion.err.log
 ```
@@ -44,7 +44,7 @@ The full step-by-step bootstrap is in [SETUP.md](SETUP.md).
 
 ## Main environment variables
 
-The app writes these for you; set them by hand only when running from source. See `.env.example` for the complete list.
+The app writes these for you; set them by hand only when running from source. See [`env.example`](env.example) for the complete list.
 
 | Variable | Purpose |
 | --- | --- |

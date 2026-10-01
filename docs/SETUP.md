@@ -244,7 +244,7 @@ Install the job:
 
 ```bash
 mkdir -p ~/Library/LaunchAgents
-cp extras/launchd/com.transcribe-to-notion.watch.plist.example ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
+cp docs/launchd/com.transcribe-to-notion.watch.plist.example ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
 launchctl load ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
 ```
 

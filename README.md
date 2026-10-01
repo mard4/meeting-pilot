@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/assets/readme/logo.png" alt="Meeting Pilot" width="96" height="96" />
+  <img src="docs/assets/readme/logo.png" alt="Meeting Pilot" width="96" height="96" />
 </p>
 
 <h1 align="center">Meeting Pilot</h1>
@@ -7,7 +7,7 @@
 <!-- <h3 align="center">Your meetings. Your data.</h3> -->
 
 <p align="center">
-  <img src="src/assets/readme/hero-demo.gif" alt="A Teams call is detected, recorded with a live transcript and notes, then published to Notion and Obsidian, and the meeting chat answers a question about it with sources" width="100%" />
+  <img src="docs/assets/readme/hero-demo.gif" alt="A Teams call is detected, recorded with a live transcript and notes, then published to Notion and Obsidian, and the meeting chat answers a question about it with sources" width="100%" />
 </p>
 
 <p align="center">
@@ -17,7 +17,7 @@
 
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/MeetingPilot/Scripts/install.sh | bash
 ```
 
 <p align="center">
@@ -25,10 +25,10 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/scripts/in
 </p>
 <table align="center">
   <tr>
-    <td align="center"><img src="src/assets/readme/icons/nobot.svg" width="40" alt="" /><br /><sub><b>No bot</b></sub></td>
-    <td align="center"><img src="src/assets/readme/icons/nocloud.svg" width="40" alt="" /><br /><sub><b>Zero cloud</b></sub></td>
-    <td align="center"><img src="src/assets/readme/icons/free.svg" width="40" alt="" /><br /><sub><b>Free</b></sub></td>
-    <td align="center"><img src="src/assets/readme/icons/apple.svg" width="40" alt="" /><br /><sub><b>MacOS </b></sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/nobot.svg" width="40" alt="" /><br /><sub><b>No bot</b></sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/nocloud.svg" width="40" alt="" /><br /><sub><b>Zero cloud</b></sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/free.svg" width="40" alt="" /><br /><sub><b>Free</b></sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/apple.svg" width="40" alt="" /><br /><sub><b>MacOS </b></sub></td>
   </tr>
 </table>
 
@@ -48,17 +48,17 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/scripts/in
 
 <!-- <p align="center">Record the call. Get the notes. Ask anything.</p> -->
 
-<td width="60%" align="center"><img src="src/assets/readme/overview.png" alt="Overview with today's meetings, their project, topic and publish targets" width="100%" /></td>
+<td width="60%" align="center"><img src="docs/assets/readme/overview.png" alt="Overview with today's meetings, their project, topic and publish targets" width="100%" /></td>
 
 <table align="center">
   <tr>
-    <td align="center" width="16%"><img src="src/assets/readme/icons/detect.svg" width="48" alt="" /><br /><b>Detect</b><br /><sub></sub></td>
-    <td align="center" width="16%"><img src="src/assets/readme/icons/record.svg" width="48" alt="" /><br /><b>Record</b><br /><sub></sub></td>
-    <!-- <td align="center" width="16%"><img src="src/assets/readme/icons/autostop.svg" width="48" alt="" /><br /><b>Auto-stop</b><br /><sub></sub></td> -->
-    <td align="center" width="16%"><img src="src/assets/readme/icons/transcribe.svg" width="48" alt="" /><br /><b>Transcribe</b><br /><sub></sub></td>
-    <td align="center" width="16%"><img src="src/assets/readme/icons/summarize.svg" width="48" alt="" /><br /><b>Summarize</b><br /><sub></sub></td>
-    <td align="center" width="16%"><img src="src/assets/readme/icons/publish.svg" width="48" alt="" /><br /><b>Publish</b><br /><sub></sub></td>
-        <td align="center" width="16%"><img src="src/assets/readme/icons/chat.svg" width="48" alt="" /><br /><b>Ask</b><br /><sub></sub></td>
+    <td align="center" width="16%"><img src="docs/assets/readme/icons/detect.svg" width="48" alt="" /><br /><b>Detect</b><br /><sub></sub></td>
+    <td align="center" width="16%"><img src="docs/assets/readme/icons/record.svg" width="48" alt="" /><br /><b>Record</b><br /><sub></sub></td>
+    <!-- <td align="center" width="16%"><img src="docs/assets/readme/icons/autostop.svg" width="48" alt="" /><br /><b>Auto-stop</b><br /><sub></sub></td> -->
+    <td align="center" width="16%"><img src="docs/assets/readme/icons/transcribe.svg" width="48" alt="" /><br /><b>Transcribe</b><br /><sub></sub></td>
+    <td align="center" width="16%"><img src="docs/assets/readme/icons/summarize.svg" width="48" alt="" /><br /><b>Summarize</b><br /><sub></sub></td>
+    <td align="center" width="16%"><img src="docs/assets/readme/icons/publish.svg" width="48" alt="" /><br /><b>Publish</b><br /><sub></sub></td>
+        <td align="center" width="16%"><img src="docs/assets/readme/icons/chat.svg" width="48" alt="" /><br /><b>Ask</b><br /><sub></sub></td>
   </tr>
 </table>
 
@@ -72,10 +72,10 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/scripts/in
       <h3>LIVE TRANSCRIPT</h3>
       Live transcript with speakers, next to your notes. Your notes guide the summary.
     </td>
-    <td width="60%" align="center"><img src="src/assets/readme/live-sidebar.png" alt="Live sidebar with transcript, speakers and notes" width="55%" /></td>
+    <td width="60%" align="center"><img src="docs/assets/readme/live-sidebar.png" alt="Live sidebar with transcript, speakers and notes" width="55%" /></td>
   </tr>
   <tr>
-    <td width="60%" align="center"><img src="src/assets/readme/chat-demo.gif" alt="Meeting chat filtered on one project and three topics, answering with cited sources" width="100%" /></td>
+    <td width="60%" align="center"><img src="docs/assets/readme/chat-demo.gif" alt="Meeting chat filtered on one project and three topics, answering with cited sources" width="100%" /></td>
     <td width="40%" valign="middle">
       <!-- <sub>MEETING CHAT</sub> -->
       <h3>MEETING CHAT</h3>
@@ -88,7 +88,7 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/scripts/in
       <h3>JOURNAL</h3>
       Built-in, searchable, plain Markdown.
     </td>
-    <td width="60%" align="center"><img src="src/assets/readme/journal.png" alt="Local Journal with searchable meeting notes" width="100%" /></td>
+    <td width="60%" align="center"><img src="docs/assets/readme/journal.png" alt="Local Journal with searchable meeting notes" width="100%" /></td>
   </tr>
 </table>
 
@@ -99,31 +99,31 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/scripts/in
 <table align="center">
   <tr>
     <th align="left">Publish</th>
-    <td align="center"><img src="src/assets/readme/icons/notes.svg" width="40" alt="" /><br /><sub>Journal</sub></td>
-    <td align="center"><img src="src/assets/readme/icons/logos/notion.png" width="40" alt="" /><br /><sub>Notion</sub></td>
-    <td align="center"><img src="src/assets/readme/icons/logos/obsidian.png" width="40" alt="" /><br /><sub>Obsidian</sub></td>
-    <td align="center"><img src="src/assets/readme/icons/logos/apple-notes.png" width="40" alt="" /><br /><sub>Apple Notes</sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/notes.svg" width="40" alt="" /><br /><sub>Journal</sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/logos/notion.png" width="40" alt="" /><br /><sub>Notion</sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/logos/obsidian.png" width="40" alt="" /><br /><sub>Obsidian</sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/logos/apple-notes.png" width="40" alt="" /><br /><sub>Apple Notes</sub></td>
   </tr>
   <tr>
     <th align="left">Summaries<br /><sub>Local or Cloud</sub></th>
-    <td align="center"><img src="src/assets/readme/icons/apple.svg" width="40" alt="" /><br /><sub>Apple Intelligence</sub></td>
-    <td align="center"><img src="src/assets/readme/icons/logos/omlx.svg" width="40" alt="" /><br /><sub>oMLX</sub></td>
-    <td align="center"><img src="src/assets/readme/icons/logos/ollama.png" width="40" alt="" /><br /><sub>Ollama</sub></td>
-    <td align="center"><img src="src/assets/readme/icons/logos/lm-studio.png" width="40" alt="" /><br /><sub>LM Studio</sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/apple.svg" width="40" alt="" /><br /><sub>Apple Intelligence</sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/logos/omlx.svg" width="40" alt="" /><br /><sub>oMLX</sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/logos/ollama.png" width="40" alt="" /><br /><sub>Ollama</sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/logos/lm-studio.png" width="40" alt="" /><br /><sub>LM Studio</sub></td>
   </tr>
   <tr>
     <th align="left"><br /><sub></sub></th>
-    <td align="center"><img src="src/assets/readme/icons/logos/openai.png" width="40" alt="" /><br /><sub>OpenAI</sub></td>
-    <td align="center"><img src="src/assets/readme/icons/logos/gemini.png" width="40" alt="" /><br /><sub>Gemini</sub></td>
-    <td align="center"><img src="src/assets/readme/icons/logos/claude.png" width="40" alt="" /><br /><sub>Claude</sub></td>
-    <!-- <td align="center"><img src="src/assets/readme/icons/free.svg" width="40" alt="" /><br /><sub>Any OpenAI-compatible</sub></td> -->
+    <td align="center"><img src="docs/assets/readme/icons/logos/openai.png" width="40" alt="" /><br /><sub>OpenAI</sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/logos/gemini.png" width="40" alt="" /><br /><sub>Gemini</sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/logos/claude.png" width="40" alt="" /><br /><sub>Claude</sub></td>
+    <!-- <td align="center"><img src="docs/assets/readme/icons/free.svg" width="40" alt="" /><br /><sub>Any OpenAI-compatible</sub></td> -->
   </tr>
   <tr>
     <th align="left">Capture</th>
-    <td align="center"><img src="src/assets/readme/icons/apple.svg" width="40" alt="" /><br /><sub>Apple On-Device</sub></td>
-    <td align="center"><img src="src/assets/readme/icons/logos/teams.png" width="40" alt="" /><br /><sub>Microsoft Teams</sub></td>
-    <td align="center"><img src="src/assets/readme/icons/logos/fluidaudio.png" width="40" alt="" /><br /><sub>FluidAudio</sub></td>
-    <td align="center"><img src="src/assets/readme/icons/logos/slack.png" width="40" alt="" /><br /><sub>Slack · <i>soon</i></sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/apple.svg" width="40" alt="" /><br /><sub>Apple On-Device</sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/logos/teams.png" width="40" alt="" /><br /><sub>Microsoft Teams</sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/logos/fluidaudio.png" width="40" alt="" /><br /><sub>FluidAudio</sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/logos/slack.png" width="40" alt="" /><br /><sub>Slack · <i>soon</i></sub></td>
   </tr>
 </table>
 
@@ -139,8 +139,8 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/scripts/in
 
 <table>
   <tr>
-    <td align="center" width="50%"><img src="src/assets/readme/connectors.png" alt="Connectors: Notion, Obsidian, Apple Notes and the local Journal" width="100%" /><br /><sub><b>Connectors</b> · where notes go, which sections they include</sub></td>
-    <td align="center" width="50%"><img src="src/assets/readme/pipeline.png" alt="Pipeline: recorder, transcription and summary provider" width="100%" /><br /><sub><b>Pipeline</b> · recorder, transcription, summary model</sub></td>
+    <td align="center" width="50%"><img src="docs/assets/readme/connectors.png" alt="Connectors: Notion, Obsidian, Apple Notes and the local Journal" width="100%" /><br /><sub><b>Connectors</b> · where notes go, which sections they include</sub></td>
+    <td align="center" width="50%"><img src="docs/assets/readme/pipeline.png" alt="Pipeline: recorder, transcription and summary provider" width="100%" /><br /><sub><b>Pipeline</b> · recorder, transcription, summary model</sub></td>
   </tr>
 </table>
 
@@ -189,7 +189,7 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/scripts/in
 | ✨ **Summaries** | Apple Intelligence & local models run on-device. API mode sends transcript text only to the provider you choose. |
 | 🏷️ **Meeting metadata** | From the Teams window (Accessibility), on-device OCR as fallback, plus Calendar / Outlook if enabled. |
 | 💾 **Storage** | Archived in `~/TeamsMeetings`; published only to destinations you pick. |
-| 🔗 **Notion connect** | One-click OAuth goes through a stateless [Cloudflare Worker](extras/cloudflare/meeting-pilot-oauth.js) that never sees your meetings. Or paste your own token. |
+| 🔗 **Notion connect** | One-click OAuth goes through a stateless [Cloudflare Worker](docs/cloudflare/meeting-pilot-oauth.js) that never sees your meetings. Or paste your own token. |
 
 **macOS permissions** — asked only when a feature needs them:
 
@@ -227,4 +227,4 @@ Copyright (C) 2026 Mardeen · [GPL-3.0-or-later](LICENSE). Use, study, modify an
 </p>
 
 
-<p align="center"><br /><img src="src/assets/readme/logo.png" width="32" alt="" /><br /><sub>Your meetings. Your data.</sub></p>
+<p align="center"><br /><img src="docs/assets/readme/logo.png" width="32" alt="" /><br /><sub>Your meetings. Your data.</sub></p>

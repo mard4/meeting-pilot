@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Installs the latest Meeting Pilot release into /Applications.
-#   curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/MeetingPilot/Scripts/install.sh | bash
 set -euo pipefail
 
 REPO="mard4/meeting-pilot"

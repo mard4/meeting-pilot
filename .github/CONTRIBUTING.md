@@ -10,7 +10,7 @@ Python backend:
 python3 -m venv .venv311
 source .venv311/bin/activate
 pip install -e .
-cp .env.example .env
+cp docs/env.example .env
 ```
 
 macOS app: see [macos/MeetingPilot/README.md](../macos/MeetingPilot/README.md) and [SETUP.md](../docs/SETUP.md) for the full bootstrap process, including the FluidAudio dependency.

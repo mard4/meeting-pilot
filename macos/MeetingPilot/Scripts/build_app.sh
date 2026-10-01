@@ -113,14 +113,14 @@ xcrun swiftc \
   -O \
   -framework AppKit \
   -framework Vision \
-  "$ROOT_DIR/scripts/ocr_vision.swift" \
+  "$APP_SRC/Scripts/ocr_vision.swift" \
   -o "$MACOS/TeamsOCR"
 
 xcrun swiftc \
   -target "$SWIFT_TARGET" \
   -O \
   -framework CoreGraphics \
-  "$ROOT_DIR/scripts/teams_window_id.swift" \
+  "$APP_SRC/Scripts/teams_window_id.swift" \
   -o "$MACOS/TeamsWindowID"
 
 # A fresh clone has no build environment yet: bootstrap it with uv (required above).

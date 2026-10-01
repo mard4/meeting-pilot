@@ -1,7 +1,7 @@
 // Probe: does the new Microsoft Teams expose "who is speaking" through Accessibility?
 //
 // Run it DURING a live Teams call while other people talk (gallery view, captions optional):
-//   swift scripts/probe_teams_speaking.swift [seconds] [output_dir]
+//   swift macos/MeetingPilot/Scripts/probe_teams_speaking.swift [seconds] [output_dir]
 //
 // It snapshots the Teams accessibility tree once per second, then reports:
 //   1. nodes mentioning speaking/mic/caption keywords
