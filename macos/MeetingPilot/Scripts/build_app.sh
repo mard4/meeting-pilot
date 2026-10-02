@@ -94,7 +94,7 @@ xcrun swiftc \
   -parse-as-library \
   -framework Foundation \
   -framework Speech \
-  "$APP_SRC/Sources/AppleTranscriber.swift" \
+  "$APP_SRC/Sources/Transcription/AppleTranscriber.swift" \
   -o "$MACOS/AppleTranscriber"
 
 xcrun swiftc \
@@ -105,7 +105,7 @@ xcrun swiftc \
   -framework NaturalLanguage \
   -Xlinker -weak_framework -Xlinker FoundationModels \
   -Xlinker -weak_framework -Xlinker Translation \
-  "$APP_SRC/Sources/AppleIntelligenceSummarizer.swift" \
+  "$APP_SRC/Sources/Summarization/AppleIntelligenceSummarizer.swift" \
   -o "$MACOS/AppleIntelligenceSummarizer"
 
 xcrun swiftc \

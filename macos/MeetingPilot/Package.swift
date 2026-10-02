@@ -23,8 +23,8 @@ let package = Package(
             ],
             path: "Sources",
             exclude: [
-                "AppleTranscriber.swift",
-                "AppleIntelligenceSummarizer.swift",
+                "Transcription/AppleTranscriber.swift",
+                "Summarization/AppleIntelligenceSummarizer.swift",
             ],
             swiftSettings: [
                 .unsafeFlags(["-parse-as-library"]),

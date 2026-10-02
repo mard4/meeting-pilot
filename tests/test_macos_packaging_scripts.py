@@ -18,7 +18,7 @@ def test_ad_hoc_build_embeds_a_stable_tcc_requirement() -> None:
 
 def test_bundle_id_is_consistent_everywhere() -> None:
     bundle_id = plistlib.loads((APP_SRC / "Info.plist").read_bytes())["CFBundleIdentifier"]
-    swift = (APP_SRC / "Sources/ConfigLocators.swift").read_text()
+    swift = (APP_SRC / "Sources/App/ConfigLocators.swift").read_text()
     distribution = (APP_SRC / "Installer/Distribution.xml").read_text()
 
     assert not bundle_id.startswith("it.local.")

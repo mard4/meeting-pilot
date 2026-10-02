@@ -24,10 +24,11 @@ enum ProjectLocator {
         }
 #if DEBUG
         // Running from a checkout (swift run, Xcode): this file sits at
-        // <repo>/macos/MeetingPilot/Sources/, so the repo is four levels up.
+        // <repo>/macos/MeetingPilot/Sources/App/, so the repo is five levels up.
         let checkout = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent()
         if FileManager.default.fileExists(atPath: checkout.appendingPathComponent("pyproject.toml").path) {
             return checkout
         }

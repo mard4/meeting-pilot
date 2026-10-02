@@ -25,7 +25,7 @@ def _section(source: str, start: str, end: str) -> str:
 
 
 SOURCE = _AppSources()
-APPLE_TRANSCRIBER = Path(__file__).parents[1] / "macos/MeetingPilot/Sources/AppleTranscriber.swift"
+APPLE_TRANSCRIBER = Path(__file__).parents[1] / "macos/MeetingPilot/Sources/Transcription/AppleTranscriber.swift"
 INFO_PLIST = Path(__file__).parents[1] / "macos/MeetingPilot/Info.plist"
 
 
