@@ -1,6 +1,6 @@
 [project]
 name = "meeting-pilot"
-version = "0.1.0"
+version = "0.1.2"
 description = "Automatic Teams meeting post-processing with on-device transcription, summaries, and publishing."
 readme = "README.md"
 license = {text = "MIT"}
