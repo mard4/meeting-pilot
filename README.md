@@ -216,14 +216,14 @@ Run from source, headless CLI, environment config → [DEVELOPMENT.md](docs/DEVE
 
 ## License
 
-Copyright (C) 2026 Mardeen · [GPL-3.0-or-later](LICENSE). Use, study, modify and share; distributed versions must stay GPL with source available.
+Copyright (c) 2026 Mardeen · [MIT](LICENSE). Use, study, modify and share, including commercially, as long as the copyright notice is kept.
 
-**Trademark:** "Meeting Pilot" and its logo are not covered by the GPL. Forks must use a different name and icon. Official signed builds come only from this repo's [Releases](https://github.com/mard4/meeting-pilot/releases).
+**Trademark:** "Meeting Pilot" and its logo are not covered by the MIT license ([TRADEMARKS.md](TRADEMARKS.md)). Forks must use a different name and icon. Official signed builds come only from this repo's [Releases](https://github.com/mard4/meeting-pilot/releases).
 
 <p align="center">
   <a href="https://github.com/mard4/meeting-pilot/releases/latest"><img src="https://img.shields.io/github/v/release/mard4/meeting-pilot?style=flat-square&color=ef2f49&label=release" alt="Latest release" /></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-111?style=flat-square&logo=apple&logoColor=white" alt="macOS 14+" />
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-111?style=flat-square" alt="GPL-3.0" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-111?style=flat-square" alt="MIT" /></a>
   <a href="https://meetingpilot.pages.dev/"><img src="https://img.shields.io/badge/website-meetingpilot.pages.dev-111?style=flat-square" alt="Website" /></a>
 <a href="mailto:support@meetingpilotapp.com"><img src="https://img.shields.io/badge/email-support%40meetingpilotapp.com-111?style=flat-square" alt="Email support@meetingpilotapp.com" /></a>
 </p>

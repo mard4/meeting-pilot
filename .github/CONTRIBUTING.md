@@ -49,7 +49,7 @@ Please use the GitHub issue templates. Include steps to reproduce, expected vs. 
 
 ## License of contributions
 
-Meeting Pilot is licensed under the [GPL-3.0-or-later](../LICENSE). By submitting a pull request you confirm that you wrote the contribution (or have the right to submit it), and you agree that it is licensed under the GPL-3.0-or-later and that the maintainer may also distribute it under other license terms, including commercial ones.
+Meeting Pilot is licensed under the [MIT License](../LICENSE). By submitting a pull request you confirm that you wrote the contribution (or have the right to submit it), and you agree that it is licensed under the MIT License.
 
 ## Code of Conduct
 
