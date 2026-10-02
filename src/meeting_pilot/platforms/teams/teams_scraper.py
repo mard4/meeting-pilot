@@ -11,6 +11,9 @@ from typing import Any
 
 from ...config import Config
 
+# Swift sources of the Teams window-id and OCR helpers, run with `swift` when working
+# from a checkout. The app passes its compiled copies through MEETING_PILOT_*_COMMAND.
+HELPER_SCRIPTS_DIR = Path(__file__).resolve().parents[4] / "macos/MeetingPilot/Scripts"
 
 GENERIC_UI_WORDS = {
     "attiva",
@@ -418,7 +421,7 @@ end tell
 
 def _read_ocr_lines(screenshot_path: Path) -> list[str]:
     _bring_teams_to_front()
-    script_dir = Path(__file__).resolve().parents[4] / "scripts"
+    script_dir = HELPER_SCRIPTS_DIR
     window_id = _teams_window_id(script_dir)
     try:
         screenshot_result = subprocess.run(

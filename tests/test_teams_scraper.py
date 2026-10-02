@@ -8,10 +8,18 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
-from meeting_pilot.platforms.teams.teams_scraper import capture_teams_runtime_metadata, read_saved_teams_runtime_metadata
+from meeting_pilot.platforms.teams.teams_scraper import (
+    HELPER_SCRIPTS_DIR,
+    capture_teams_runtime_metadata,
+    read_saved_teams_runtime_metadata,
+)
 
 
 class TeamsScraperTests(unittest.TestCase):
+    def test_checkout_fallback_finds_the_helper_scripts(self) -> None:
+        self.assertTrue((HELPER_SCRIPTS_DIR / "teams_window_id.swift").is_file())
+        self.assertTrue((HELPER_SCRIPTS_DIR / "ocr_vision.swift").is_file())
+
     def test_stale_runtime_metadata_is_not_attached_to_a_new_recording(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
