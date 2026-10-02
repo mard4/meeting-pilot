@@ -1,20 +1,21 @@
 <p align="center">
-  <img src="docs/assets/readme/logo.png" alt="Meeting Pilot" width="96" height="96" />
+  <a href="https://meetingpilotapp.com">
+    <img src="docs/assets/readme/logo.png" alt="Meeting Pilot" width="96" height="96" />
+  </a>
 </p>
 
 <h1 align="center">Meeting Pilot</h1>
+<p align="center">
+  <a href="https://meetingpilotapp.com">🌐 Website</a> ·
+  <a href="https://github.com/mard4/meeting-pilot/releases/latest/download/MeetingPilot.dmg">⬇ Download</a> ·
+  <a href="mailto:support@meetingpilotapp.com">@ Email</a> 
+</p>
 
 <!-- <h3 align="center">Your meetings. Your data.</h3> -->
 
 <p align="center">
   <img src="docs/assets/readme/hero-demo.gif" alt="A Teams call is detected, recorded with a live transcript and notes, then published to Notion and Obsidian, and the meeting chat answers a question about it with sources" width="100%" />
 </p>
-
-<p align="center">
-  <a href="https://github.com/mard4/meeting-pilot/releases/latest/download/MeetingPilot.dmg"><b>⬇ Download</b></a> ·
-  <a href="https://meetingpilot.pages.dev/">Website</a> 
-</p>
-
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/MeetingPilot/Scripts/install.sh | bash
@@ -33,7 +34,7 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
 </table>
 
 <p align="center">
-  <a href="https://meetingpilot.pages.dev/">Website</a> ·
+  <a href="https://meetingpilotapp.com/">Website</a> ·
   <a href="docs/SETUP.md">Setup</a> ·
   <a href="docs/CHANGELOG.md">Changelog</a> ·
   <a href="docs/DEVELOPMENT.md">Developers</a>
@@ -224,6 +225,7 @@ Copyright (C) 2026 Mardeen · [GPL-3.0-or-later](LICENSE). Use, study, modify an
   <img src="https://img.shields.io/badge/macOS-14%2B-111?style=flat-square&logo=apple&logoColor=white" alt="macOS 14+" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-111?style=flat-square" alt="GPL-3.0" /></a>
   <a href="https://meetingpilot.pages.dev/"><img src="https://img.shields.io/badge/website-meetingpilot.pages.dev-111?style=flat-square" alt="Website" /></a>
+<a href="mailto:support@meetingpilotapp.com"><img src="https://img.shields.io/badge/email-support%40meetingpilotapp.com-111?style=flat-square" alt="Email support@meetingpilotapp.com" /></a>
 </p>
 
 
