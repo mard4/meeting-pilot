@@ -648,3 +648,9 @@
 "Il transcript verrà inviato al cloud" = "Het transcript wordt naar de cloud gestuurd";
 "Usa Cloud" = "Gebruik cloud";
 "Con un provider cloud, il transcript di ogni riunione viene inviato al servizio scelto (OpenAI, Gemini, Claude o compatibile) per generare la sintesi. Con Apple Intelligence o un modello locale resta tutto sul Mac." = "Met een cloudaanbieder wordt het transcript van elke vergadering naar de gekozen dienst (OpenAI, Gemini, Claude of compatibel) gestuurd om de samenvatting te maken. Met Apple Intelligence of een lokaal model blijft alles op je Mac.";
+
+/* Menu bar popover buttons */
+"Apri" = "Open";
+"Sidebar" = "Zijbalk";
+"Apri la chat delle riunioni" = "Open de vergaderchat";
+"La sidebar dal vivo è disponibile durante una registrazione" = "De live zijbalk is beschikbaar tijdens een opname";

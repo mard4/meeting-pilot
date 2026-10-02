@@ -628,3 +628,9 @@
 "Il transcript verrà inviato al cloud" = "Il transcript verrà inviato al cloud";
 "Usa Cloud" = "Usa Cloud";
 "Con un provider cloud, il transcript di ogni riunione viene inviato al servizio scelto (OpenAI, Gemini, Claude o compatibile) per generare la sintesi. Con Apple Intelligence o un modello locale resta tutto sul Mac." = "Con un provider cloud, il transcript di ogni riunione viene inviato al servizio scelto (OpenAI, Gemini, Claude o compatibile) per generare la sintesi. Con Apple Intelligence o un modello locale resta tutto sul Mac.";
+
+/* Menu bar popover buttons */
+"Apri" = "Apri";
+"Sidebar" = "Sidebar";
+"Apri la chat delle riunioni" = "Apri la chat delle riunioni";
+"La sidebar dal vivo è disponibile durante una registrazione" = "La sidebar dal vivo è disponibile durante una registrazione";

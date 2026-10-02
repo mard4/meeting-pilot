@@ -648,3 +648,9 @@
 "Il transcript verrà inviato al cloud" = "Das Transkript wird in die Cloud gesendet";
 "Usa Cloud" = "Cloud verwenden";
 "Con un provider cloud, il transcript di ogni riunione viene inviato al servizio scelto (OpenAI, Gemini, Claude o compatibile) per generare la sintesi. Con Apple Intelligence o un modello locale resta tutto sul Mac." = "Mit einem Cloud-Anbieter wird das Transkript jedes Meetings an den gewählten Dienst (OpenAI, Gemini, Claude oder kompatibel) gesendet, um die Zusammenfassung zu erstellen. Mit Apple Intelligence oder einem lokalen Modell bleibt alles auf deinem Mac.";
+
+/* Menu bar popover buttons */
+"Apri" = "Öffnen";
+"Sidebar" = "Leiste";
+"Apri la chat delle riunioni" = "Meeting-Chat öffnen";
+"La sidebar dal vivo è disponibile durante una registrazione" = "Die Live-Seitenleiste ist während einer Aufnahme verfügbar";

@@ -163,6 +163,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
                 self?.closePopover()
                 self?.showMainWindow()
             },
+            openChat: { [weak self] in
+                self?.closePopover()
+                self?.model.selectedSection = .chat
+                self?.showMainWindow()
+            },
             openDiary: { [weak self] in
                 self?.closePopover()
                 self?.showDiaryWindow()

@@ -137,7 +137,11 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         self.assertIn("MenuBarProcessingRow(session: session)", overview)
         self.assertIn("BrandTile(size: 30)", overview)
         self.assertIn("RecordingControls(compact: true)", overview)
-        self.assertIn('systemImage: "book.pages"', overview)
+        self.assertIn('Image(systemName: "book.pages")', overview)
+        self.assertIn("Button(action: openChat)", overview)
+        self.assertIn("model.selectedSection = .chat", launch_setup)
+        self.assertIn("LiveSidebarWindow.shared.toggle(", overview)
+        self.assertIn(".disabled(!liveSidebarAvailable)", overview)
         self.assertNotIn("MenuBarMetric(title:", overview)
         self.assertNotIn('"Watcher attivo"', overview)
 

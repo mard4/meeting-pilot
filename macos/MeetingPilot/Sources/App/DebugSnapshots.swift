@@ -31,7 +31,7 @@ enum DebugSnapshots {
             }
             if only == nil || "menubar".contains(only!) || only!.contains("menubar") {
                 capture(
-                    MenuBarOverview(openApp: {}, openDiary: {}).environmentObject(model),
+                    MenuBarOverview(openApp: {}, openChat: {}, openDiary: {}).environmentObject(model),
                     size: NSSize(width: 320, height: 330), theme: theme, name: "menubar-\(suffix)", in: directory
                 )
             }

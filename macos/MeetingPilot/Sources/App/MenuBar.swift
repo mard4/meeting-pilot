@@ -16,6 +16,7 @@ struct MenuBarOverview: View {
     @Environment(\.colorScheme) private var colorScheme
 
     let openApp: () -> Void
+    let openChat: () -> Void
     let openDiary: () -> Void
 
     private var pipelineSteps: [PipelineStep] {
@@ -27,6 +28,24 @@ struct MenuBarOverview: View {
             PipelineStep(title: "Sintesi", state: menuBarState(for: 3, current: stage)),
             PipelineStep(title: "Pubblica", state: menuBarState(for: 4, current: stage))
         ]
+    }
+
+    private var liveSidebarAvailable: Bool {
+        model.recording.nativeRecordingActive && !model.recording.nativeRecordingPath.isEmpty
+    }
+
+    /// Icon and short title sharing the row equally; long translations scale down
+    /// rather than push the row past the popover's width.
+    private func menuButtonLabel(_ title: String, systemImage: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: systemImage)
+                .font(.system(size: 11, weight: .medium))
+            Text(localized(title))
+                .font(.system(size: 12, weight: .medium))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private func menuBarState(for step: Int, current: Int) -> StepState {
@@ -107,17 +126,36 @@ struct MenuBarOverview: View {
 
             Spacer(minLength: 0)
 
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Button(action: openApp) {
-                    Label(localized("Apri Meeting Pilot"), systemImage: "macwindow")
-                        .frame(maxWidth: .infinity)
+                    menuButtonLabel("Apri", systemImage: "macwindow")
                 }
                 .buttonStyle(MPSecondaryButtonStyle(compact: true))
+                .help(localized("Apri Meeting Pilot"))
+                Button(action: openChat) {
+                    menuButtonLabel("Chat", systemImage: "bubble.left.and.bubble.right")
+                }
+                .buttonStyle(MPSecondaryButtonStyle(compact: true))
+                .help(localized("Apri la chat delle riunioni"))
+                // The live sidebar belongs to the recording's audio file, so it only
+                // exists while a native recording is running.
+                Button {
+                    LiveSidebarWindow.shared.toggle(audioFileURL: URL(fileURLWithPath: model.recording.nativeRecordingPath))
+                } label: {
+                    menuButtonLabel("Sidebar", systemImage: "sidebar.right")
+                }
+                .buttonStyle(MPSecondaryButtonStyle(compact: true))
+                .disabled(!liveSidebarAvailable)
+                .help(localized(liveSidebarAvailable
+                    ? "Mostra la sidebar dal vivo con trascrizione e parlanti"
+                    : "La sidebar dal vivo è disponibile durante una registrazione"))
                 Button(action: openDiary) {
-                    Label(localized("Diario"), systemImage: "book.pages")
+                    Image(systemName: "book.pages")
+                        .font(.system(size: 11, weight: .medium))
                 }
                 .buttonStyle(MPSecondaryButtonStyle(compact: true))
-                .help("Apri Diario")
+                .fixedSize()
+                .help(localized("Apri Diario"))
             }
         }
         .padding(14)
