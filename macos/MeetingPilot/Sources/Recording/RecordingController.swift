@@ -30,6 +30,8 @@ final class RecordingController: ObservableObject {
 
     var onStatusMessage: (String) -> Void = { _ in }
     var onNeedsRefresh: () -> Void = {}
+    /// Where detection and recording events are written; tests swap it out.
+    var log: (String) -> Void = { AppLog.append($0) }
     var settings: () -> RecorderSettings = { .fallback }
 
     private(set) var externalRecordingStartedAt: Date?
@@ -73,10 +75,10 @@ final class RecordingController: ObservableObject {
             DispatchQueue.main.async {
                 if let warning {
                     self?.onStatusMessage("Registrazione salvata con avviso")
-                    AppLog.append("Registrazione salvata con avviso: \(url.lastPathComponent)\n\(warning.localizedDescription)")
+                    self?.log("Registrazione salvata con avviso: \(url.lastPathComponent)\n\(warning.localizedDescription)")
                 } else {
                     self?.onStatusMessage("Registrazione completa salvata")
-                    AppLog.append("Registrazione audio sistema + microfono salvata: \(url.lastPathComponent)")
+                    self?.log("Registrazione audio sistema + microfono salvata: \(url.lastPathComponent)")
                 }
                 self?.onNeedsRefresh()
             }
@@ -171,7 +173,7 @@ final class RecordingController: ObservableObject {
                     self.nativeRecordingPath = url.path
                     self.startAutomaticTeamsMetadataCapture(title: title)
                     self.observeCallAtRecordingStart()
-                    AppLog.append("Registrazione avviata: \(url.lastPathComponent)")
+                    self.log("Registrazione avviata: \(url.lastPathComponent)")
                 case .failure(let error):
                     self.onStatusMessage("Recorder non avviato")
                     presentErrorAlert("Non riesco ad avviare il recorder macOS", detail: error.localizedDescription)
@@ -201,7 +203,7 @@ final class RecordingController: ObservableObject {
             }
             nativeRecordingPaused = false
             onStatusMessage("Registrazione ripresa")
-            AppLog.append("Registrazione nativa ripresa")
+            log("Registrazione nativa ripresa")
         } else {
             guard nativeRecorder.pause() else {
                 onStatusMessage("Non riesco a mettere in pausa la registrazione")
@@ -209,7 +211,7 @@ final class RecordingController: ObservableObject {
             }
             nativeRecordingPaused = true
             onStatusMessage("Registrazione in pausa")
-            AppLog.append("Registrazione nativa in pausa")
+            log("Registrazione nativa in pausa")
         }
         onNeedsRefresh()
     }
@@ -279,7 +281,7 @@ final class RecordingController: ObservableObject {
     private func warnAboutMissingAccessibilityBeforeRecording() {
         guard !AXIsProcessTrusted() else { return }
         onStatusMessage("Registrazione avviata senza Accessibilità: titolo e partecipanti Teams potrebbero mancare")
-        AppLog.append("Avviso: registrazione avviata senza Accessibilità; metadati Teams non disponibili")
+        log("Avviso: registrazione avviata senza Accessibilità; metadati Teams non disponibili")
         requestAccessibilityPermission()
     }
 
@@ -306,11 +308,11 @@ final class RecordingController: ObservableObject {
                 case .success:
                     self.beginExternalRecordingState(title: title)
                     self.onStatusMessage("TranscribeX sta registrando")
-                    AppLog.append("Registrazione TranscribeX avviata automaticamente per: \(title)")
+                    self.log("Registrazione TranscribeX avviata automaticamente per: \(title)")
                 case .failure(let error):
                     self.externalRecordingDidFinish()
                     self.onStatusMessage("TranscribeX non ha avviato la registrazione")
-                    AppLog.append("Avvio automatico TranscribeX fallito: \(error.localizedDescription)")
+                    self.log("Avvio automatico TranscribeX fallito: \(error.localizedDescription)")
                     presentErrorAlert("Non riesco ad avviare TranscribeX", detail: error.localizedDescription)
                 }
                 self.onNeedsRefresh()
@@ -323,7 +325,7 @@ final class RecordingController: ObservableObject {
         externalRecordingStartedAt = Date()
         observeCallAtRecordingStart()
         runtimeStatus = "Registrazione esterna in corso"
-        AppLog.append("Recorder esterno avviato per: \(title)")
+        log("Recorder esterno avviato per: \(title)")
         startAutomaticTeamsMetadataCapture(title: title)
     }
 
@@ -352,7 +354,7 @@ final class RecordingController: ObservableObject {
             ? "Registrazione fermata"
             : (automatic ? "Call terminata: preparo l'audio completo..." : "Preparo l'audio completo..."))
         if let url {
-            AppLog.append("Stop registrazione\(automatic ? " automatico" : "") richiesto: unisco audio di sistema e microfono in \(url.lastPathComponent)")
+            log("Stop registrazione\(automatic ? " automatico" : "") richiesto: unisco audio di sistema e microfono in \(url.lastPathComponent)")
         }
         onNeedsRefresh()
     }
@@ -387,7 +389,7 @@ final class RecordingController: ObservableObject {
             if !reportedAccessibilityMissingForActiveRecording {
                 reportedAccessibilityMissingForActiveRecording = true
                 onStatusMessage("Accessibilità non disponibile: partecipanti non acquisiti")
-                AppLog.append("Acquisizione partecipanti sospesa: Meeting Pilot non dispone di Accessibilità")
+                log("Acquisizione partecipanti sospesa: Meeting Pilot non dispone di Accessibilità")
             }
             return
         }
@@ -413,12 +415,12 @@ final class RecordingController: ObservableObject {
                 let participants = (payload?["participants"] as? [String]) ?? []
                 if !accessibilityError.isEmpty && participants.isEmpty {
                     self.onStatusMessage("Consenti Accessibilità a Meeting Pilot per recuperare i partecipanti")
-                    AppLog.append("Metadati Teams non disponibili: manca il permesso Accessibilità\n\(output)")
+                    self.log("Metadati Teams non disponibili: manca il permesso Accessibilità\n\(output)")
                 } else if payload?["confidence"] != nil {
-                    AppLog.append("Metadati Teams aggiornati automaticamente")
+                    self.log("Metadati Teams aggiornati automaticamente")
                     self.onNeedsRefresh()
                 } else {
-                    AppLog.append("Acquisizione automatica metadati Teams non riuscita: \(output)")
+                    self.log("Acquisizione automatica metadati Teams non riuscita: \(output)")
                 }
             }
         }
@@ -437,7 +439,7 @@ final class RecordingController: ObservableObject {
             recordingObservedAppAudioInput = true
             recordingObservedMeeting = true
             if meetingEndCandidateSince != nil {
-                AppLog.append("Stop automatico annullato: \(platform.displayName) usa nuovamente il microfono")
+                log("Stop automatico annullato: \(platform.displayName) usa nuovamente il microfono")
             }
             meetingEndCandidateSince = nil
             runtimeStatus = "Registrazione call \(platform.displayName) in corso"
@@ -453,7 +455,7 @@ final class RecordingController: ObservableObject {
             recordingObservedMeeting = true
             recordingObservedStrongCallSignal = true
             if meetingEndCandidateSince != nil {
-                AppLog.append("Stop automatico annullato: controlli call \(platform.displayName) nuovamente presenti")
+                log("Stop automatico annullato: controlli call \(platform.displayName) nuovamente presenti")
             }
             meetingEndCandidateSince = nil
             runtimeStatus = "Registrazione call \(platform.displayName) in corso"
@@ -466,7 +468,7 @@ final class RecordingController: ObservableObject {
         if !recordingObservedStrongCallSignal && titleLooksLikeMeeting {
             recordingObservedMeeting = true
             if meetingEndCandidateSince != nil {
-                AppLog.append("Stop automatico annullato: finestra call \(platform.displayName) nuovamente presente")
+                log("Stop automatico annullato: finestra call \(platform.displayName) nuovamente presente")
             }
             meetingEndCandidateSince = nil
             runtimeStatus = "Registrazione call \(platform.displayName) in corso"
@@ -508,14 +510,14 @@ final class RecordingController: ObservableObject {
         externalRecordingDidFinish()
         resetObservedCall()
         runtimeStatus = "Call terminata: attendo il file audio"
-        AppLog.append("Call con recorder esterno terminata: attendo il file audio completo")
+        log("Call con recorder esterno terminata: attendo il file audio completo")
         onNeedsRefresh()
     }
 
     private func beginOrCompleteAutomaticStop(reason: String) {
         if meetingEndCandidateSince == nil {
             meetingEndCandidateSince = Date()
-            AppLog.append("\(reason): avvio attesa stop automatico di \(automaticStopConfirmationSeconds) secondi")
+            log("\(reason): avvio attesa stop automatico di \(automaticStopConfirmationSeconds) secondi")
             runtimeStatus = "Verifico fine call \(platform.displayName)..."
             return
         }

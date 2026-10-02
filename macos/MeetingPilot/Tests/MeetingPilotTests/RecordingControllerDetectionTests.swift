@@ -22,6 +22,7 @@ private final class FakeMeetingPlatform: MeetingPlatform {
 final class RecordingControllerDetectionTests: XCTestCase {
     private var platform: FakeMeetingPlatform!
     private var controller: RecordingController!
+    private var logged: [String] = []
 
     override func setUp() {
         platform = FakeMeetingPlatform()
@@ -30,6 +31,9 @@ final class RecordingControllerDetectionTests: XCTestCase {
             cli: MeetingPilotCLI(envURL: root.appendingPathComponent(".env"), projectRoot: root),
             platform: platform
         )
+        logged = []
+        // Keep test events out of the real ~/Library/Logs/MeetingPilot.log.
+        controller.log = { [weak self] in self?.logged.append($0) }
         // A long delay keeps the real prompt window from ever appearing during tests.
         controller.settings = {
             RecorderSettings(mode: "macos_prompt", folder: "", openTarget: "", promptEnabled: true,
@@ -92,6 +96,7 @@ final class RecordingControllerDetectionTests: XCTestCase {
         platform.input = false
         controller.pollMeeting()
         XCTAssertEqual(controller.runtimeStatus, "Verifico fine call Teams...")
+        XCTAssertEqual(logged, ["Teams non usa più il microfono: avvio attesa stop automatico di 15 secondi"])
         controller.pollMeeting()
         XCTAssertTrue(controller.runtimeStatus.hasPrefix("Fine call rilevata: salvataggio tra "))
         XCTAssertTrue(controller.nativeRecordingActive)
@@ -99,6 +104,7 @@ final class RecordingControllerDetectionTests: XCTestCase {
         platform.input = true
         controller.pollMeeting()
         XCTAssertEqual(controller.runtimeStatus, "Registrazione call Teams in corso")
+        XCTAssertEqual(logged.last, "Stop automatico annullato: Teams usa nuovamente il microfono")
     }
 
     func testCallControlsKeepRecordingWhenMicrophoneUnknown() {

@@ -345,15 +345,44 @@ func transcriptionProcessCommands() -> [String] {
         .filter { $0.contains("appletranscriber") || $0.contains("fluidaudiocli") || $0.contains("retry-transcription") }
 }
 
-let watcherCommandMarkers = ["MeetingPilotCLI watch", "meeting-pilot watch"]
+/// Whether a process is a `watch` run of the CLI: the bundled MeetingPilotCLI, or a
+/// checkout's `meeting-pilot` script under Python. Matching the executable, not just
+/// the command text, keeps a shell or grep that mentions "MeetingPilotCLI watch" from
+/// counting as the watcher (and from being killed when the watcher stops).
+func isWatcherCommand(executable: String, arguments: String) -> Bool {
+    let name = (executable as NSString).lastPathComponent
+    if name == "MeetingPilotCLI" || name == "meeting-pilot" {
+        return arguments.hasSuffix(" watch")
+    }
+    return name.hasPrefix("python") && arguments.hasSuffix("/meeting-pilot watch")
+}
+
+/// PIDs of running watchers, from `ps` executable paths joined with their arguments.
+func watcherProcessIDs() -> [pid_t] {
+    func byPID(_ field: String) -> [pid_t: String] {
+        var result: [pid_t: String] = [:]
+        for line in Shell.run("/bin/ps", ["-ax", "-o", "pid=,\(field)="]).split(separator: "\n") {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard let space = trimmed.firstIndex(of: " "), let pid = pid_t(trimmed[..<space]) else { continue }
+            result[pid] = trimmed[space...].trimmingCharacters(in: .whitespaces)
+        }
+        return result
+    }
+    let executables = byPID("comm")
+    let arguments = byPID("args")
+    return executables.compactMap { pid, executable in
+        guard let args = arguments[pid], isWatcherCommand(executable: executable, arguments: args) else { return nil }
+        return pid
+    }
+}
 
 func isWatcherProcessRunning() -> Bool {
-    Shell.processCommands().contains { command in watcherCommandMarkers.contains { command.contains($0) } }
+    !watcherProcessIDs().isEmpty
 }
 
 func stopWatcherProcesses() {
-    for marker in watcherCommandMarkers {
-        Shell.run("/usr/bin/pkill", ["-f", marker])
+    for pid in watcherProcessIDs() {
+        kill(pid, SIGTERM)
     }
 }
 
