@@ -9,7 +9,7 @@ class _AppSources:
     """The app used to live in a single MeetingPilot.swift; read all split files as one."""
 
     def read_text(self) -> str:
-        return FILE_BREAK.join(path.read_text() for path in sorted(SOURCES_DIR.glob("*.swift")))
+        return FILE_BREAK.join(path.read_text() for path in sorted(SOURCES_DIR.rglob("*.swift")))
 
 
 FILE_BREAK = "\n// ---- next source file ----\n"
@@ -752,16 +752,16 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         self.assertIn("audioPaths", helper)
         self.assertIn("!isTranscriptionProcessActive(for: session, activeCommands: activeCommands)", source)
 
-    def test_recording_prompt_is_only_shown_for_a_new_teams_meeting(self):
+    def test_recording_prompt_is_only_shown_for_a_new_meeting(self):
         source = SOURCE.read_text()
-        helper = _section(source, "func pollTeamsMeeting()", "private func")
+        helper = _section(source, "func pollMeeting()", "private func")
 
-        self.assertIn("private var teamsMeetingWasDetected = false", source)
-        self.assertIn("let teamsInputActive = teamsProcessIsRunningInput() == true", helper)
-        self.assertIn("let activeTeamsMeeting = title != nil && teamsInputActive", helper)
-        self.assertIn("let meetingJustStarted = activeTeamsMeeting && !teamsMeetingWasDetected", helper)
-        self.assertIn("teamsMeetingWasDetected = activeTeamsMeeting", helper)
-        self.assertIn("guard let title, activeTeamsMeeting else", helper)
+        self.assertIn("private var meetingWasDetected = false", source)
+        self.assertIn("let appInputActive = platform.processIsRunningInput() == true", helper)
+        self.assertIn("let activeMeeting = title != nil && appInputActive", helper)
+        self.assertIn("let meetingJustStarted = activeMeeting && !meetingWasDetected", helper)
+        self.assertIn("meetingWasDetected = activeMeeting", helper)
+        self.assertIn("guard let title, activeMeeting else", helper)
         self.assertNotIn("title != lastPromptTitle", helper)
         self.assertNotIn("Date().timeIntervalSince(lastPromptDate)", helper)
 
