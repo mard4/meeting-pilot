@@ -6,9 +6,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from meeting_pilot.apple_intelligence_client import AppleIntelligenceUnavailable
+from meeting_pilot.summarization.apple_intelligence_client import AppleIntelligenceUnavailable
 from meeting_pilot.artifacts import MeetingArtifacts
-from meeting_pilot.omlx_client import summarize
+from meeting_pilot.summarization.omlx_client import summarize
 
 
 class SummaryProviderDispatchTests(unittest.TestCase):
@@ -25,10 +25,10 @@ class SummaryProviderDispatchTests(unittest.TestCase):
             fallback = {"title": "Fallback"}
 
             with patch(
-                "meeting_pilot.omlx_client.summarize_with_apple_intelligence",
+                "meeting_pilot.summarization.omlx_client.summarize_with_apple_intelligence",
                 side_effect=AppleIntelligenceUnavailable("not ready"),
             ), patch(
-                "meeting_pilot.omlx_client.summarize_with_openai_compatible",
+                "meeting_pilot.summarization.omlx_client.summarize_with_openai_compatible",
                 return_value=fallback,
             ) as compatible:
                 result = summarize(config, artifacts)

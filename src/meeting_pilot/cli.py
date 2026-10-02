@@ -8,13 +8,13 @@ from pathlib import Path
 
 from .config import Config
 from .env_file import update_env_file
-from .knowledge_base import (
+from .chat.knowledge_base import (
     default_knowledge_index_path,
     documents_from_json_file,
     index_knowledge_documents,
     mongodb_documents_from_collection,
 )
-from .meeting_chat import (
+from .chat.meeting_chat import (
     MeetingChatFilters,
     answer_meeting_question,
     available_chat_filter_values,
@@ -24,11 +24,11 @@ from .meeting_chat import (
     result_to_dict,
     save_meeting_chat_result,
 )
-from .notion_projects import assign_meeting_project
+from .publishing.notion_projects import assign_meeting_project
 from .tag_catalog import add_catalog_value, bootstrap_catalog_from_notion, catalog_values, discard_unconfirmed_initial_imports, import_catalog_from_notion, import_catalog_from_sources
-from .notion_setup import NotionSetupError, provision_notion_workspace
+from .publishing.notion_setup import NotionSetupError, provision_notion_workspace
 from .pipeline import process_audio, retry_from_transcript, retry_transcription
-from .teams_scraper import capture_teams_runtime_metadata
+from .platforms.teams.teams_scraper import capture_teams_runtime_metadata
 from .watcher import _source_key, mark_processed, watch
 from .language import config_language
 

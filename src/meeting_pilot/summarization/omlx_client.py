@@ -10,13 +10,13 @@ from typing import Any
 
 import certifi
 
-from .artifacts import MeetingArtifacts
-from .config import Config
+from ..artifacts import MeetingArtifacts
+from ..config import Config
 from .apple_intelligence_client import AppleIntelligenceUnavailable, summarize_with_apple_intelligence
-from .business_glossary import summary_instructions as business_glossary_instructions
-from .language import config_language, language_name
+from ..business_glossary import summary_instructions as business_glossary_instructions
+from ..language import config_language, language_name
 from .summary_templates import summary_guidance
-from .tag_catalog import catalog_values
+from ..tag_catalog import catalog_values
 
 
 SYSTEM_PROMPT = """You turn meeting transcripts into actionable meeting notes.

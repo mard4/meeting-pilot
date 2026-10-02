@@ -5,9 +5,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .artifacts import MeetingArtifacts, write_journal_receipt
+from ..artifacts import MeetingArtifacts, write_journal_receipt
 from .obsidian_publisher import _note_content, _note_date, _note_title, _sanitize_filename, _unique_path
-from .config import Config
+from ..config import Config
 
 
 def publish_to_journal(config: Config, artifacts: MeetingArtifacts) -> dict[str, Any]:

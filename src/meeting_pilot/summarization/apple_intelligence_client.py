@@ -5,10 +5,10 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from .artifacts import MeetingArtifacts
-from .config import Config
-from .tag_catalog import catalog_values
-from .language import config_language, language_name
+from ..artifacts import MeetingArtifacts
+from ..config import Config
+from ..tag_catalog import catalog_values
+from ..language import config_language, language_name
 from .summary_templates import summary_guidance
 
 

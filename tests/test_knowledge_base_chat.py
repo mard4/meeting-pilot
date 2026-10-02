@@ -9,8 +9,8 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from meeting_pilot.knowledge_base import KnowledgeDocument, index_knowledge_documents
-from meeting_pilot.meeting_chat import MeetingChatFilters, answer_meeting_question
+from meeting_pilot.chat.knowledge_base import KnowledgeDocument, index_knowledge_documents
+from meeting_pilot.chat.meeting_chat import MeetingChatFilters, answer_meeting_question
 
 
 class KnowledgeBaseChatTests(unittest.TestCase):

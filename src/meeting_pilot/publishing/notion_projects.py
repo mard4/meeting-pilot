@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Any
 import requests
 
-from .artifacts import write_notion_receipt
-from .config import Config
-from .env_file import update_env_file
+from ..artifacts import write_notion_receipt
+from ..config import Config
+from ..env_file import update_env_file
 
 
 def assign_meeting_project(

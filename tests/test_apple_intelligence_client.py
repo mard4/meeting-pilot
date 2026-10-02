@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from meeting_pilot.apple_intelligence_client import (
+from meeting_pilot.summarization.apple_intelligence_client import (
     AppleIntelligenceUnavailable,
     summarize_with_apple_intelligence,
 )

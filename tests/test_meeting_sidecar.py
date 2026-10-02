@@ -6,9 +6,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from meeting_pilot.artifacts import collect_artifacts
-from meeting_pilot.millet_runner import _two_track_transcript, create_session, run_fluid_audio
+from meeting_pilot.transcription.fluid_audio import _two_track_transcript, run_fluid_audio
+from meeting_pilot.transcription.session import create_session
 from meeting_pilot.pipeline import _discard_audio
-from meeting_pilot.summary_templates import resolve_template, summary_guidance
+from meeting_pilot.summarization.summary_templates import resolve_template, summary_guidance
 
 
 def _session_with_sidecar(tmp_path: Path, **files: str) -> Path:
@@ -181,7 +182,7 @@ def test_discarding_audio_also_removes_the_separate_tracks(tmp_path: Path) -> No
 
 def test_published_note_includes_the_notes_typed_during_the_meeting(tmp_path: Path) -> None:
     from meeting_pilot.artifacts import MeetingArtifacts
-    from meeting_pilot.obsidian_publisher import publish_to_obsidian
+    from meeting_pilot.publishing.obsidian_publisher import publish_to_obsidian
 
     session = tmp_path / "session"
     session.mkdir()

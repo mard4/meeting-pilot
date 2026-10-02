@@ -7,6 +7,19 @@ Meeting Pilot has two parts:
 - **macOS app** (`macos/MeetingPilot/`, Swift Package Manager): menu bar app, meeting detection, recorder, live sidebar, settings and chat UI.
 - **Python pipeline** (`src/meeting_pilot/`): transcription, summarization and publishing, exposed as the `meeting-pilot` CLI.
 
+Both are organised by feature, with matching names where the two overlap:
+
+| Area | Swift (`macos/MeetingPilot/Sources/`) | Python (`src/meeting_pilot/`) |
+|---|---|---|
+| Meeting apps (Teams) | `Platforms/`, `Platforms/Teams/` | `platforms/teams/` |
+| Transcription (FluidAudio, Apple) | `Transcription/` | `transcription/` |
+| Summaries | `Summarization/` | `summarization/` |
+| Notion, Obsidian, Apple Notes, Diary | `Publishing/` | `publishing/` |
+| Meeting chat | `Chat/` | `chat/` |
+| Recording, live sidebar | `Recording/` | – |
+| Pipeline status, watcher | `Pipeline/` | `pipeline.py`, `watcher.py` |
+| App shell, settings, shared UI | `App/`, `DesignSystem/` | `cli.py`, `config.py` |
+
 See [CONTRIBUTING.md](../.github/CONTRIBUTING.md) for code style, tests and pull requests, and [SETUP.md](SETUP.md) for the full step-by-step bootstrap.
 
 ## Run from source

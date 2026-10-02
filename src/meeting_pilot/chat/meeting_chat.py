@@ -13,11 +13,11 @@ from typing import Any, Callable, Iterable
 
 import certifi
 
-from .config import Config
-from .language import NOT_FOUND_ANSWERS, config_language, label, language_name
-from .omlx_client import is_ollama, ollama_chat_request, strip_model_wrapping
+from ..config import Config
+from ..language import NOT_FOUND_ANSWERS, config_language, label, language_name
+from ..summarization.omlx_client import is_ollama, ollama_chat_request, strip_model_wrapping
 from .knowledge_base import default_knowledge_index_path, load_knowledge_documents
-from .tag_catalog import catalog_values
+from ..tag_catalog import catalog_values
 
 
 ChatProvider = Callable[[str, str], str]

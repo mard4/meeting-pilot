@@ -4,8 +4,8 @@ from pathlib import Path
 import re
 from typing import Any
 
-from .config import Config
-from .env_file import update_env_file
+from ..config import Config
+from ..env_file import update_env_file
 
 
 class NotionSetupError(ValueError):

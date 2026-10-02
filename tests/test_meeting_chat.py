@@ -12,8 +12,8 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from meeting_pilot.artifacts import MeetingArtifacts, write_journal_receipt, write_omlx_summary
-from meeting_pilot.journal_publisher import publish_to_journal
-from meeting_pilot.meeting_chat import (
+from meeting_pilot.publishing.journal_publisher import publish_to_journal
+from meeting_pilot.chat.meeting_chat import (
     MeetingChatCitation,
     MeetingChatFilters,
     answer_meeting_question,

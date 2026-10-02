@@ -7,7 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from meeting_pilot.artifacts import MeetingArtifacts
-from meeting_pilot.journal_publisher import publish_to_journal
+from meeting_pilot.publishing.journal_publisher import publish_to_journal
 
 
 class JournalPublisherTests(unittest.TestCase):

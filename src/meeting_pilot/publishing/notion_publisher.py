@@ -4,9 +4,9 @@ import re
 from datetime import datetime
 from typing import Any
 
-from .artifacts import MeetingArtifacts, write_notion_receipt
-from .config import Config
-from .language import config_language, label
+from ..artifacts import MeetingArtifacts, write_notion_receipt
+from ..config import Config
+from ..language import config_language, label
 from .meeting_format import (
     action_items,
     decisions,

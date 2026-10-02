@@ -4,11 +4,11 @@ import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
-from meeting_pilot.millet_runner import (
+from meeting_pilot.transcription.fluid_audio import (
     _fluid_audio_labelled_transcript,
     run_fluid_audio,
-    validate_audio_file,
 )
+from meeting_pilot.transcription.session import validate_audio_file
 
 
 def test_run_fluid_audio_writes_standard_transcript_artifacts(tmp_path: Path, monkeypatch) -> None:

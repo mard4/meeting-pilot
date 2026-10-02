@@ -6,7 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from meeting_pilot.notion_setup import NotionSetupError, provision_notion_workspace
+from meeting_pilot.publishing.notion_setup import NotionSetupError, provision_notion_workspace
 
 
 def _title_property(value: str) -> dict:

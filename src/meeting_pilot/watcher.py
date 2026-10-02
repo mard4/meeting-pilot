@@ -7,7 +7,7 @@ import traceback
 from pathlib import Path
 
 from .config import Config
-from .millet_runner import AUDIO_EXTENSIONS
+from .transcription.session import AUDIO_EXTENSIONS
 
 
 def iter_ready_audio_files(config: Config) -> list[Path]:

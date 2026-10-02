@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from meeting_pilot.artifacts import MeetingArtifacts
-from meeting_pilot.notion_publisher import publish_to_notion
+from meeting_pilot.publishing.notion_publisher import publish_to_notion
 
 
 class _Pages:
@@ -181,7 +181,7 @@ class NotionPublisherTests(unittest.TestCase):
         self.assertIn("Date", properties)
 
     def test_local_meeting_time_is_sent_with_its_utc_offset(self) -> None:
-        from meeting_pilot.notion_publisher import _notion_date
+        from meeting_pilot.publishing.notion_publisher import _notion_date
 
         self.assertEqual(_notion_date("2026-09-30"), "2026-09-30")
         self.assertEqual(_notion_date("2026-07-28T10:00:00Z"), "2026-07-28T10:00:00+00:00")
@@ -260,7 +260,7 @@ def _plain(block) -> str:
 
 class NotionBlockLayoutTests(unittest.TestCase):
     def _blocks(self, artifacts):
-        from meeting_pilot.notion_publisher import _build_blocks
+        from meeting_pilot.publishing.notion_publisher import _build_blocks
 
         return _build_blocks(_full_config(), artifacts)
 

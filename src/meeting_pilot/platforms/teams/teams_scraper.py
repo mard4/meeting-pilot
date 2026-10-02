@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .config import Config
+from ...config import Config
 
 
 GENERIC_UI_WORDS = {
@@ -418,7 +418,7 @@ end tell
 
 def _read_ocr_lines(screenshot_path: Path) -> list[str]:
     _bring_teams_to_front()
-    script_dir = Path(__file__).resolve().parents[2] / "scripts"
+    script_dir = Path(__file__).resolve().parents[4] / "scripts"
     window_id = _teams_window_id(script_dir)
     try:
         screenshot_result = subprocess.run(

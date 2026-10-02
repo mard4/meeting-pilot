@@ -5,7 +5,7 @@ import re
 from datetime import datetime
 from typing import Any
 
-from .artifacts import MeetingArtifacts
+from ..artifacts import MeetingArtifacts
 
 WEEKDAYS = {
     "it": ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"],

@@ -9,8 +9,8 @@ from unittest import mock
 
 from meeting_pilot import language
 from meeting_pilot.artifacts import MeetingArtifacts
-from meeting_pilot.meeting_chat import _chat_system_prompt, quick_prompt_question
-from meeting_pilot.obsidian_publisher import publish_to_obsidian
+from meeting_pilot.chat.meeting_chat import _chat_system_prompt, quick_prompt_question
+from meeting_pilot.publishing.obsidian_publisher import publish_to_obsidian
 
 
 class ResolveOutputLanguageTests(unittest.TestCase):

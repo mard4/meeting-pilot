@@ -7,10 +7,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .artifacts import MeetingArtifacts
-from .config import Config
+from ..artifacts import MeetingArtifacts
+from ..config import Config
 from .obsidian_publisher import _include
-from .language import config_language, label
+from ..language import config_language, label
 
 
 def publish_to_apple_notes(config: Config, artifacts: MeetingArtifacts) -> dict[str, Any]:

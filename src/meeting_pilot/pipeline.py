@@ -6,15 +6,17 @@ import re
 from pathlib import Path
 
 from .artifacts import MeetingArtifacts, collect_artifacts, write_meeting_metadata, write_omlx_summary
-from .apple_notes_publisher import publish_to_apple_notes
+from .publishing.apple_notes_publisher import publish_to_apple_notes
 from .config import Config
-from .journal_publisher import publish_to_journal
-from .obsidian_publisher import publish_to_obsidian
+from .publishing.journal_publisher import publish_to_journal
+from .publishing.obsidian_publisher import publish_to_obsidian
 from .meeting_metadata import find_meeting_metadata
-from .millet_runner import create_session, run_apple_transcriber, run_fluid_audio, validate_audio_file
-from .notion_publisher import publish_to_notion
-from .omlx_client import summarize
-from .teams_scraper import read_saved_teams_runtime_metadata
+from .transcription.apple import run_apple_transcriber
+from .transcription.fluid_audio import run_fluid_audio
+from .transcription.session import create_session, validate_audio_file
+from .publishing.notion_publisher import publish_to_notion
+from .summarization.omlx_client import summarize
+from .platforms.teams.teams_scraper import read_saved_teams_runtime_metadata
 from .tag_catalog import catalog_values
 
 

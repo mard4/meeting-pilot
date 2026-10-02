@@ -13,7 +13,7 @@ from typing import Any
 import certifi
 
 from .config import Config
-from .knowledge_base import default_knowledge_index_path, load_knowledge_documents
+from .chat.knowledge_base import default_knowledge_index_path, load_knowledge_documents
 
 
 CATALOG_FILENAME = "tag-catalog.json"
