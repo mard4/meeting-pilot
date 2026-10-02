@@ -69,9 +69,9 @@ def _build_properties(
 
     title_property = _title_property_name(schema or {}, config.notion_title_property)
     properties: dict[str, Any] = {title_property: {"title": [{"text": {"content": title[:2000]}}]}}
-    date = metadata.get("start") or summary.get("date") or frontmatter.get("date")
+    date = meeting_date(artifacts)
     if date:
-        properties["Date"] = {"date": {"start": _notion_date(str(date))}}
+        properties[_date_property_name(schema or {})] = {"date": {"start": _notion_date(str(date))}}
     project = metadata.get("project") or frontmatter.get("project")
     project_select_name = _notion_select_name(project)
     if project_select_name:
@@ -149,6 +149,17 @@ def _title_property_name(schema: dict[str, Any], preferred: str) -> str:
         if isinstance(value, dict) and value.get("type") == "title":
             return str(name)
     return preferred
+
+
+def _date_property_name(schema: dict[str, Any]) -> str:
+    """Reuse an existing date column even when it is named 'Data' (or any case variant)."""
+    for candidate in ("Date", "Data"):
+        if _schema_property_type(schema, candidate) == "date":
+            return candidate
+    for name, value in schema.items():
+        if isinstance(value, dict) and value.get("type") == "date" and str(name).lower() in {"date", "data"}:
+            return str(name)
+    return "Date"
 
 
 def _ensure_properties(
