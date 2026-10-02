@@ -9,9 +9,9 @@ from unittest.mock import MagicMock, patch
 
 import certifi
 
-from transcribe_to_notion.artifacts import MeetingArtifacts
-from transcribe_to_notion.omlx_client import summarize_with_openai_compatible
-from transcribe_to_notion.tag_catalog import add_catalog_value
+from meeting_pilot.artifacts import MeetingArtifacts
+from meeting_pilot.omlx_client import summarize_with_openai_compatible
+from meeting_pilot.tag_catalog import add_catalog_value
 
 
 class OpenAICompatibleClientTests(unittest.TestCase):
@@ -38,10 +38,10 @@ class OpenAICompatibleClientTests(unittest.TestCase):
         ssl_context = object()
 
         with patch(
-            "transcribe_to_notion.omlx_client.ssl.create_default_context",
+            "meeting_pilot.omlx_client.ssl.create_default_context",
             return_value=ssl_context,
         ) as create_context, patch(
-            "transcribe_to_notion.omlx_client.urllib.request.urlopen",
+            "meeting_pilot.omlx_client.urllib.request.urlopen",
             return_value=response,
         ) as urlopen:
             result = summarize_with_openai_compatible(config, artifacts)
@@ -78,7 +78,7 @@ class OpenAICompatibleClientTests(unittest.TestCase):
             response.__enter__.return_value = response
 
             with patch(
-                "transcribe_to_notion.omlx_client.urllib.request.urlopen",
+                "meeting_pilot.omlx_client.urllib.request.urlopen",
                 return_value=response,
             ) as urlopen:
                 summarize_with_openai_compatible(
@@ -124,7 +124,7 @@ class OllamaRuntimeTests(unittest.TestCase):
         response = MagicMock()
         response.read.return_value = json.dumps({"message": {"content": content}}).encode()
         response.__enter__.return_value = response
-        with patch("transcribe_to_notion.omlx_client.urllib.request.urlopen", return_value=response) as urlopen:
+        with patch("meeting_pilot.omlx_client.urllib.request.urlopen", return_value=response) as urlopen:
             result = summarize_with_openai_compatible(self._config(), artifacts)
         request = urlopen.call_args.args[0]
         return result, json.loads(request.data.decode("utf-8")), request.full_url

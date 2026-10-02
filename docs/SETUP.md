@@ -30,7 +30,7 @@ python3 -m venv .venv311
 Verify:
 
 ```bash
-.venv311/bin/transcribe-to-notion --help
+.venv311/bin/meeting-pilot --help
 ```
 
 ## 3. oMLX
@@ -207,25 +207,25 @@ With `MOVE_SOURCE_AUDIO=false`, the pipeline copies audio from TranscribeX inste
 To process a single file:
 
 ```bash
-.venv311/bin/transcribe-to-notion run-once /path/to/audio.m4a
+.venv311/bin/meeting-pilot run-once /path/to/audio.m4a
 ```
 
 To start the watcher:
 
 ```bash
-.venv311/bin/transcribe-to-notion watch
+.venv311/bin/meeting-pilot watch
 ```
 
 Dry run without publishing to Notion:
 
 ```bash
-.venv311/bin/transcribe-to-notion run-once /path/to/audio.m4a --dry-run
+.venv311/bin/meeting-pilot run-once /path/to/audio.m4a --dry-run
 ```
 
 To read the subject and participants from the active Teams window:
 
 ```bash
-.venv311/bin/transcribe-to-notion teams-scrape --output ~/TeamsMeetings/teams-runtime.json
+.venv311/bin/meeting-pilot teams-scrape --output ~/TeamsMeetings/teams-runtime.json
 ```
 
 The command first tries AppleScript/Accessibility. If the UI doesn't expose enough text, it brings Teams to the foreground, takes a screenshot, and uses Apple Vision OCR.
@@ -266,7 +266,7 @@ launchctl unload ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
 ```bash
 cd /path/to/meeting-pilot
 .venv311/bin/meeting-pilot --help
-.venv311/bin/transcribe-to-notion --help
+.venv311/bin/meeting-pilot --help
 curl -sS http://127.0.0.1:8000/v1/models -H "Authorization: Bearer $(awk -F= '/^SUMMARY_API_KEY=/{print $2}' .env)"
 ```
 

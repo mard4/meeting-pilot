@@ -9,8 +9,8 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from transcribe_to_notion.knowledge_base import KnowledgeDocument, index_knowledge_documents
-from transcribe_to_notion.meeting_chat import MeetingChatFilters, answer_meeting_question
+from meeting_pilot.knowledge_base import KnowledgeDocument, index_knowledge_documents
+from meeting_pilot.meeting_chat import MeetingChatFilters, answer_meeting_question
 
 
 class KnowledgeBaseChatTests(unittest.TestCase):
@@ -141,7 +141,7 @@ class KnowledgeBaseChatTests(unittest.TestCase):
                 [
                     sys.executable,
                     "-m",
-                    "transcribe_to_notion.cli",
+                    "meeting_pilot.cli",
                     "kb-index-file",
                     "--source",
                     "mongodb",

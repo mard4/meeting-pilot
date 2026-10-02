@@ -5,7 +5,7 @@ This guide is for developers who want to run Meeting Pilot's pipeline from sourc
 Meeting Pilot has two parts:
 
 - **macOS app** (`macos/MeetingPilot/`, Swift Package Manager): menu bar app, meeting detection, recorder, live sidebar, settings and chat UI.
-- **Python pipeline** (`src/transcribe_to_notion/`): transcription, summarization and publishing, exposed as the `transcribe-to-notion` CLI.
+- **Python pipeline** (`src/meeting_pilot/`): transcription, summarization and publishing, exposed as the `meeting-pilot` CLI.
 
 See [CONTRIBUTING.md](../.github/CONTRIBUTING.md) for code style, tests and pull requests, and [SETUP.md](SETUP.md) for the full step-by-step bootstrap.
 
@@ -21,11 +21,11 @@ cp docs/env.example .env   # then fill it in
 ```
 
 ```bash
-transcribe-to-notion run-once /path/to/audio.m4a            # process one file
-transcribe-to-notion run-once /path/to/audio.m4a --dry-run  # without publishing
-transcribe-to-notion watch                                  # watch the inbox folder
-transcribe-to-notion teams-scrape --output ~/TeamsMeetings/teams-runtime.json
-transcribe-to-notion chat --question "What did we decide about offline mode?" \
+meeting-pilot run-once /path/to/audio.m4a            # process one file
+meeting-pilot run-once /path/to/audio.m4a --dry-run  # without publishing
+meeting-pilot watch                                  # watch the inbox folder
+meeting-pilot teams-scrape --output ~/TeamsMeetings/teams-runtime.json
+meeting-pilot chat --question "What did we decide about offline mode?" \
   --project "Atlas App" --theme Roadmap --theme Launch
 ```
 

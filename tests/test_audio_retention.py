@@ -6,8 +6,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from transcribe_to_notion.config import Config
-from transcribe_to_notion.pipeline import process_audio
+from meeting_pilot.config import Config
+from meeting_pilot.pipeline import process_audio
 
 
 def _fake_transcription(config: Config, audio_file: Path) -> None:
@@ -33,8 +33,8 @@ class AudioRetentionTests(unittest.TestCase):
         source = config.inbox_audio_dir / "Meeting Pilot - call.m4a"
         source.write_bytes(b"audio")
 
-        with patch("transcribe_to_notion.pipeline.validate_audio_file"), patch(
-            "transcribe_to_notion.pipeline.run_fluid_audio", side_effect=_fake_transcription
+        with patch("meeting_pilot.pipeline.validate_audio_file"), patch(
+            "meeting_pilot.pipeline.run_fluid_audio", side_effect=_fake_transcription
         ):
             destination = process_audio(config, source)
 
@@ -66,8 +66,8 @@ class AudioRetentionTests(unittest.TestCase):
         source = config.inbox_audio_dir / "call.m4a"
         source.write_bytes(b"audio")
 
-        with patch("transcribe_to_notion.pipeline.validate_audio_file"), patch(
-            "transcribe_to_notion.pipeline.run_fluid_audio", side_effect=RuntimeError("boom")
+        with patch("meeting_pilot.pipeline.validate_audio_file"), patch(
+            "meeting_pilot.pipeline.run_fluid_audio", side_effect=RuntimeError("boom")
         ), self.assertRaises(RuntimeError):
             process_audio(config, source)
 

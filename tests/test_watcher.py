@@ -7,8 +7,8 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from transcribe_to_notion.watcher import iter_ready_audio_files
-from transcribe_to_notion import watcher
+from meeting_pilot.watcher import iter_ready_audio_files
+from meeting_pilot import watcher
 
 
 class WatcherTests(unittest.TestCase):

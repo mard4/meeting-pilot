@@ -1,6 +1,6 @@
 # Contributing to Meeting Pilot
 
-Thanks for considering a contribution. This project has two parts: a Python CLI/backend (`src/transcribe_to_notion/`) and a macOS app (`macos/MeetingPilot/`, Swift Package Manager).
+Thanks for considering a contribution. This project has two parts: a Python CLI/backend (`src/meeting_pilot/`) and a macOS app (`macos/MeetingPilot/`, Swift Package Manager).
 
 ## Getting set up
 

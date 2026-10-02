@@ -1,6 +1,6 @@
 # Meeting Pilot macOS
 
-Interfaccia macOS nativa per controllare la pipeline `transcribe-to-notion`.
+Interfaccia macOS nativa per controllare la pipeline `meeting-pilot`.
 E' una menu bar app: resta nella barra in alto di macOS, non nel Dock.
 
 ## Build locale

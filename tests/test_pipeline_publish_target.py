@@ -5,9 +5,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from transcribe_to_notion.artifacts import MeetingArtifacts
-from transcribe_to_notion import watcher
-from transcribe_to_notion.pipeline import _apply_meeting_tag, _publish_artifacts
+from meeting_pilot.artifacts import MeetingArtifacts
+from meeting_pilot import watcher
+from meeting_pilot.pipeline import _apply_meeting_tag, _publish_artifacts
 
 
 def test_session_recovery_claim_allows_only_one_owner(tmp_path: Path) -> None:
@@ -28,9 +28,9 @@ class PipelinePublishTargetTests(unittest.TestCase):
         )
         artifacts = MeetingArtifacts(session_dir=Path("/tmp/session"), audio_file=Path("/tmp/audio.m4a"), title="Riunione")
 
-        with patch("transcribe_to_notion.pipeline.publish_to_notion") as notion, patch(
-            "transcribe_to_notion.pipeline.publish_to_obsidian"
-        ) as obsidian, patch("transcribe_to_notion.pipeline.publish_to_apple_notes") as notes:
+        with patch("meeting_pilot.pipeline.publish_to_notion") as notion, patch(
+            "meeting_pilot.pipeline.publish_to_obsidian"
+        ) as obsidian, patch("meeting_pilot.pipeline.publish_to_apple_notes") as notes:
             _publish_artifacts(config, artifacts)
 
         notion.assert_called_once_with(config, artifacts)
@@ -46,9 +46,9 @@ class PipelinePublishTargetTests(unittest.TestCase):
         )
         artifacts = MeetingArtifacts(session_dir=Path("/tmp/session"), audio_file=Path("/tmp/audio.m4a"), title="Riunione")
 
-        with patch("transcribe_to_notion.pipeline.publish_to_notion") as notion, patch(
-            "transcribe_to_notion.pipeline.publish_to_obsidian"
-        ) as obsidian, patch("transcribe_to_notion.pipeline.publish_to_apple_notes") as notes:
+        with patch("meeting_pilot.pipeline.publish_to_notion") as notion, patch(
+            "meeting_pilot.pipeline.publish_to_obsidian"
+        ) as obsidian, patch("meeting_pilot.pipeline.publish_to_apple_notes") as notes:
             _publish_artifacts(config, artifacts)
 
         notion.assert_not_called()
@@ -64,9 +64,9 @@ class PipelinePublishTargetTests(unittest.TestCase):
         )
         artifacts = MeetingArtifacts(session_dir=Path("/tmp/session"), audio_file=Path("/tmp/audio.m4a"), title="Riunione")
 
-        with patch("transcribe_to_notion.pipeline.publish_to_notion") as notion, patch(
-            "transcribe_to_notion.pipeline.publish_to_obsidian"
-        ) as obsidian, patch("transcribe_to_notion.pipeline.publish_to_apple_notes") as notes:
+        with patch("meeting_pilot.pipeline.publish_to_notion") as notion, patch(
+            "meeting_pilot.pipeline.publish_to_obsidian"
+        ) as obsidian, patch("meeting_pilot.pipeline.publish_to_apple_notes") as notes:
             _publish_artifacts(config, artifacts)
 
         notion.assert_not_called()
@@ -82,10 +82,10 @@ class PipelinePublishTargetTests(unittest.TestCase):
         )
         artifacts = MeetingArtifacts(session_dir=Path("/tmp/session"), audio_file=Path("/tmp/audio.m4a"), title="Riunione")
 
-        with patch("transcribe_to_notion.pipeline.publish_to_notion") as notion, patch(
-            "transcribe_to_notion.pipeline.publish_to_obsidian"
-        ) as obsidian, patch("transcribe_to_notion.pipeline.publish_to_apple_notes") as notes, patch(
-            "transcribe_to_notion.pipeline.publish_to_journal"
+        with patch("meeting_pilot.pipeline.publish_to_notion") as notion, patch(
+            "meeting_pilot.pipeline.publish_to_obsidian"
+        ) as obsidian, patch("meeting_pilot.pipeline.publish_to_apple_notes") as notes, patch(
+            "meeting_pilot.pipeline.publish_to_journal"
         ) as journal:
             _publish_artifacts(config, artifacts)
 
@@ -105,7 +105,7 @@ class PipelinePublishTargetTests(unittest.TestCase):
         )
         artifacts = MeetingArtifacts(session_dir=Path("/tmp/session"), audio_file=Path("/tmp/audio.m4a"), title="Riunione")
 
-        with patch("transcribe_to_notion.pipeline.publish_to_journal") as journal:
+        with patch("meeting_pilot.pipeline.publish_to_journal") as journal:
             _publish_artifacts(config, artifacts)
 
         journal.assert_not_called()
@@ -119,9 +119,9 @@ class PipelinePublishTargetTests(unittest.TestCase):
         )
         artifacts = MeetingArtifacts(session_dir=Path("/tmp/session"), audio_file=Path("/tmp/audio.m4a"), title="Riunione")
 
-        with patch("transcribe_to_notion.pipeline.publish_to_notion") as notion, patch(
-            "transcribe_to_notion.pipeline.publish_to_obsidian"
-        ) as obsidian, patch("transcribe_to_notion.pipeline.publish_to_apple_notes") as notes:
+        with patch("meeting_pilot.pipeline.publish_to_notion") as notion, patch(
+            "meeting_pilot.pipeline.publish_to_obsidian"
+        ) as obsidian, patch("meeting_pilot.pipeline.publish_to_apple_notes") as notes:
             _publish_artifacts(config, artifacts)
 
         obsidian.assert_called_once_with(config, artifacts)
@@ -136,12 +136,12 @@ class PipelinePublishTargetTests(unittest.TestCase):
             meeting_metadata={"title": "Riunione Teams Progetto Atlas"},
             omlx_summary={"tag": "Architettura Atlas"},
         )
-        with patch("transcribe_to_notion.pipeline.write_meeting_metadata"):
+        with patch("meeting_pilot.pipeline.write_meeting_metadata"):
             _apply_meeting_tag(artifacts)
         self.assertEqual(artifacts.meeting_metadata["project"], "Architettura Atlas")
 
         artifacts.meeting_metadata["project"] = "Scelta manuale"
-        with patch("transcribe_to_notion.pipeline.write_meeting_metadata"):
+        with patch("meeting_pilot.pipeline.write_meeting_metadata"):
             _apply_meeting_tag(artifacts)
         self.assertEqual(artifacts.meeting_metadata["project"], "Scelta manuale")
 
@@ -154,7 +154,7 @@ class PipelinePublishTargetTests(unittest.TestCase):
             omlx_summary={"theme": "Pianificazione trimestrale"},
         )
 
-        with patch("transcribe_to_notion.pipeline.write_meeting_metadata"):
+        with patch("meeting_pilot.pipeline.write_meeting_metadata"):
             _apply_meeting_tag(artifacts)
 
         self.assertEqual(
@@ -171,7 +171,7 @@ class PipelinePublishTargetTests(unittest.TestCase):
             omlx_summary={"theme": "Tema generato"},
         )
 
-        with patch("transcribe_to_notion.pipeline.write_meeting_metadata"):
+        with patch("meeting_pilot.pipeline.write_meeting_metadata"):
             _apply_meeting_tag(artifacts)
 
         self.assertEqual(artifacts.meeting_metadata["theme"], "Tema manuale")

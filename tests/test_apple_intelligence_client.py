@@ -6,12 +6,12 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from transcribe_to_notion.apple_intelligence_client import (
+from meeting_pilot.apple_intelligence_client import (
     AppleIntelligenceUnavailable,
     summarize_with_apple_intelligence,
 )
-from transcribe_to_notion.artifacts import MeetingArtifacts
-from transcribe_to_notion.tag_catalog import add_catalog_value
+from meeting_pilot.artifacts import MeetingArtifacts
+from meeting_pilot.tag_catalog import add_catalog_value
 
 
 class AppleIntelligenceClientTests(unittest.TestCase):

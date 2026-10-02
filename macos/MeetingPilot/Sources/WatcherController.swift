@@ -1,6 +1,6 @@
 import Foundation
 
-/// Owns the long-running `transcribe-to-notion watch` process.
+/// Owns the long-running `meeting-pilot watch` process.
 final class WatcherController: ObservableObject {
     @Published var watcherActive = false
 

@@ -9,7 +9,7 @@ struct MeetingPilotCLI {
         Bundle.main.resourceURL?
             .appendingPathComponent("MeetingPilotCLI/MeetingPilotCLI")
             .path
-        ?? projectRoot.appendingPathComponent(".venv311/bin/transcribe-to-notion").path
+        ?? projectRoot.appendingPathComponent(".venv311/bin/meeting-pilot").path
     }
 
     /// Runs a Meeting Pilot CLI command. Call off the main thread.

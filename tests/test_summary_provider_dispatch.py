@@ -6,9 +6,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from transcribe_to_notion.apple_intelligence_client import AppleIntelligenceUnavailable
-from transcribe_to_notion.artifacts import MeetingArtifacts
-from transcribe_to_notion.omlx_client import summarize
+from meeting_pilot.apple_intelligence_client import AppleIntelligenceUnavailable
+from meeting_pilot.artifacts import MeetingArtifacts
+from meeting_pilot.omlx_client import summarize
 
 
 class SummaryProviderDispatchTests(unittest.TestCase):
@@ -25,10 +25,10 @@ class SummaryProviderDispatchTests(unittest.TestCase):
             fallback = {"title": "Fallback"}
 
             with patch(
-                "transcribe_to_notion.omlx_client.summarize_with_apple_intelligence",
+                "meeting_pilot.omlx_client.summarize_with_apple_intelligence",
                 side_effect=AppleIntelligenceUnavailable("not ready"),
             ), patch(
-                "transcribe_to_notion.omlx_client.summarize_with_openai_compatible",
+                "meeting_pilot.omlx_client.summarize_with_openai_compatible",
                 return_value=fallback,
             ) as compatible:
                 result = summarize(config, artifacts)

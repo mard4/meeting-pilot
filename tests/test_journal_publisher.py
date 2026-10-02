@@ -6,8 +6,8 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from transcribe_to_notion.artifacts import MeetingArtifacts
-from transcribe_to_notion.journal_publisher import publish_to_journal
+from meeting_pilot.artifacts import MeetingArtifacts
+from meeting_pilot.journal_publisher import publish_to_journal
 
 
 class JournalPublisherTests(unittest.TestCase):

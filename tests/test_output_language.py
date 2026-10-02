@@ -7,10 +7,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from transcribe_to_notion import language
-from transcribe_to_notion.artifacts import MeetingArtifacts
-from transcribe_to_notion.meeting_chat import _chat_system_prompt, quick_prompt_question
-from transcribe_to_notion.obsidian_publisher import publish_to_obsidian
+from meeting_pilot import language
+from meeting_pilot.artifacts import MeetingArtifacts
+from meeting_pilot.meeting_chat import _chat_system_prompt, quick_prompt_question
+from meeting_pilot.obsidian_publisher import publish_to_obsidian
 
 
 class ResolveOutputLanguageTests(unittest.TestCase):

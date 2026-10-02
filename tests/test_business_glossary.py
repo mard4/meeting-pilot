@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from transcribe_to_notion import business_glossary
+from meeting_pilot import business_glossary
 
 
 class BusinessGlossaryTests(unittest.TestCase):

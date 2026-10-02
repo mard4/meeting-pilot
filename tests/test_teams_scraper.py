@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
-from transcribe_to_notion.teams_scraper import capture_teams_runtime_metadata, read_saved_teams_runtime_metadata
+from meeting_pilot.teams_scraper import capture_teams_runtime_metadata, read_saved_teams_runtime_metadata
 
 
 class TeamsScraperTests(unittest.TestCase):
@@ -44,7 +44,7 @@ class TeamsScraperTests(unittest.TestCase):
             config = type("Config", (), {"meetings_root": Path(temporary)})()
 
             with patch(
-                "transcribe_to_notion.teams_scraper._read_accessibility_lines",
+                "meeting_pilot.teams_scraper._read_accessibility_lines",
                 return_value=([], []),
             ):
                 metadata = capture_teams_runtime_metadata(
@@ -80,7 +80,7 @@ class TeamsScraperTests(unittest.TestCase):
             config = type("Config", (), {"meetings_root": Path(temporary)})()
 
             with patch(
-                "transcribe_to_notion.teams_scraper._read_accessibility_lines",
+                "meeting_pilot.teams_scraper._read_accessibility_lines",
                 return_value=(
                     ["Partecipanti", "Mario Rossi", "Laura Bianchi", "Chat"],
                     ["Allineamento | Microsoft Teams"],

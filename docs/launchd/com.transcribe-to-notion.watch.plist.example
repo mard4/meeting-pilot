@@ -8,7 +8,7 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/YOUR_USERNAME/Documents/meeting-pilot/.venv311/bin/transcribe-to-notion</string>
+    <string>/Users/YOUR_USERNAME/Documents/meeting-pilot/.venv311/bin/meeting-pilot</string>
     <string>watch</string>
   </array>
 

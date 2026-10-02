@@ -4,7 +4,7 @@
 Each session holds a silent WAV (retry-summary requires an audio file), a
 speaker-labelled transcript, and calendar-like metadata, so it can be fed to:
 
-    transcribe-to-notion retry-summary --session-dir <session>
+    meeting-pilot retry-summary --session-dir <session>
 """
 from __future__ import annotations
 

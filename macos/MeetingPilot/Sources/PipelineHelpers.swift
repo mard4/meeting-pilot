@@ -345,7 +345,7 @@ func transcriptionProcessCommands() -> [String] {
         .filter { $0.contains("appletranscriber") || $0.contains("fluidaudiocli") || $0.contains("retry-transcription") }
 }
 
-let watcherCommandMarkers = ["MeetingPilotCLI watch", "transcribe-to-notion watch"]
+let watcherCommandMarkers = ["MeetingPilotCLI watch", "meeting-pilot watch", "transcribe-to-notion watch"]
 
 func isWatcherProcessRunning() -> Bool {
     Shell.processCommands().contains { command in watcherCommandMarkers.contains { command.contains($0) } }

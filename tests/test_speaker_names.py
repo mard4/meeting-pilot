@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from transcribe_to_notion.speaker_names import name_speakers_from_teams
-from transcribe_to_notion.summary_templates import summary_guidance
+from meeting_pilot.speaker_names import name_speakers_from_teams
+from meeting_pilot.summary_templates import summary_guidance
 
 
 def _write_teams_speakers(session: Path, segments: list[dict]) -> None:

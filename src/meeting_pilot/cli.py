@@ -36,7 +36,7 @@ from .language import config_language
 def main() -> None:
     env_path = _env_path()
     _load_dotenv(env_path)
-    parser = argparse.ArgumentParser(prog="transcribe-to-notion")
+    parser = argparse.ArgumentParser(prog="meeting-pilot")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     run_once = subparsers.add_parser("run-once", help="Process one audio file immediately.")

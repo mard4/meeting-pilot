@@ -11,9 +11,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from transcribe_to_notion.artifacts import MeetingArtifacts, write_journal_receipt, write_omlx_summary
-from transcribe_to_notion.journal_publisher import publish_to_journal
-from transcribe_to_notion.meeting_chat import (
+from meeting_pilot.artifacts import MeetingArtifacts, write_journal_receipt, write_omlx_summary
+from meeting_pilot.journal_publisher import publish_to_journal
+from meeting_pilot.meeting_chat import (
     MeetingChatCitation,
     MeetingChatFilters,
     answer_meeting_question,
@@ -22,7 +22,7 @@ from transcribe_to_notion.meeting_chat import (
     quick_prompt_question,
     save_meeting_chat_result,
 )
-from transcribe_to_notion.tag_catalog import add_catalog_value, discard_unconfirmed_initial_imports, import_catalog_from_sources
+from meeting_pilot.tag_catalog import add_catalog_value, discard_unconfirmed_initial_imports, import_catalog_from_sources
 
 
 class MeetingChatTests(unittest.TestCase):
@@ -191,7 +191,7 @@ class MeetingChatTests(unittest.TestCase):
                 "topics": [{"name": "Old topic", "sources": ["notion_confirmed_import"]}],
             }), encoding="utf-8")
 
-            with patch("transcribe_to_notion.tag_catalog.bootstrap_catalog_from_notion", return_value={
+            with patch("meeting_pilot.tag_catalog.bootstrap_catalog_from_notion", return_value={
                 "projects": ["Current Notion"],
                 "topics": ["Current topic"],
             }):
@@ -215,7 +215,7 @@ class MeetingChatTests(unittest.TestCase):
                 "topics": [{"name": "Old topic", "sources": ["import:notion"]}],
             }), encoding="utf-8")
 
-            with patch("transcribe_to_notion.tag_catalog._obsidian_candidates", return_value={
+            with patch("meeting_pilot.tag_catalog._obsidian_candidates", return_value={
                 "projects": ["Obsidian current"],
                 "topics": ["Obsidian topic"],
             }):
@@ -225,13 +225,13 @@ class MeetingChatTests(unittest.TestCase):
             self.assertEqual(values["topics"], ["Obsidian topic"])
 
     def test_notion_catalog_requests_use_the_bundled_certificate_store(self) -> None:
-        source = (Path(__file__).parents[1] / "src/transcribe_to_notion/tag_catalog.py").read_text()
+        source = (Path(__file__).parents[1] / "src/meeting_pilot/tag_catalog.py").read_text()
 
         self.assertIn("import certifi", source)
         self.assertIn("ssl.create_default_context(cafile=certifi.where())", source)
 
     def test_notion_import_reads_tags_assigned_to_pages_not_historical_property_options(self) -> None:
-        from transcribe_to_notion.tag_catalog import bootstrap_catalog_from_notion
+        from meeting_pilot.tag_catalog import bootstrap_catalog_from_notion
 
         config = SimpleNamespace(
             notion_token="token",
@@ -250,7 +250,7 @@ class MeetingChatTests(unittest.TestCase):
             }}], "has_more": False, "next_cursor": None},
         ]
 
-        with patch("transcribe_to_notion.tag_catalog._notion_request", side_effect=responses) as request:
+        with patch("meeting_pilot.tag_catalog._notion_request", side_effect=responses) as request:
             values = bootstrap_catalog_from_notion(config)
 
         self.assertEqual(values, {"projects": ["Current project"], "topics": ["Current topic"]})
@@ -276,7 +276,7 @@ class MeetingChatTests(unittest.TestCase):
             )
 
             completed = subprocess.run(
-                [sys.executable, "-m", "transcribe_to_notion.cli", "chat-projects"],
+                [sys.executable, "-m", "meeting_pilot.cli", "chat-projects"],
                 cwd=Path(__file__).parents[1],
                 env={**os.environ, "PYTHONPATH": "src", "MEETING_PILOT_ENV_FILE": str(env_path)},
                 text=True,
@@ -584,7 +584,7 @@ class MeetingChatTests(unittest.TestCase):
                 [
                     sys.executable,
                     "-m",
-                    "transcribe_to_notion.cli",
+                    "meeting_pilot.cli",
                     "chat",
                     "--question",
                     "Cosa è stato deciso su isycontrol?",

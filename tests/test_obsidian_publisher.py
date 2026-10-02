@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from transcribe_to_notion.artifacts import MeetingArtifacts
-from transcribe_to_notion.obsidian_publisher import publish_to_obsidian
+from meeting_pilot.artifacts import MeetingArtifacts
+from meeting_pilot.obsidian_publisher import publish_to_obsidian
 
 
 class ObsidianPublisherTests(unittest.TestCase):
@@ -90,7 +90,7 @@ class ObsidianPublisherTests(unittest.TestCase):
 
 
     def test_action_items_use_obsidian_tasks_syntax_and_empty_sections_are_skipped(self) -> None:
-        from transcribe_to_notion.obsidian_publisher import _note_content
+        from meeting_pilot.obsidian_publisher import _note_content
 
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -280,6 +280,36 @@ wheels = [
 ]
 
 [[package]]
+name = "meeting-pilot"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "certifi" },
+    { name = "notion-client" },
+    { name = "pymongo" },
+    { name = "requests" },
+]
+
+[package.optional-dependencies]
+build = [
+    { name = "pyinstaller" },
+]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "certifi", specifier = ">=2025.1.31" },
+    { name = "notion-client", specifier = ">=2.3.0" },
+    { name = "pyinstaller", marker = "extra == 'build'", specifier = ">=6.22" },
+    { name = "pymongo", specifier = ">=4.8.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
+    { name = "requests", specifier = ">=2.32" },
+]
+provides-extras = ["dev", "build"]
+
+[[package]]
 name = "notion-client"
 version = "3.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -476,36 +506,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/6d/44/f5da03a8ef95d3691
 wheels = [
     { url = "https://files.pythonhosted.org/packages/95/9c/c510029fc6ef33a6275cd2c5d3cecd6613dfd6aa401d57c54f1c18852ccf/setuptools-84.0.0-py3-none-any.whl", hash = "sha256:51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670", size = 818216, upload-time = "2026-08-08T18:27:56.719Z" },
 ]
-
-[[package]]
-name = "transcribe-to-notion"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "certifi" },
-    { name = "notion-client" },
-    { name = "pymongo" },
-    { name = "requests" },
-]
-
-[package.optional-dependencies]
-build = [
-    { name = "pyinstaller" },
-]
-dev = [
-    { name = "pytest" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "certifi", specifier = ">=2025.1.31" },
-    { name = "notion-client", specifier = ">=2.3.0" },
-    { name = "pyinstaller", marker = "extra == 'build'", specifier = ">=6.22" },
-    { name = "pymongo", specifier = ">=4.8.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
-    { name = "requests", specifier = ">=2.32" },
-]
-provides-extras = ["dev", "build"]
 
 [[package]]
 name = "typing-extensions"

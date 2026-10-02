@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
-from transcribe_to_notion.millet_runner import (
+from meeting_pilot.millet_runner import (
     _fluid_audio_labelled_transcript,
     run_fluid_audio,
     validate_audio_file,

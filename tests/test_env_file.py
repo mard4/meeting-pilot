@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from transcribe_to_notion.env_file import update_env_file
+from meeting_pilot.env_file import update_env_file
 
 
 class EnvFileTests(unittest.TestCase):
