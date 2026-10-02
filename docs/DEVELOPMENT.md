@@ -35,9 +35,9 @@ To start the watcher at login without the app:
 
 ```bash
 mkdir -p ~/Library/LaunchAgents
-cp docs/launchd/com.transcribe-to-notion.watch.plist.example ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
-launchctl load ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
-tail -f ~/Library/Logs/transcribe-to-notion.log ~/Library/Logs/transcribe-to-notion.err.log
+cp docs/launchd/com.meeting-pilot.watch.plist.example ~/Library/LaunchAgents/com.meeting-pilot.watch.plist
+launchctl load ~/Library/LaunchAgents/com.meeting-pilot.watch.plist
+tail -f ~/Library/Logs/meeting-pilot.log ~/Library/Logs/meeting-pilot.err.log
 ```
 
 The full step-by-step bootstrap is in [SETUP.md](SETUP.md).

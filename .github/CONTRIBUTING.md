@@ -45,7 +45,7 @@ swift test
 
 ## Reporting bugs / requesting features
 
-Please use the GitHub issue templates. Include steps to reproduce, expected vs. actual behavior, and relevant logs (`~/Library/Logs/transcribe-to-notion.{log,err}`) with any personal data redacted.
+Please use the GitHub issue templates. Include steps to reproduce, expected vs. actual behavior, and relevant logs (`~/Library/Logs/meeting-pilot.{log,err}`) with any personal data redacted.
 
 ## License of contributions
 

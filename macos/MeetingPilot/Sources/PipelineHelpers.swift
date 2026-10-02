@@ -16,8 +16,8 @@ func diagnosticLogText(meetingsRoot: URL) -> String {
     var sections: [String] = []
     let globalLogs = [
         ("APP", AppLog.appURL),
-        ("PIPELINE", logRoot.appendingPathComponent("transcribe-to-notion.log")),
-        ("ERRORI", logRoot.appendingPathComponent("transcribe-to-notion.err.log"))
+        ("PIPELINE", logRoot.appendingPathComponent("meeting-pilot.log")),
+        ("ERRORI", logRoot.appendingPathComponent("meeting-pilot.err.log"))
     ]
     for (title, url) in globalLogs {
         let rawContent = readLogTail(url, maximumBytes: 48_000)
@@ -345,7 +345,7 @@ func transcriptionProcessCommands() -> [String] {
         .filter { $0.contains("appletranscriber") || $0.contains("fluidaudiocli") || $0.contains("retry-transcription") }
 }
 
-let watcherCommandMarkers = ["MeetingPilotCLI watch", "meeting-pilot watch", "transcribe-to-notion watch"]
+let watcherCommandMarkers = ["MeetingPilotCLI watch", "meeting-pilot watch"]
 
 func isWatcherProcessRunning() -> Bool {
     Shell.processCommands().contains { command in watcherCommandMarkers.contains { command.contains($0) } }

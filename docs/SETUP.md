@@ -244,21 +244,21 @@ Install the job:
 
 ```bash
 mkdir -p ~/Library/LaunchAgents
-cp docs/launchd/com.transcribe-to-notion.watch.plist.example ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
-launchctl load ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
+cp docs/launchd/com.meeting-pilot.watch.plist.example ~/Library/LaunchAgents/com.meeting-pilot.watch.plist
+launchctl load ~/Library/LaunchAgents/com.meeting-pilot.watch.plist
 ```
 
 Logs:
 
 ```bash
-tail -f ~/Library/Logs/transcribe-to-notion.log
-tail -f ~/Library/Logs/transcribe-to-notion.err.log
+tail -f ~/Library/Logs/meeting-pilot.log
+tail -f ~/Library/Logs/meeting-pilot.err.log
 ```
 
 Stop:
 
 ```bash
-launchctl unload ~/Library/LaunchAgents/com.transcribe-to-notion.watch.plist
+launchctl unload ~/Library/LaunchAgents/com.meeting-pilot.watch.plist
 ```
 
 ## 10. Quick check

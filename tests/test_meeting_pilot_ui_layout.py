@@ -569,7 +569,7 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         source = SOURCE.read_text()
         diagnostics = _section(source, "func diagnosticLogText", "func recentLogEntries")
 
-        self.assertIn('"transcribe-to-notion.err.log"', diagnostics)
+        self.assertIn('"meeting-pilot.err.log"', diagnostics)
 
     def test_system_audio_does_not_require_screen_capture_on_tahoe(self):
         source = SOURCE.read_text()

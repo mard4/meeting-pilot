@@ -24,4 +24,4 @@ What you expected to happen instead.
 - Publish target (`PUBLISH_TARGETS`):
 
 **Logs**
-Relevant excerpts from `~/Library/Logs/transcribe-to-notion.log` / `.err.log`, with any personal data (names, tokens, meeting content) redacted.
+Relevant excerpts from `~/Library/Logs/meeting-pilot.log` / `.err.log`, with any personal data (names, tokens, meeting content) redacted.

@@ -63,8 +63,8 @@ final class WatcherController: ObservableObject {
                 cli.path,
                 ["watch"],
                 environment: cli.environment(["PYTHONUNBUFFERED": "1"]),
-                standardOutput: AppLog.directory.appendingPathComponent("transcribe-to-notion.log"),
-                standardError: AppLog.directory.appendingPathComponent("transcribe-to-notion.err.log")
+                standardOutput: AppLog.directory.appendingPathComponent("meeting-pilot.log"),
+                standardError: AppLog.directory.appendingPathComponent("meeting-pilot.err.log")
             )
         } catch {
             AppLog.append("Avvio watcher non riuscito: \(error.localizedDescription)")

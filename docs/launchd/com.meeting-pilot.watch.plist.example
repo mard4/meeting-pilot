@@ -4,7 +4,7 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.transcribe-to-notion.watch</string>
+  <string>com.meeting-pilot.watch</string>
 
   <key>ProgramArguments</key>
   <array>
@@ -28,9 +28,9 @@
   <true/>
 
   <key>StandardOutPath</key>
-  <string>/Users/YOUR_USERNAME/Library/Logs/transcribe-to-notion.log</string>
+  <string>/Users/YOUR_USERNAME/Library/Logs/meeting-pilot.log</string>
 
   <key>StandardErrorPath</key>
-  <string>/Users/YOUR_USERNAME/Library/Logs/transcribe-to-notion.err.log</string>
+  <string>/Users/YOUR_USERNAME/Library/Logs/meeting-pilot.err.log</string>
 </dict>
 </plist>

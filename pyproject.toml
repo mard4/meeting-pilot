@@ -22,8 +22,6 @@ build = [
 
 [project.scripts]
 meeting-pilot = "meeting_pilot.cli:main"
-# Old name, kept so existing virtualenvs and launchd jobs keep working.
-transcribe-to-notion = "meeting_pilot.cli:main"
 
 [build-system]
 requires = ["setuptools>=69", "wheel"]
