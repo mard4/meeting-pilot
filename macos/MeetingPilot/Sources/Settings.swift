@@ -218,7 +218,7 @@ struct SettingsOverviewView: View {
                 if isRelaunchingForLanguage {
                     // saveAppLanguage() relaunches the whole process — Bundle.main's
                     // locale is bound at launch and can't be hot-swapped — so without
-                    // this, clicking a segment just makes the app silently vanish for
+                    // this, picking a language just makes the app silently vanish for
                     // ~250ms, which reads as a crash, not a language change.
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
@@ -235,13 +235,16 @@ struct SettingsOverviewView: View {
                             model.saveAppLanguage(selected)
                         }
                     )) {
-                        Text("Italiano").tag("it")
-                        Text("English").tag("en")
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(verbatim: language.nativeName).tag(language.rawValue)
+                        }
                     }
                     .labelsHidden()
-                    .pickerStyle(.segmented)
+                    .pickerStyle(.menu)
+                    .fixedSize()
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
             .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))

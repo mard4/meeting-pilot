@@ -17,7 +17,6 @@ struct RecorderView: View {
     @State private var folder = ""
     @State private var openTarget = ""
     @State private var transcriptionProvider = "fluid"
-    @State private var transcriptionLocale = "it-IT"
     @State private var confirmingAppleTranscription = false
 
     var body: some View {
@@ -108,9 +107,6 @@ struct RecorderView: View {
                     .alert("Nessun riconoscimento dei parlanti", isPresented: $confirmingAppleTranscription) {
                         Button("Resta su FluidAudio", role: .cancel) {}
                         Button("Usa Apple") {
-                            if transcriptionLocale.isEmpty {
-                                transcriptionLocale = "it-IT"
-                            }
                             selectTranscriptionProvider("apple")
                         }
                     } message: {
@@ -129,24 +125,6 @@ struct RecorderView: View {
                     .frame(maxHeight: .infinity)
                 }
                 .fixedSize(horizontal: false, vertical: true)
-                if transcriptionProvider == "apple" {
-                    HStack(spacing: 10) {
-                        Image(systemName: "globe")
-                            .foregroundStyle(MeetingPilotDesign.accent)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Lingua Apple")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(MeetingPilotDesign.textDimColor)
-                            TextField("it-IT", text: $transcriptionLocale)
-                                .textFieldStyle(DarkTextFieldStyle())
-                                .frame(width: 120, height: 28)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    .padding(8)
-                    .background(MeetingPilotDesign.accent.opacity(0.10))
-                    .clipShape(RoundedRectangle(cornerRadius: 9))
-                }
             }
             .padding(12)
             .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
@@ -211,7 +189,6 @@ struct RecorderView: View {
             folder = model.recorderFolder
             openTarget = model.recorderOpenTarget
             transcriptionProvider = model.transcriptionProvider
-            transcriptionLocale = model.transcriptionLocale
         }
     }
 
@@ -238,8 +215,7 @@ struct RecorderView: View {
             promptEnabled: model.recordingPromptEnabled,
             promptDelaySeconds: model.recordingPromptDelaySeconds,
             openTarget: openTarget,
-            transcriptionProvider: transcriptionProvider,
-            transcriptionLocale: transcriptionLocale
+            transcriptionProvider: transcriptionProvider
         )
     }
 
@@ -256,8 +232,7 @@ struct RecorderView: View {
             promptEnabled: model.recordingPromptEnabled,
             promptDelaySeconds: model.recordingPromptDelaySeconds,
             openTarget: openTarget,
-            transcriptionProvider: transcriptionProvider,
-            transcriptionLocale: transcriptionLocale
+            transcriptionProvider: transcriptionProvider
         )
     }
 }

@@ -220,7 +220,7 @@ struct LogsView: View {
 
 /// Locale matching the in-app language choice, for user-facing dates.
 var appLocale: Locale {
-    Locale(identifier: Bundle.main.preferredLocalizations.first == "en" ? "en_US" : "it_IT")
+    Locale(identifier: (AppLanguage(code: Bundle.main.preferredLocalizations.first) ?? .en).localeIdentifier)
 }
 
 func localized(_ value: String) -> String {

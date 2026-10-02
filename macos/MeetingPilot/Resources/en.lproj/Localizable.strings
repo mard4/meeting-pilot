@@ -230,7 +230,6 @@
 "Scegli cartella modelli" = "Choose models folder";
 "Nome modello manuale" = "Manual model name";
 "Permessi" = "Permissions";
-"Lingua Apple" = "Apple language";
 "La sintesi viene generata sul Mac senza API key. Le trascrizioni lunghe vengono elaborate in più passaggi." = "Summaries are generated on your Mac without an API key. Long transcripts are processed in multiple steps.";
 "Nome pagina" = "Page name";
 "Configurazione avanzata (token e pagina manuali)" = "Advanced configuration (manual token and page)";

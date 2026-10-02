@@ -150,7 +150,7 @@ final class LiveMeetingPipeline: @unchecked Sendable {
         self.converter = converter
         self.sessionFolder = sessionFolder
         self.sessionStartedAt = Date()
-        self.asrLanguage = Self.appLanguageCode()
+        self.asrLanguage = AppLanguage.current.asrLanguageCode
 
         queue.async { [self] in loadDiarizationModels() }
         let language = asrLanguage
@@ -176,14 +176,6 @@ final class LiveMeetingPipeline: @unchecked Sendable {
         } catch {
             NSLog("LiveMeetingPipeline: diarization models unavailable, live speaker sidebar disabled: \(error)")
         }
-    }
-
-    /// Follows the app language setting (same fallback to macOS as `AppModel`), mapped
-    /// to Nemotron's language hints. Both route to its Latin-script model variant.
-    private static func appLanguageCode() -> String {
-        let saved = UserDefaults.standard.string(forKey: "MeetingPilotAppLanguage")
-        let system = Locale.preferredLanguages.first?.hasPrefix("it") == true ? "it" : "en"
-        return (saved ?? system) == "en" ? "en-US" : "it-IT"
     }
 
     private func startAsr(_ leg: AsrLeg) {

@@ -11,6 +11,85 @@ import SwiftUI
 import UserNotifications
 
 
+/// Languages for the UI and the meeting notes. Each one needs a Resources/<code>.lproj
+/// table and must be a language hint of the live Nemotron model (its Latin-script
+/// variant), so a choice here also drives live transcription.
+enum AppLanguage: String, CaseIterable, Identifiable {
+    case it
+    case en
+    case es
+    case fr
+    case de
+    case pt
+    case nl
+
+    var id: String { rawValue }
+
+    /// Shown in its own language, so the picker stays readable whatever the UI language.
+    var nativeName: String {
+        switch self {
+        case .it: return "Italiano"
+        case .en: return "English"
+        case .es: return "Español"
+        case .fr: return "Français"
+        case .de: return "Deutsch"
+        case .pt: return "Português"
+        case .nl: return "Nederlands"
+        }
+    }
+
+    var asrLanguageCode: String {
+        switch self {
+        case .it: return "it-IT"
+        case .en: return "en-US"
+        case .es: return "es-ES"
+        case .fr: return "fr-FR"
+        case .de: return "de-DE"
+        case .pt: return "pt-BR"
+        case .nl: return "nl-NL"
+        }
+    }
+
+    var localeIdentifier: String {
+        switch self {
+        case .it: return "it_IT"
+        case .en: return "en_US"
+        case .es: return "es_ES"
+        case .fr: return "fr_FR"
+        case .de: return "de_DE"
+        case .pt: return "pt_BR"
+        case .nl: return "nl_NL"
+        }
+    }
+
+    /// The relaunch happens before the new localization loads, so this is per language.
+    var updatedMessage: String {
+        switch self {
+        case .it: return "Lingua aggiornata"
+        case .en: return "Language updated"
+        case .es: return "Idioma actualizado"
+        case .fr: return "Langue mise à jour"
+        case .de: return "Sprache aktualisiert"
+        case .pt: return "Idioma atualizado"
+        case .nl: return "Taal bijgewerkt"
+        }
+    }
+
+    /// Accepts "fr", "fr-FR", "fr_CA" style codes.
+    init?(code: String?) {
+        guard let code, let language = Self(rawValue: String(code.prefix(2)).lowercased()) else { return nil }
+        self = language
+    }
+
+    /// The saved choice, else the first supported macOS language, else English.
+    static var current: AppLanguage {
+        if let saved = AppLanguage(code: UserDefaults.standard.string(forKey: "MeetingPilotAppLanguage")) {
+            return saved
+        }
+        return Locale.preferredLanguages.lazy.compactMap { AppLanguage(code: $0) }.first ?? .en
+    }
+}
+
 enum AppSection: String, CaseIterable, Identifiable {
     case dashboard = "Dashboard"
     case history = "Cronologia"

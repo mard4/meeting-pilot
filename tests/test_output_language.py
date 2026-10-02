@@ -28,8 +28,15 @@ class ResolveOutputLanguageTests(unittest.TestCase):
             self.assertEqual(language.resolve_output_language(), "en")
 
     def test_unknown_languages_fall_back_to_english_headings(self) -> None:
-        self.assertEqual(language.label("fr", "decisions"), "Decisions")
-        self.assertEqual(language.language_name("fr"), "French")
+        self.assertEqual(language.label("sv", "decisions"), "Decisions")
+        self.assertEqual(language.language_name("de"), "German")
+        self.assertEqual(language.language_name("sv"), "English")
+
+    def test_app_languages_have_their_own_headings(self) -> None:
+        self.assertEqual(language.label("es", "decisions"), "Decisiones")
+        self.assertEqual(language.label("fr", "decisions"), "Décisions")
+        for code in ("es", "fr", "de", "pt", "nl"):
+            self.assertEqual(language.LABELS[code].keys(), language.LABELS["en"].keys())
 
 
 class EnglishOutputTests(unittest.TestCase):

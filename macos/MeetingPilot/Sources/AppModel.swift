@@ -39,7 +39,6 @@ final class AppModel: ObservableObject {
     @Published var recordingPromptDelaySeconds = 3
     @Published var recorderOpenTarget = ""
     @Published var transcriptionProvider = "fluid"
-    @Published var transcriptionLocale = "it-IT"
     @Published var appLanguage = "it"
     @Published var appTheme: MeetingPilotTheme = .dark
     @Published var fluidAudioInstalled = false
@@ -178,13 +177,17 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Apple On-Device transcribes in the app language; there is no separate setting.
+    var transcriptionLocale: String {
+        (AppLanguage(code: appLanguage) ?? .en).asrLanguageCode
+    }
+
     var transcriptionDisplayName: String {
         switch transcriptionProvider {
         case "fluid":
             return fluidAudioInstalled ? "FluidAudio" : "FluidAudio non disponibile"
         default:
-            let locale = transcriptionLocale.trimmingCharacters(in: .whitespacesAndNewlines)
-            return locale.isEmpty ? "Apple On-Device" : "Apple On-Device · \(locale)"
+            return "Apple On-Device · \(transcriptionLocale)"
         }
     }
 
@@ -205,8 +208,7 @@ final class AppModel: ObservableObject {
         self.runningAppPath = Bundle.main.bundleURL.path
         // Until the user picks a language in Settings, UI and meeting notes follow macOS.
         let savedLanguage = UserDefaults.standard.string(forKey: "MeetingPilotAppLanguage")
-        let systemLanguage = Locale.preferredLanguages.first?.hasPrefix("it") == true ? "it" : "en"
-        self.appLanguage = savedLanguage.map { $0 == "en" ? "en" : "it" } ?? systemLanguage
+        self.appLanguage = AppLanguage.current.rawValue
         self.appTheme = MeetingPilotTheme(rawValue: UserDefaults.standard.string(forKey: "MeetingPilotAppTheme")) ?? .dark
         EnvFile.onFailure = { [weak self] message in self?.statusMessage = message }
         ConfigLocator.ensureConfigFile(at: envURL)
@@ -217,6 +219,7 @@ final class AppModel: ObservableObject {
         if savedLanguage != nil {
             EnvFile.update(at: envURL, values: ["OUTPUT_LANGUAGE": appLanguage])
         }
+        EnvFile.update(at: envURL, values: ["TRANSCRIPTION_LOCALE": transcriptionLocale])
         prepareBundledFluidAudio()
         connectControllers()
     }
@@ -361,7 +364,6 @@ final class AppModel: ObservableObject {
         recorderOpenTarget = env["RECORDER_OPEN_TARGET"] ?? defaultRecorderOpenTarget(for: recorderMode, folder: inbox.path)
         transcriptionProvider = env["TRANSCRIPTION_PROVIDER"] == "apple" ? "apple" : "fluid"
         teamsOCREnabled = (env["TEAMS_OCR_ENABLED"] ?? "false").lowercased() == "true"
-        transcriptionLocale = env["TRANSCRIPTION_LOCALE"] ?? "it-IT"
         fluidAudioInstalled = fluidAudioCommandAvailable(in: env)
         requestAppleSpeechAuthorizationIfNeeded()
         notion.load(from: env)
@@ -606,17 +608,19 @@ final class AppModel: ObservableObject {
     }
 
     func saveAppLanguage(_ language: String) {
-        let selected = language == "en" ? "en" : "it"
+        guard let language = AppLanguage(code: language) else { return }
+        let selected = language.rawValue
         guard selected != appLanguage else { return }
         appLanguage = selected
         UserDefaults.standard.set(selected, forKey: "MeetingPilotAppLanguage")
         UserDefaults.standard.set([selected], forKey: "AppleLanguages")
         UserDefaults.standard.synchronize()
         // The watcher reads .env only at startup, so restart it to pick up the new
-        // summary/heading language. Deferred out of the settings view update.
-        EnvFile.update(at: envURL, values: ["OUTPUT_LANGUAGE": selected])
+        // summary, heading and Apple transcription language. Deferred out of the
+        // settings view update.
+        EnvFile.update(at: envURL, values: ["OUTPUT_LANGUAGE": selected, "TRANSCRIPTION_LOCALE": language.asrLanguageCode])
         watcher.restartIfRunning()
-        statusMessage = selected == "en" ? "Language updated" : "Lingua aggiornata"
+        statusMessage = language.updatedMessage
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
             relaunchApp()
         }
@@ -1390,7 +1394,7 @@ final class AppModel: ObservableObject {
         refresh()
     }
 
-    func saveRecorderSettings(mode: String, folder: String, promptEnabled: Bool, promptDelaySeconds: Int, openTarget: String, transcriptionProvider: String, transcriptionLocale: String) {
+    func saveRecorderSettings(mode: String, folder: String, promptEnabled: Bool, promptDelaySeconds: Int, openTarget: String, transcriptionProvider: String) {
         if transcriptionProvider == "fluid" && !fluidAudioCommandAvailable(in: EnvFile.load(from: envURL)) {
             statusMessage = "FluidAudio non è disponibile in questa installazione"
             return
@@ -1417,7 +1421,7 @@ final class AppModel: ObservableObject {
                 "RECORDING_PROMPT_DELAY_SECONDS": "\(max(1, promptDelaySeconds))",
                 "RECORDER_OPEN_TARGET": resolvedOpenTarget,
                 "TRANSCRIPTION_PROVIDER": transcriptionProvider,
-                "TRANSCRIPTION_LOCALE": transcriptionLocale.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "it-IT" : transcriptionLocale.trimmingCharacters(in: .whitespacesAndNewlines),
+                "TRANSCRIPTION_LOCALE": transcriptionLocale,
                 "APPLE_TRANSCRIBER_CMD": appleTranscriberCommandPath()
             ]
         )
@@ -1437,8 +1441,7 @@ final class AppModel: ObservableObject {
             promptEnabled: recordingPromptEnabled,
             promptDelaySeconds: recordingPromptDelaySeconds,
             openTarget: recorderOpenTarget,
-            transcriptionProvider: transcriptionProvider,
-            transcriptionLocale: transcriptionLocale
+            transcriptionProvider: transcriptionProvider
         )
     }
 
