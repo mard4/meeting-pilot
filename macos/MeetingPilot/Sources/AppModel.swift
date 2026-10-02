@@ -461,7 +461,7 @@ final class AppModel: ObservableObject {
         accessibilityGranted = AXIsProcessTrusted()
         permissionsReady = permissionRows.filter(\.granted).count
         refreshNotificationPermissionRow()
-        recording.pollTeamsMeeting()
+        recording.pollMeeting()
     }
 
     var missingPermissionRows: [PermissionRow] {

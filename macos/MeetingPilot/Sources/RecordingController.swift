@@ -16,8 +16,9 @@ struct RecorderSettings {
     )
 }
 
-/// Teams meeting detection, the recording prompt, native/external recording and the
-/// automatic stop when the call ends, plus the Teams metadata captured meanwhile.
+/// Meeting detection for a `MeetingPlatform`, the recording prompt, native/external
+/// recording and the automatic stop when the call ends, plus the Teams metadata
+/// captured meanwhile.
 final class RecordingController: ObservableObject {
     @Published var nativeRecordingActive = false
     @Published var nativeRecordingPaused = false
@@ -34,6 +35,7 @@ final class RecordingController: ObservableObject {
     private(set) var externalRecordingStartedAt: Date?
 
     private let cli: MeetingPilotCLI
+    private let platform: MeetingPlatform
     private let nativeRecorder = NativeAudioRecorder()
     private var meetingDetectionTimer: Timer?
     private var teamsMetadataCaptureTimer: Timer?
@@ -41,17 +43,18 @@ final class RecordingController: ObservableObject {
     private var teamsMetadataCaptureInProgress = false
     private var reportedAccessibilityMissingForActiveRecording = false
     private var activeRecordingTitle = ""
-    private var teamsMeetingWasDetected = false
+    private var meetingWasDetected = false
     private var recordingPromptShownForCurrentMeeting = false
     private var microphoneWasActive = false
-    private var recordingObservedTeamsMeeting = false
+    private var recordingObservedMeeting = false
     private var recordingObservedStrongCallSignal = false
-    private var recordingObservedTeamsAudioInput = false
+    private var recordingObservedAppAudioInput = false
     private var meetingEndCandidateSince: Date?
     private let automaticStopConfirmationSeconds = 15
 
-    init(cli: MeetingPilotCLI) {
+    init(cli: MeetingPilotCLI, platform: MeetingPlatform = TeamsPlatform()) {
         self.cli = cli
+        self.platform = platform
         nativeRecorder.onStateChange = { [weak self] active, path in
             DispatchQueue.main.async {
                 self?.nativeRecordingActive = active
@@ -87,7 +90,7 @@ final class RecordingController: ObservableObject {
     func startMeetingDetectionMonitor() {
         meetingDetectionTimer?.invalidate()
         meetingDetectionTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
-            self?.pollTeamsMeeting()
+            self?.pollMeeting()
         }
     }
 
@@ -107,19 +110,19 @@ final class RecordingController: ObservableObject {
     /// After a recorder change, prompt again for a meeting that is already in progress
     /// instead of waiting for the next one.
     func resetMeetingDetection() {
-        teamsMeetingWasDetected = false
+        meetingWasDetected = false
         recordingPromptShownForCurrentMeeting = false
     }
 
     func showRecordingPrompt(
         title: String,
         delaySeconds: Int? = nil,
-        requiresActiveTeamsMeeting: Bool = false
+        requiresActiveMeeting: Bool = false
     ) {
         let delay = TimeInterval(max(0, delaySeconds ?? settings().promptDelaySeconds))
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             guard let self else { return }
-            guard !requiresActiveTeamsMeeting || self.hasActiveTeamsAudioMeeting() else {
+            guard !requiresActiveMeeting || self.hasActiveAudioMeeting() else {
                 self.recordingPromptShownForCurrentMeeting = false
                 return
             }
@@ -133,9 +136,13 @@ final class RecordingController: ObservableObject {
         }
     }
 
+    /// The visible meeting's title, or the platform's generic one.
+    func currentMeetingPromptTitle() -> String {
+        platform.meetingPromptTitle() ?? platform.fallbackMeetingTitle
+    }
+
     func showManualRecordingPrompt() {
-        let title = currentTeamsMeetingPromptTitle() ?? "Riunione Teams"
-        showRecordingPrompt(title: title, delaySeconds: 0)
+        showRecordingPrompt(title: currentMeetingPromptTitle(), delaySeconds: 0)
     }
 
     func handleRecordAction(meetingTitle: String) {
@@ -163,7 +170,7 @@ final class RecordingController: ObservableObject {
                     self.onStatusMessage("Registrazione avviata")
                     self.nativeRecordingPath = url.path
                     self.startAutomaticTeamsMetadataCapture(title: title)
-                    self.observeTeamsCallAtRecordingStart()
+                    self.observeCallAtRecordingStart()
                     AppLog.append("Registrazione avviata: \(url.lastPathComponent)")
                 case .failure(let error):
                     self.onStatusMessage("Recorder non avviato")
@@ -227,9 +234,9 @@ final class RecordingController: ObservableObject {
         }
     }
 
-    /// Called every couple of seconds: prompts when a Teams call starts, or watches for
+    /// Called every couple of seconds: prompts when a call starts, or watches for
     /// its end while recording.
-    func pollTeamsMeeting() {
+    func pollMeeting() {
         if nativeRecordingActive {
             monitorAutomaticRecordingStop()
             return
@@ -244,29 +251,29 @@ final class RecordingController: ObservableObject {
         let microphoneJustActivated = microphoneActive && !microphoneWasActive
         microphoneWasActive = microphoneActive
 
-        let title = currentTeamsMeetingPromptTitle()
-        let teamsInputActive = teamsProcessIsRunningInput() == true
-        let activeTeamsMeeting = title != nil && teamsInputActive
-        let meetingJustStarted = activeTeamsMeeting && !teamsMeetingWasDetected
-        teamsMeetingWasDetected = activeTeamsMeeting
+        let title = platform.meetingPromptTitle()
+        let appInputActive = platform.processIsRunningInput() == true
+        let activeMeeting = title != nil && appInputActive
+        let meetingJustStarted = activeMeeting && !meetingWasDetected
+        meetingWasDetected = activeMeeting
 
-        guard let title, activeTeamsMeeting else {
+        guard let title, activeMeeting else {
             runtimeStatus = title == nil
-                ? "Nessuna call Teams rilevata"
-                : "Teams aperto, nessuna call audio attiva"
+                ? "Nessuna call \(platform.displayName) rilevata"
+                : "\(platform.displayName) aperto, nessuna call audio attiva"
             recordingPromptShownForCurrentMeeting = false
             return
         }
 
         guard meetingJustStarted || microphoneJustActivated else {
-            runtimeStatus = "Call Teams rilevata: \(title)"
+            runtimeStatus = "Call \(platform.displayName) rilevata: \(title)"
             return
         }
         guard !recordingPromptShownForCurrentMeeting else { return }
 
-        runtimeStatus = "Call Teams rilevata: \(title)"
+        runtimeStatus = "Call \(platform.displayName) rilevata: \(title)"
         recordingPromptShownForCurrentMeeting = true
-        showRecordingPrompt(title: title, requiresActiveTeamsMeeting: true)
+        showRecordingPrompt(title: title, requiresActiveMeeting: true)
     }
 
     private func warnAboutMissingAccessibilityBeforeRecording() {
@@ -314,32 +321,32 @@ final class RecordingController: ObservableObject {
     private func beginExternalRecordingState(title: String) {
         externalRecordingActive = true
         externalRecordingStartedAt = Date()
-        observeTeamsCallAtRecordingStart()
+        observeCallAtRecordingStart()
         runtimeStatus = "Registrazione esterna in corso"
         AppLog.append("Recorder esterno avviato per: \(title)")
         startAutomaticTeamsMetadataCapture(title: title)
     }
 
-    private func observeTeamsCallAtRecordingStart() {
-        let snapshot = teamsWindowSnapshot()
-        let teamsInput = teamsProcessIsRunningInput()
+    private func observeCallAtRecordingStart() {
+        let snapshot = platform.windowSnapshot()
+        let appInput = platform.processIsRunningInput()
         recordingObservedStrongCallSignal = snapshot.callSignal
-        recordingObservedTeamsAudioInput = teamsInput == true
-        recordingObservedTeamsMeeting = teamsInput == true || snapshot.callSignal || snapshot.titles.contains { looksLikeTeamsMeetingTitle($0) }
+        recordingObservedAppAudioInput = appInput == true
+        recordingObservedMeeting = appInput == true || snapshot.callSignal || snapshot.titles.contains { platform.looksLikeMeetingTitle($0) }
         meetingEndCandidateSince = nil
     }
 
-    private func resetObservedTeamsCall() {
-        recordingObservedTeamsMeeting = false
+    private func resetObservedCall() {
+        recordingObservedMeeting = false
         recordingObservedStrongCallSignal = false
-        recordingObservedTeamsAudioInput = false
+        recordingObservedAppAudioInput = false
         meetingEndCandidateSince = nil
     }
 
     private func finishNativeRecording(automatic: Bool) {
         stopAutomaticTeamsMetadataCapture()
         let url = nativeRecorder.stop()
-        resetObservedTeamsCall()
+        resetObservedCall()
         nativeRecordingPaused = false
         onStatusMessage(url == nil
             ? "Registrazione fermata"
@@ -417,79 +424,79 @@ final class RecordingController: ObservableObject {
         }
     }
 
-    private func hasActiveTeamsAudioMeeting() -> Bool {
-        currentTeamsMeetingPromptTitle() != nil && teamsProcessIsRunningInput() == true
+    private func hasActiveAudioMeeting() -> Bool {
+        platform.meetingPromptTitle() != nil && platform.processIsRunningInput() == true
     }
 
     private func monitorAutomaticRecordingStop() {
-        let snapshot = teamsWindowSnapshot()
-        let titleLooksLikeMeeting = snapshot.titles.contains { looksLikeTeamsMeetingTitle($0) }
-        let teamsInput = teamsProcessIsRunningInput()
+        let snapshot = platform.windowSnapshot()
+        let titleLooksLikeMeeting = snapshot.titles.contains { platform.looksLikeMeetingTitle($0) }
+        let appInput = platform.processIsRunningInput()
 
-        if teamsInput == true {
-            recordingObservedTeamsAudioInput = true
-            recordingObservedTeamsMeeting = true
+        if appInput == true {
+            recordingObservedAppAudioInput = true
+            recordingObservedMeeting = true
             if meetingEndCandidateSince != nil {
-                AppLog.append("Stop automatico annullato: Teams usa nuovamente il microfono")
+                AppLog.append("Stop automatico annullato: \(platform.displayName) usa nuovamente il microfono")
             }
             meetingEndCandidateSince = nil
-            runtimeStatus = "Registrazione call Teams in corso"
+            runtimeStatus = "Registrazione call \(platform.displayName) in corso"
             return
         }
 
-        if recordingObservedTeamsAudioInput && teamsInput == false {
-            beginOrCompleteAutomaticStop(reason: "Teams non usa più il microfono")
+        if recordingObservedAppAudioInput && appInput == false {
+            beginOrCompleteAutomaticStop(reason: "\(platform.displayName) non usa più il microfono")
             return
         }
 
         if snapshot.callSignal {
-            recordingObservedTeamsMeeting = true
+            recordingObservedMeeting = true
             recordingObservedStrongCallSignal = true
             if meetingEndCandidateSince != nil {
-                AppLog.append("Stop automatico annullato: controlli call Teams nuovamente presenti")
+                AppLog.append("Stop automatico annullato: controlli call \(platform.displayName) nuovamente presenti")
             }
             meetingEndCandidateSince = nil
-            runtimeStatus = "Registrazione call Teams in corso"
+            runtimeStatus = "Registrazione call \(platform.displayName) in corso"
             return
         }
 
         // After seeing actual in-call controls, their disappearance is the
-        // meaningful end signal. Teams may keep a recap/window with the same
+        // meaningful end signal. The app may keep a recap/window with the same
         // meeting title open after hang-up, so that title must not block stop.
         if !recordingObservedStrongCallSignal && titleLooksLikeMeeting {
-            recordingObservedTeamsMeeting = true
+            recordingObservedMeeting = true
             if meetingEndCandidateSince != nil {
-                AppLog.append("Stop automatico annullato: finestra call Teams nuovamente presente")
+                AppLog.append("Stop automatico annullato: finestra call \(platform.displayName) nuovamente presente")
             }
             meetingEndCandidateSince = nil
-            runtimeStatus = "Registrazione call Teams in corso"
+            runtimeStatus = "Registrazione call \(platform.displayName) in corso"
             return
         }
 
         // Never auto-stop if Accessibility never let us observe a real meeting
         // window. In that case the explicit Stop action remains the safe path.
-        guard recordingObservedTeamsMeeting else { return }
-        beginOrCompleteAutomaticStop(reason: "Controlli call Teams scomparsi")
+        guard recordingObservedMeeting else { return }
+        beginOrCompleteAutomaticStop(reason: "Controlli call \(platform.displayName) scomparsi")
     }
 
     private func monitorExternalRecordingState() {
-        let snapshot = teamsWindowSnapshot()
-        let titleLooksLikeMeeting = snapshot.titles.contains { looksLikeTeamsMeetingTitle($0) }
-        let teamsInput = teamsProcessIsRunningInput()
+        let snapshot = platform.windowSnapshot()
+        let titleLooksLikeMeeting = snapshot.titles.contains { platform.looksLikeMeetingTitle($0) }
+        let appInput = platform.processIsRunningInput()
 
-        if teamsInput == true || snapshot.callSignal || (!recordingObservedStrongCallSignal && titleLooksLikeMeeting) {
-            recordingObservedTeamsMeeting = true
-            recordingObservedTeamsAudioInput = recordingObservedTeamsAudioInput || teamsInput == true
+        if appInput == true || snapshot.callSignal || (!recordingObservedStrongCallSignal && titleLooksLikeMeeting) {
+            recordingObservedMeeting = true
+            recordingObservedAppAudioInput = recordingObservedAppAudioInput || appInput == true
             recordingObservedStrongCallSignal = recordingObservedStrongCallSignal || snapshot.callSignal
             meetingEndCandidateSince = nil
             runtimeStatus = "Registrazione esterna in corso"
             return
         }
 
-        guard recordingObservedTeamsMeeting else { return }
+        guard recordingObservedMeeting else { return }
         if meetingEndCandidateSince == nil {
             meetingEndCandidateSince = Date()
-            runtimeStatus = "Verifico fine call Teams..."
+            runtimeStatus = "Verifico fine call \(platform.displayName)..."
             return
         }
         let elapsed = Date().timeIntervalSince(meetingEndCandidateSince ?? Date())
@@ -499,7 +506,7 @@ final class RecordingController: ObservableObject {
         }
 
         externalRecordingDidFinish()
-        resetObservedTeamsCall()
+        resetObservedCall()
         runtimeStatus = "Call terminata: attendo il file audio"
         AppLog.append("Call con recorder esterno terminata: attendo il file audio completo")
         onNeedsRefresh()
@@ -509,7 +516,7 @@ final class RecordingController: ObservableObject {
         if meetingEndCandidateSince == nil {
             meetingEndCandidateSince = Date()
             AppLog.append("\(reason): avvio attesa stop automatico di \(automaticStopConfirmationSeconds) secondi")
-            runtimeStatus = "Verifico fine call Teams..."
+            runtimeStatus = "Verifico fine call \(platform.displayName)..."
             return
         }
         let elapsed = Date().timeIntervalSince(meetingEndCandidateSince ?? Date())

@@ -11,12 +11,6 @@ import SwiftUI
 import UserNotifications
 
 
-struct TeamsWindowSnapshot {
-    let titles: [String]
-    let frontmost: Bool
-    let callSignal: Bool
-}
-
 func currentTeamsMeetingPromptTitle() -> String? {
     let snapshot = teamsWindowSnapshot()
     var candidate: String?
@@ -122,7 +116,7 @@ func teamsProcessIsRunningInput() -> Bool? {
     return false
 }
 
-func teamsWindowSnapshot() -> TeamsWindowSnapshot {
+func teamsWindowSnapshot() -> MeetingWindowSnapshot {
     let frontmostApp = NSWorkspace.shared.frontmostApplication
     let frontmostName = frontmostApp?.localizedName?.lowercased() ?? ""
     let frontmostBundle = frontmostApp?.bundleIdentifier?.lowercased() ?? ""
@@ -130,7 +124,7 @@ func teamsWindowSnapshot() -> TeamsWindowSnapshot {
 
     let axSnapshot = teamsWindowAccessibilitySnapshot()
     let cgTitles = teamsWindowTitlesViaCoreGraphics()
-    return TeamsWindowSnapshot(
+    return MeetingWindowSnapshot(
         titles: dedupPreservingOrder(axSnapshot.titles + cgTitles),
         frontmost: frontmost,
         callSignal: axSnapshot.callSignal

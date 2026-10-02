@@ -331,7 +331,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     }
 
     @objc private func testRecordingPrompt() {
-        model.recording.showRecordingPrompt(title: currentTeamsMeetingPromptTitle() ?? "Riunione Teams", delaySeconds: 1)
+        model.recording.showRecordingPrompt(title: model.recording.currentMeetingPromptTitle(), delaySeconds: 1)
     }
 
     func userNotificationCenter(
