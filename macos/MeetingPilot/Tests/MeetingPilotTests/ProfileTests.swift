@@ -11,6 +11,17 @@ final class ProfileTests: XCTestCase {
         XCTAssertFalse(UserProfile.worker.isStudent)
     }
 
+    /// Everyone is asked until USER_PROFILE holds an answer, including installs that
+    /// predate profiles and had none.
+    func testOnlyASavedAnswerSkipsTheProfileQuestion() {
+        XCTAssertFalse(UserProfile.isChosen(nil))
+        XCTAssertFalse(UserProfile.isChosen(""))
+        XCTAssertFalse(UserProfile.isChosen("ask"))
+        XCTAssertTrue(UserProfile.isChosen("worker"))
+        XCTAssertTrue(UserProfile.isChosen("student"))
+        XCTAssertTrue(UserProfile.isChosen("both"))
+    }
+
     /// The pipeline reads these names (config.py); older meeting sections may still be
     /// saved under their Notion-only names.
     func testPageSectionsKeepThePipelineEnvironmentNames() {

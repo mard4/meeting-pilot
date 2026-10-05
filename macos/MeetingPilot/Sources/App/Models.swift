@@ -333,6 +333,11 @@ enum UserProfile: String {
         }
     }
 
+    /// Whether USER_PROFILE holds an answer; missing or empty means the user was not asked yet.
+    static func isChosen(_ saved: String?) -> Bool {
+        saved.flatMap(UserProfile.init(rawValue:)) != nil
+    }
+
     var isStudent: Bool { self != .worker }
     var isWorker: Bool { self != .student }
 }

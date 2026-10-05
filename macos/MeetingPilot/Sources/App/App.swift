@@ -342,7 +342,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         NSApp.terminate(nil)
     }
 
-    /// A fresh install first says who it is for, then gets the permission checklist.
+    /// Until the user has said who it is for (new installs and updates alike), that comes
+    /// first, then the permission checklist.
     private func askProfileThenPermissions() {
         guard model.needsProfileChoice else {
             showMissingPermissionsIfNeeded()

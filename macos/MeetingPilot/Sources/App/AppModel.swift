@@ -214,16 +214,10 @@ final class AppModel: ObservableObject {
         self.appLanguage = AppLanguage.current.rawValue
         self.appTheme = MeetingPilotTheme(rawValue: UserDefaults.standard.string(forKey: "MeetingPilotAppTheme")) ?? .dark
         EnvFile.onFailure = { [weak self] message in self?.statusMessage = message }
-        let isFreshInstall = !FileManager.default.fileExists(atPath: envURL.path)
         ConfigLocator.ensureConfigFile(at: envURL)
-        if EnvFile.load(from: envURL)["USER_PROFILE"] == nil {
-            if isFreshInstall {
-                needsProfileChoice = true
-            } else {
-                // Installs from before profiles only ever made meeting notes.
-                EnvFile.update(at: envURL, values: ["USER_PROFILE": UserProfile.worker.rawValue])
-            }
-        }
+        // Asked once of everyone, new installs and updates alike, until they answer;
+        // meanwhile recordings stay meeting notes.
+        needsProfileChoice = !UserProfile.isChosen(EnvFile.load(from: envURL)["USER_PROFILE"])
         EnvFile.update(at: envURL, values: ["BUSINESS_GLOSSARY_FILE": glossaryURL.path])
         let templatesURL = configRoot.appendingPathComponent(SummaryTemplateCatalog.fileName)
         self.customSummaryTemplates = SummaryTemplateCatalog.loadCustom(from: templatesURL)

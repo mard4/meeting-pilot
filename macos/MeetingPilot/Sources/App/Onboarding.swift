@@ -63,7 +63,8 @@ final class PermissionsSetupWindow {
     }
 }
 
-/// Asked once on a fresh install, before the permission checklist: whether recordings
+/// Asked once, on a new install or the first launch after updating, before the
+/// permission checklist (and again at launch until answered): whether recordings
 /// become study notes, meeting notes or either (USER_PROFILE). It has no close button,
 /// because every later summary depends on the answer.
 final class ProfileSetupWindow {
