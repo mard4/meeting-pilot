@@ -409,11 +409,15 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         sidebar = _section(source, "struct Sidebar", "private struct SidebarStatusFooter")
         targets = _section(source, "struct PublicationTargetsView", "struct JournalNoteReader")
 
-        # Destinations live in one "Connettori" page, not one sidebar entry each.
+        # Destinations live in one "Pubblicazione" page, not one sidebar entry each.
         self.assertIn("SidebarRow(section: .publicationTargets", sidebar)
         for section in (".notion", ".obsidian", ".appleNotes", ".provider"):
             self.assertNotIn(f"SidebarRow(section: {section}", sidebar)
-        self.assertIn('ContentPane(title: "Connettori"', targets)
+        self.assertIn('ContentPane(title: "Pubblicazione"', targets)
+        self.assertIn('case publicationTargets = "Pubblicazione"', source)
+        # What the notes contain sits with where they go: template, prompt and glossary.
+        self.assertIn("SummaryContentSection()", targets)
+        self.assertLess(targets.index("SummaryContentSection()"), targets.index("PageSectionsCard()"))
         for asset in ("Notion_app_logo.png", "2023_Obsidian_logo.svg", "apple_notes_logo.png"):
             self.assertIn(asset, targets)
         self.assertIn('detail: "Condivise da tutte le destinazioni."', targets)
@@ -888,7 +892,8 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         self.assertIn('Text("Trascrizione")', recorder)
         self.assertIn('Text("Sintesi (AI)")', recorder)
         self.assertIn("SummaryConfigurationForm()", recorder)
-        self.assertIn("SummaryContentSection()", recorder)
+        # Template, prompt and glossary moved to the Pubblicazione page.
+        self.assertNotIn("SummaryContentSection()", recorder)
 
     def test_summary_prompt_lives_in_the_summary_content_section(self):
         source = SOURCE.read_text()

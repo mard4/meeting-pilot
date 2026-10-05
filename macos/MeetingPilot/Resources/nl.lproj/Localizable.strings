@@ -282,7 +282,6 @@
 "Assegna" = "Wijs toe";
 "Assegna progetto" = "Wijs project toe";
 "Pubblicata su" = "Gepubliceerd in";
-"Scegli dove pubblicare le note di ogni riunione. Puoi attivarne più di uno." = "Kies waar de notities van elke vergadering worden gepubliceerd. Je kunt er meerdere inschakelen.";
 "Come Meeting Pilot registra, trascrive e sintetizza le riunioni. Audio e trascrizioni restano sul Mac." = "Hoe Meeting Pilot vergaderingen opneemt, transcribeert en samenvat. Audio en transcripties blijven op je Mac.";
 "Lingua, aspetto, permessi e stato dei servizi." = "Taal, weergave, toestemmingen en status van diensten.";
 "Le note delle riunioni, in Markdown sul tuo Mac." = "Je vergadernotities, als Markdown op je Mac.";
@@ -315,7 +314,6 @@
 "Panoramica" = "Overzicht";
 "In attesa di parlato..." = "Wachten op spraak...";
 "Chiudi" = "Sluit";
-"Connettori" = "Connectoren";
 
 /* Full English coverage 2026-09 */
 "%ld di %ld" = "%ld van %ld";
@@ -728,3 +726,8 @@
 "Apri le slide in Anteprima" = "Open de dia's in Voorvertoning";
 "Scegli" = "Kies";
 "Slide %d di %d" = "Dia %d van %d";
+
+/* Publishing page */
+"Dove vanno le note di ogni riunione e cosa contengono." = "Waar de notities van elke vergadering heen gaan en wat erin staat.";
+"Puoi attivarne più di una." = "Je kunt er meerdere aanzetten.";
+"Modello di sintesi, prompt e vocabolario usati per ogni nota." = "Sjabloon voor samenvatting, eigen prompt en bedrijfswoordenlijst voor elke notitie.";

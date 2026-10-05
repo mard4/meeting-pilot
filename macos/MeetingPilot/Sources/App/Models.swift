@@ -96,7 +96,7 @@ enum AppSection: String, CaseIterable, Identifiable {
     case recorder = "Pipeline"
     case provider = "Provider"
     case chat = "Chat"
-    case publicationTargets = "Connettori"
+    case publicationTargets = "Pubblicazione"
     case journal = "Diario"
     case notion = "Notion"
     case obsidian = "Obsidian"

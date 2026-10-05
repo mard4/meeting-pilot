@@ -282,7 +282,6 @@
 "Assegna" = "Asignar";
 "Assegna progetto" = "Asignar proyecto";
 "Pubblicata su" = "Publicada en";
-"Scegli dove pubblicare le note di ogni riunione. Puoi attivarne più di uno." = "Elige dónde se publican las notas de cada reunión. Puedes activar más de uno.";
 "Come Meeting Pilot registra, trascrive e sintetizza le riunioni. Audio e trascrizioni restano sul Mac." = "Cómo Meeting Pilot graba, transcribe y resume las reuniones. El audio y las transcripciones se quedan en tu Mac.";
 "Lingua, aspetto, permessi e stato dei servizi." = "Idioma, apariencia, permisos y estado de los servicios.";
 "Le note delle riunioni, in Markdown sul tuo Mac." = "Tus notas de reuniones, en Markdown en tu Mac.";
@@ -315,7 +314,6 @@
 "Panoramica" = "Resumen";
 "In attesa di parlato..." = "Esperando voz...";
 "Chiudi" = "Cerrar";
-"Connettori" = "Conectores";
 
 /* Full English coverage 2026-09 */
 "%ld di %ld" = "%ld de %ld";
@@ -728,3 +726,8 @@
 "Apri le slide in Anteprima" = "Abrir las diapositivas en Vista Previa";
 "Scegli" = "Elegir";
 "Slide %d di %d" = "Diapositiva %d de %d";
+
+/* Publishing page */
+"Dove vanno le note di ogni riunione e cosa contengono." = "Adónde van las notas de cada reunión y qué contienen.";
+"Puoi attivarne più di una." = "Puedes activar más de uno.";
+"Modello di sintesi, prompt e vocabolario usati per ogni nota." = "Plantilla de resumen, prompt personalizado y glosario de empresa para cada nota.";

@@ -348,7 +348,8 @@ struct PublicationTargetsView: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        ContentPane(title: "Connettori", subtitle: "Scegli dove pubblicare le note di ogni riunione. Puoi attivarne più di uno.") {
+        ContentPane(title: "Pubblicazione", subtitle: "Dove vanno le note di ogni riunione e cosa contengono.") {
+            MPSectionTitle("Destinazioni", detail: "Puoi attivarne più di una.")
             VStack(spacing: 10) {
                 PublicationDestinationCard(
                     title: "Notion",
@@ -397,6 +398,14 @@ struct PublicationTargetsView: View {
                         .foregroundStyle(MeetingPilotDesign.textDimColor)
                 }
             }
+
+            // What the summary writes sits next to which of its sections each page shows;
+            // the model that writes it stays in Pipeline.
+            VStack(alignment: .leading, spacing: 10) {
+                MPSectionTitle("Contenuto della sintesi", detail: "Modello di sintesi, prompt e vocabolario usati per ogni nota.")
+                SummaryContentSection()
+            }
+            .padding(.top, 14)
 
             VStack(alignment: .leading, spacing: 10) {
                 MPSectionTitle("Sezioni pagina", detail: "Condivise da tutte le destinazioni.")

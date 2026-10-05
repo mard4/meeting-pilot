@@ -138,10 +138,6 @@ struct RecorderView: View {
                 Text("Sintesi (AI)")
                     .font(.system(size: 15, weight: .semibold))
                 SummaryConfigurationForm()
-                Divider()
-                    .padding(.vertical, 4)
-                MPSectionTitle("Contenuto della sintesi")
-                SummaryContentSection()
             }
             .padding(12)
             .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(MeetingPilotDesign.surfaceColor))

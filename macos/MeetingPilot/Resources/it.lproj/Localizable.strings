@@ -277,7 +277,6 @@
 "Assegna" = "Assegna";
 "Assegna progetto" = "Assegna progetto";
 "Pubblicata su" = "Pubblicata su";
-"Scegli dove pubblicare le note di ogni riunione. Puoi attivarne più di uno." = "Scegli dove pubblicare le note di ogni riunione. Puoi attivarne più di uno.";
 "Come Meeting Pilot registra, trascrive e sintetizza le riunioni. Audio e trascrizioni restano sul Mac." = "Come Meeting Pilot registra, trascrive e sintetizza le riunioni. Audio e trascrizioni restano sul Mac.";
 "Lingua, aspetto, permessi e stato dei servizi." = "Lingua, aspetto, permessi e stato dei servizi.";
 "Le note delle riunioni, in Markdown sul tuo Mac." = "Le note delle riunioni, in Markdown sul tuo Mac.";
@@ -310,7 +309,6 @@
 "Panoramica" = "Panoramica";
 "In attesa di parlato..." = "In attesa di parlato...";
 "Chiudi" = "Chiudi";
-"Connettori" = "Connettori";
 "%ld di %ld" = "%ld di %ld";
 "Abilita Meeting Pilot in Accessibilità, poi torna qui: acquisiremo titolo e partecipanti Teams." = "Abilita Meeting Pilot in Accessibilità, poi torna qui: acquisiremo titolo e partecipanti Teams.";
 "Accessibilità attiva" = "Accessibilità attiva";
@@ -708,3 +706,8 @@
 "Apri le slide in Anteprima" = "Apri le slide in Anteprima";
 "Scegli" = "Scegli";
 "Slide %d di %d" = "Slide %d di %d";
+
+/* Publishing page */
+"Dove vanno le note di ogni riunione e cosa contengono." = "Dove vanno le note di ogni riunione e cosa contengono.";
+"Puoi attivarne più di una." = "Puoi attivarne più di una.";
+"Modello di sintesi, prompt e vocabolario usati per ogni nota." = "Modello di sintesi, prompt e vocabolario usati per ogni nota.";
