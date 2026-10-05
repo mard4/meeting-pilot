@@ -63,103 +63,11 @@ final class PermissionsSetupWindow {
     }
 }
 
-/// Asked once, on a new install or the first launch after updating, before the
-/// permission checklist (and again at launch until answered): whether recordings
-/// become study notes, meeting notes or either (USER_PROFILE). It has no close button,
-/// because every later summary depends on the answer.
-final class ProfileSetupWindow {
-    static let shared = ProfileSetupWindow()
-
-    private var panel: NSPanel?
-    private var hostingController: NSHostingController<AnyView>?
-
-    func show(onChoose: @escaping (UserProfile) -> Void) {
-        close()
-        let panel = NSPanel(
-            contentRect: NSRect(origin: .zero, size: NSSize(width: 540, height: 284)),
-            styleMask: [.titled],
-            backing: .buffered,
-            defer: false
-        )
-        panel.title = "Meeting Pilot"
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = true
-        panel.level = .normal
-        panel.hidesOnDeactivate = false
-
-        // A separate window hierarchy: set the app's theme here too (see PermissionsSetupWindow).
-        let theme = MeetingPilotTheme(rawValue: UserDefaults.standard.string(forKey: "MeetingPilotAppTheme")) ?? .dark
-        let view = ProfileSetupView { [weak self] profile in
-            self?.close()
-            onChoose(profile)
-        }
-        .preferredColorScheme(theme == .light ? .light : .dark)
-        let hostingController = NSHostingController(rootView: AnyView(view))
-        self.hostingController = hostingController
-        panel.contentView = hostingController.view
-        panel.center()
-        NSApp.activate(ignoringOtherApps: true)
-        panel.makeKeyAndOrderFront(nil)
-        self.panel = panel
-    }
-
-    func close() {
-        panel?.orderOut(nil)
-        panel = nil
-        hostingController = nil
-    }
-}
-
-struct ProfileSetupView: View {
-    let onChoose: (UserProfile) -> Void
-    @State private var student = false
-    @State private var worker = false
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 14) {
-                BrandTile(size: 40)
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(localized("Studente o lavoratore?"))
-                        .font(.mpDisplay(18))
-                        .foregroundStyle(MeetingPilotDesign.primaryText(for: colorScheme))
-                    Text(localized("Scegli uno o entrambi: Meeting Pilot scriverà note pensate per le tue lezioni, le tue riunioni o tutte e due."))
-                        .font(MPFont.body(.medium))
-                        .foregroundStyle(MeetingPilotDesign.secondaryText(for: colorScheme))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-
-            ProfileRoleCards(student: $student, worker: $worker, keepsOne: false)
-
-            HStack {
-                Text(localized("Puoi cambiarlo quando vuoi in Impostazioni."))
-                    .font(MPFont.callout(.medium))
-                    .foregroundStyle(MeetingPilotDesign.tertiaryText(for: colorScheme))
-                Spacer()
-                Button(localized("Continua")) {
-                    onChoose(UserProfile(student: student, worker: worker))
-                }
-                .buttonStyle(MPPrimaryButtonStyle())
-                .keyboardShortcut(.defaultAction)
-                .disabled(!student && !worker)
-            }
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(MeetingPilotBackdrop())
-        .tint(MeetingPilotDesign.accent)
-        .foregroundStyle(MeetingPilotDesign.primaryText(for: colorScheme))
-    }
-}
-
 /// Student and worker as two cards that can both be on.
 struct ProfileRoleCards: View {
     @Binding var student: Bool
     @Binding var worker: Bool
-    /// Settings always keep one role; the first-launch question starts with none.
+    /// Settings always keep one role; the welcome tour starts with none.
     var keepsOne = true
 
     var body: some View {

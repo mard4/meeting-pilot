@@ -60,8 +60,18 @@ enum DebugSnapshots {
                 size: NSSize(width: 480, height: 82), theme: .dark, name: "recording-prompt-source", in: directory
             )
         }
-        if only == nil || only!.contains("profile") {
-            capture(ProfileSetupView(onChoose: { _ in }), size: NSSize(width: 540, height: 284), theme: .dark, name: "profile-setup", in: directory)
+        if only == nil || only!.contains("welcome") {
+            // Every page of the tour, for someone who both studies and works.
+            for step in WelcomeStep.allCases {
+                capture(
+                    WelcomeView(initialProfile: .both, step: step, onProfile: { _ in }, onFinish: { _ in }).environmentObject(model),
+                    size: WelcomeView.size, theme: .dark, name: "welcome-\(step.rawValue)-\(step)", in: directory
+                )
+            }
+            capture(
+                WelcomeView(initialProfile: nil, step: .profile, onProfile: { _ in }, onFinish: { _ in }).environmentObject(model),
+                size: WelcomeView.size, theme: .light, name: "welcome-1-profile-unanswered-light", in: directory
+            )
         }
         if only == nil || only!.contains("live") {
             let store = LiveSidebarStore()

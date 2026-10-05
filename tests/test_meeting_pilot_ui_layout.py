@@ -940,6 +940,26 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         )
         self.assertIn("MeetingSidecar.writeImportInfo(", importer)
 
+    def test_first_launch_tour_explains_capture_summary_and_publishing_before_permissions(self):
+        source = SOURCE.read_text()
+        delegate = _section(source, "final class AppDelegate", "enum AppSection")
+        app = _section(source, "struct MeetingPilotApp", "extension NSImage")
+        tour = _section(source, "struct WelcomeView", "/// One capsule per page")
+
+        # Everyone without a saved profile gets the tour, then the permission checklist.
+        self.assertIn("welcomeThenPermissions()", delegate)
+        self.assertIn("WelcomeWindow.shared.show(", delegate)
+        self.assertIn("showMissingPermissionsIfNeeded()", _section(delegate, "func showWelcome", "private func showMissingPermissionsIfNeeded"))
+        self.assertNotIn("ProfileSetupWindow", source)
+        # It can be replayed from Help.
+        self.assertIn('localized("Come funziona Meeting Pilot")', app)
+        for page in ("WelcomeIntroPage()", "WelcomeProfilePage(", "WelcomeCapturePage(", "WelcomeNotesPage(", "WelcomePublishPage(", "WelcomeReadyPage("):
+            self.assertIn(page, tour)
+        # The answer is saved on the profile page, not only at the end.
+        self.assertIn("onProfile(profile)", tour)
+        # Motion respects Reduce Motion.
+        self.assertIn("accessibilityReduceMotion", tour)
+
 
 if __name__ == "__main__":
     unittest.main()

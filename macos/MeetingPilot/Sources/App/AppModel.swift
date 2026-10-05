@@ -58,7 +58,7 @@ final class AppModel: ObservableObject {
     @Published var includedSections: [PageSection: Bool] = [:]
     /// USER_PROFILE: whether recordings become meeting notes, study notes or either.
     @Published var userProfile: UserProfile = .worker
-    /// A fresh install asks once, before the permissions; see `ProfileSetupWindow`.
+    /// Asked in the welcome tour before the permissions, until answered; see `WelcomeWindow`.
     @Published var needsProfileChoice = false
     @Published var keepAudio = false
     @Published var permissionsReady = 0

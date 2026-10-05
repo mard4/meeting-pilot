@@ -36,6 +36,11 @@ struct MeetingPilotApp: App {
                 }
                 .keyboardShortcut("i", modifiers: .command)
             }
+            CommandGroup(replacing: .help) {
+                Button(localized("Come funziona Meeting Pilot")) {
+                    appDelegate.showWelcome(initialProfile: appDelegate.model.userProfile)
+                }
+            }
         }
     }
 }
@@ -145,7 +150,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
                 self?.model.startInstalledServicesAutomatically()
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
-                self?.askProfileThenPermissions()
+                self?.welcomeThenPermissions()
             }
         }
 
@@ -342,15 +347,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         NSApp.terminate(nil)
     }
 
-    /// Until the user has said who it is for (new installs and updates alike), that comes
-    /// first, then the permission checklist.
-    private func askProfileThenPermissions() {
+    /// Until the user has said who it is for (new installs and updates alike), the tour
+    /// comes first, then the permission checklist.
+    private func welcomeThenPermissions() {
         guard model.needsProfileChoice else {
             showMissingPermissionsIfNeeded()
             return
         }
-        ProfileSetupWindow.shared.show { [weak self] profile in
+        showWelcome(initialProfile: nil)
+    }
+
+    /// The tour again, from Help, with the saved profile already chosen.
+    func showWelcome(initialProfile: UserProfile?) {
+        WelcomeWindow.shared.show(model: model, initialProfile: initialProfile) { [weak self] profile in
             self?.model.saveUserProfile(profile)
+        } onFinish: { [weak self] section in
+            if let section {
+                self?.model.selectedSection = section
+                self?.showMainWindow()
+            }
             self?.showMissingPermissionsIfNeeded()
         }
     }

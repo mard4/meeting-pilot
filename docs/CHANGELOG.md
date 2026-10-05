@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- A short welcome tour on first launch, and once after updating: who the notes are for, recording and importing, who writes the summary (with Apple Intelligence's status) and where notes are published, ending with a sample of the notes you will get. Help › How Meeting Pilot Works replays it.
 - Student profile. Meeting Pilot asks once whether you are a student, a worker or both, on a new install and on the first launch after updating, until you answer (Settings › General changes it). Lectures become study notes with key concepts, assignments and deadlines, exam hints, review questions and references, in every destination; work meetings keep decisions, action items, open questions and risks. When you are both, the title decides and the live sidebar can switch a single recording. Notion gets a `Type` column (Work / Study) once you study.
 - Audio source for recordings started by hand: microphone only (in-person lectures and meetings), Mac audio only (online lectures, webinars, videos) or both. Set the default in Pipeline › Recording and change it in the record prompt. A detected call always records both.
 - When a call starts during a microphone or Mac-audio recording, Meeting Pilot offers to save it and switch to recording the call.
