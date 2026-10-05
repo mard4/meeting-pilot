@@ -953,8 +953,10 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         self.assertNotIn("ProfileSetupWindow", source)
         # It can be replayed from Help.
         self.assertIn('localized("Come funziona Meeting Pilot")', app)
-        for page in ("WelcomeIntroPage()", "WelcomeProfilePage(", "WelcomeCapturePage(", "WelcomeNotesPage(", "WelcomePublishPage(", "WelcomeReadyPage("):
+        for page in ("WelcomeIntroPage()", "WelcomeProfilePage(", "WelcomeCapturePage(", "WelcomeNotesPage(", "WelcomePublishPage(", "WelcomeChatPage(", "WelcomeReadyPage("):
             self.assertIn(page, tour)
+        # A lecture's sample note shows its link to the slides.
+        self.assertIn("showsSlides: true", _section(source, "private struct WelcomeReadyPage", "private struct WelcomeSampleRow"))
         # The answer is saved on the profile page, not only at the end.
         self.assertIn("onProfile(profile)", tour)
         # Motion respects Reduce Motion.

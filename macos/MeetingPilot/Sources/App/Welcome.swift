@@ -58,7 +58,7 @@ final class WelcomeWindow {
 }
 
 enum WelcomeStep: Int, CaseIterable {
-    case welcome, profile, capture, notes, publish, ready
+    case welcome, profile, capture, notes, publish, chat, ready
 }
 
 /// Something the user chose to set up after the tour, opened in the main window.
@@ -71,7 +71,7 @@ enum WelcomeSetup: Hashable {
 }
 
 struct WelcomeView: View {
-    static let size = NSSize(width: 680, height: 480)
+    static let size = NSSize(width: 680, height: 520)
 
     @EnvironmentObject private var model: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -131,6 +131,7 @@ struct WelcomeView: View {
         case .capture: WelcomeCapturePage(profile: profile ?? .worker)
         case .notes: WelcomeNotesPage(setupLater: $setupLater)
         case .publish: WelcomePublishPage(setupLater: $setupLater)
+        case .chat: WelcomeChatPage(profile: profile ?? .worker)
         case .ready: WelcomeReadyPage(profile: profile ?? .worker, setupLater: setupLater)
         }
     }
@@ -710,10 +711,10 @@ private struct WelcomeReadyPage: View {
                         kind: "Lezione",
                         title: "Termodinamica · Lezione 3",
                         rows: [
-                            ("lightbulb", "Concetti chiave", "Entropia e secondo principio (Slide 4)"),
-                            ("checklist", "Compiti e scadenze", "Esercizi 1–5 entro martedì"),
-                            ("questionmark.circle", "Domande di ripasso", "Quando un processo è irreversibile?"),
-                        ]
+                            WelcomeSampleRow("lightbulb", "Concetti chiave", "Entropia e secondo principio", link: "Slide 4"),
+                            WelcomeSampleRow("checklist", "Compiti e scadenze", "Esercizi 1–5 entro martedì"),
+                        ],
+                        showsSlides: true
                     )
                 }
                 if profile.isWorker {
@@ -721,9 +722,9 @@ private struct WelcomeReadyPage: View {
                         kind: "Riunione",
                         title: "Roadmap Q4 · Sync settimanale",
                         rows: [
-                            ("checkmark.seal", "Decisioni", "Prima la modalità offline"),
-                            ("checklist", "Action item", "Giulia: piano di rilascio entro venerdì"),
-                            ("exclamationmark.triangle", "Rischi", "Sincronizzazione in ritardo"),
+                            WelcomeSampleRow("checkmark.seal", "Decisioni", "Prima la modalità offline"),
+                            WelcomeSampleRow("checklist", "Action item", "Giulia: piano di rilascio entro venerdì"),
+                            WelcomeSampleRow("exclamationmark.triangle", "Rischi", "Sincronizzazione in ritardo"),
                         ]
                     )
                 }
@@ -750,13 +751,32 @@ private struct WelcomeReadyPage: View {
     }
 }
 
-/// A miniature of the note the user will get, its sections arriving one by one.
+private struct WelcomeSampleRow {
+    let symbol: String
+    let title: String
+    let text: String
+    /// Where the line comes from in the slides, shown as a link chip.
+    var link: String? = nil
+
+    init(_ symbol: String, _ title: String, _ text: String, link: String? = nil) {
+        self.symbol = symbol
+        self.title = title
+        self.text = text
+        self.link = link
+    }
+}
+
+/// A miniature of the note the user will get, its sections arriving one by one. A
+/// lecture's ends with its slides, kept in step with the transcript.
 private struct WelcomeSampleNote: View {
     let kind: String
     let title: String
-    let rows: [(symbol: String, title: String, text: String)]
+    let rows: [WelcomeSampleRow]
+    var showsSlides = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var shown = 0
+
+    private var parts: Int { rows.count + (showsSlides ? 1 : 0) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -773,32 +793,270 @@ private struct WelcomeSampleNote: View {
                         .foregroundStyle(MeetingPilotDesign.accent)
                         .frame(width: 16)
                         .padding(.top, 2)
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: 3) {
                         Text(localized(row.title))
                             .font(MPFont.caption(.semibold))
-                        Text(localized(row.text))
-                            .font(MPFont.caption())
-                            .foregroundStyle(MeetingPilotDesign.textDimColor)
-                            .fixedSize(horizontal: false, vertical: true)
+                        HStack(spacing: 6) {
+                            Text(localized(row.text))
+                                .font(MPFont.caption())
+                                .foregroundStyle(MeetingPilotDesign.textDimColor)
+                                .fixedSize(horizontal: false, vertical: true)
+                            if let link = row.link {
+                                MPBadge(text: link, tone: .accent, systemImage: "link")
+                            }
+                        }
                     }
                 }
-                .opacity(index < shown ? 1 : 0)
-                .offset(y: index < shown ? 0 : 8)
+                .modifier(WelcomeArrival(visible: index < shown))
+            }
+            if showsSlides {
+                WelcomeSlideStrip()
+                    .modifier(WelcomeArrival(visible: rows.count < shown))
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .mpCard(padding: 16)
         .onAppear {
             guard !reduceMotion else {
-                shown = rows.count
+                shown = parts
                 return
             }
-            for index in rows.indices {
+            for index in 0..<parts {
                 withAnimation(.mpSmooth.delay(0.25 + Double(index) * 0.18)) {
                     shown = index + 1
                 }
             }
         }
+    }
+}
+
+/// Fades and lifts a part into place as it arrives.
+private struct WelcomeArrival: ViewModifier {
+    let visible: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(visible ? 1 : 0)
+            .offset(y: visible ? 0 : 8)
+    }
+}
+
+/// The slides PDF beside the transcript, as in the Diary: the slide being discussed
+/// lights up and its part of the transcript shows underneath. Still under Reduce Motion.
+private struct WelcomeSlideStrip: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private let slides: [(title: String, quote: String)] = [
+        ("Sistema e ambiente", "«Il sistema scambia calore e lavoro con l'ambiente…»"),
+        ("Primo principio", "«L'energia interna si conserva…»"),
+        ("Entropia", "«L'entropia misura il disordine…»"),
+        ("Ciclo di Carnot", "«Due isoterme e due adiabatiche…»"),
+    ]
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1.4)) { context in
+            let current = reduceMotion
+                ? slides.count - 1
+                : Int(context.date.timeIntervalSinceReferenceDate / 1.4) % slides.count
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "doc.richtext")
+                    .font(MPFont.caption(.semibold))
+                    .foregroundStyle(MeetingPilotDesign.accent)
+                    .frame(width: 16)
+                    .padding(.top, 2)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(localized("Trascrizione per slide"))
+                        .font(MPFont.caption(.semibold))
+                    HStack(spacing: 8) {
+                        HStack(spacing: 4) {
+                            ForEach(slides.indices, id: \.self) { index in
+                                WelcomeSlidePage(number: index + 1, current: index == current)
+                            }
+                        }
+                        Text(String(format: localized("Slide %d"), current + 1) + " · " + localized(slides[current].title))
+                            .font(MPFont.caption(.semibold))
+                            .foregroundStyle(MeetingPilotDesign.accent)
+                            .lineLimit(1)
+                            .id("title-\(current)")
+                            .transition(.opacity)
+                    }
+                    Text(localized(slides[current].quote))
+                        .font(MPFont.caption())
+                        .foregroundStyle(MeetingPilotDesign.textDimColor)
+                        .lineLimit(1)
+                        .id("quote-\(current)")
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+            }
+            .animation(.mpSmooth, value: current)
+        }
+    }
+}
+
+/// A page of the slides PDF in miniature.
+private struct WelcomeSlidePage: View {
+    let number: Int
+    let current: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Capsule().fill(current ? MeetingPilotDesign.accent : MeetingPilotDesign.textFaintColor).frame(width: 12, height: 2)
+            Capsule().fill(MeetingPilotDesign.lineStrongColor).frame(width: 16, height: 1.5)
+            Capsule().fill(MeetingPilotDesign.lineStrongColor).frame(width: 10, height: 1.5)
+        }
+        .frame(width: 26, height: 18)
+        .background(RoundedRectangle(cornerRadius: 3, style: .continuous).fill(current ? MeetingPilotDesign.accentTint : MeetingPilotDesign.hoverColor))
+        .overlay(RoundedRectangle(cornerRadius: 3, style: .continuous).strokeBorder(current ? MeetingPilotDesign.accent : MeetingPilotDesign.lineColor, lineWidth: 1))
+        .scaleEffect(current ? 1.12 : 1)
+        .accessibilityLabel(String(format: localized("Slide %d"), number))
+    }
+}
+
+// MARK: - Chat
+
+private struct WelcomeChatPage: View {
+    let profile: UserProfile
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            WelcomePageHeader(
+                eyebrow: "Chat",
+                title: "Chiedi alle tue note",
+                subtitle: "Fai una domanda: Meeting Pilot cerca tra lezioni e riunioni e risponde citando da dove viene ogni frase."
+            )
+            WelcomeChatDemo(example: profile.isStudent ? .student : .worker)
+            Label(
+                localized("Dalla barra laterale o dalla barra dei menu. Scegli corsi o progetti e temi per restringere la ricerca."),
+                systemImage: "bubble.left.and.text.bubble.right"
+            )
+            .font(MPFont.callout())
+            .foregroundStyle(MeetingPilotDesign.textFaintColor)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct WelcomeChatExample {
+    let filters: [(symbol: String, text: String)]
+    let question: String
+    /// Answer text, each part followed by the number of the source it cites.
+    let answer: [(text: String, source: Int)]
+    let sources: [(title: String, destination: String, symbol: String)]
+
+    static let student = WelcomeChatExample(
+        filters: [("folder", "Termodinamica"), ("tag", "Esame")],
+        question: "Cosa ha detto il prof sull'esame?",
+        answer: [("Ci sarà una domanda sul ciclo di Carnot", 1), ("e conviene ripassare il secondo principio", 2)],
+        sources: [("Termodinamica · Lezione 3", "Diario", "book.pages"), ("Termodinamica · Lezione 4", "Notion", "doc.text")]
+    )
+
+    static let worker = WelcomeChatExample(
+        filters: [("folder", "Atlas App"), ("tag", "Roadmap")],
+        question: "Cosa abbiamo deciso sulla modalità offline?",
+        answer: [("Arriva prima del connettore Salesforce", 1), ("e Giulia prepara il piano di rilascio entro venerdì", 2)],
+        sources: [("Roadmap Q4 · Sync settimanale", "Diario", "book.pages"), ("Design review · Onboarding", "Notion", "doc.text")]
+    )
+}
+
+/// A conversation playing out: the question, the model thinking, the answer with its
+/// citations, then the sources they open. Shown complete under Reduce Motion.
+private struct WelcomeChatDemo: View {
+    let example: WelcomeChatExample
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// 0 nothing, 1 question, 2 thinking, 3 answer, 4 and 5 each source.
+    @State private var phase = 0
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                ForEach(example.filters, id: \.text) { filter in
+                    MPBadge(text: filter.text, systemImage: filter.symbol)
+                }
+                Spacer()
+            }
+            HStack {
+                Spacer(minLength: 80)
+                Text(localized(example.question))
+                    .font(MPFont.callout(.medium))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(MeetingPilotDesign.accentTint))
+                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(MeetingPilotDesign.accent.opacity(0.35), lineWidth: 1))
+            }
+            .modifier(WelcomeArrival(visible: phase >= 1))
+
+            ZStack(alignment: .leading) {
+                if phase == 2 {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(MeetingPilotDesign.textFaintColor)
+                        .symbolEffect(.pulse, options: .repeating)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
+                        .transition(.opacity)
+                }
+                if phase >= 3 {
+                    answer
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
+                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+            }
+            .padding(.trailing, 60)
+            .frame(minHeight: 40, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(example.sources.enumerated()), id: \.offset) { index, source in
+                    HStack(spacing: 8) {
+                        WelcomeCitation(number: index + 1)
+                        Text(localized(source.title))
+                            .font(MPFont.caption(.semibold))
+                        MPBadge(text: source.destination, systemImage: source.symbol)
+                        Spacer()
+                    }
+                    .modifier(WelcomeArrival(visible: phase >= 4 + index))
+                }
+            }
+        }
+        .mpCard(padding: 16)
+        .task {
+            guard !reduceMotion else {
+                phase = 5
+                return
+            }
+            for (next, pause) in [(1, 0.35), (2, 0.6), (3, 1.1), (4, 0.45), (5, 0.25)] {
+                try? await Task.sleep(nanoseconds: UInt64(pause * 1_000_000_000))
+                guard !Task.isCancelled else { return }
+                withAnimation(.mpSmooth) { phase = next }
+            }
+        }
+    }
+
+    private var answer: some View {
+        example.answer.enumerated().reduce(Text("")) { text, part in
+            text
+                + Text((part.offset > 0 ? " " : "") + localized(part.element.text) + " ")
+                    .font(MPFont.callout())
+                + Text("[\(part.element.source)]")
+                    .font(MPFont.caption(.bold))
+                    .foregroundColor(MeetingPilotDesign.accent)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// The numbered citation the chat puts after a sentence and before its source.
+private struct WelcomeCitation: View {
+    let number: Int
+
+    var body: some View {
+        Text("\(number)")
+            .font(MPFont.caption(.bold, design: .monospaced))
+            .foregroundStyle(MeetingPilotDesign.accent)
+            .frame(width: 18, height: 18)
+            .background(Circle().fill(MeetingPilotDesign.accentTint))
     }
 }
 
