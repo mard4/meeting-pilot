@@ -1112,13 +1112,19 @@ func parsePublicationTargets(_ env: [String: String]) -> Set<String> {
     if !parsed.isEmpty {
         return Set(parsed)
     }
-    if env["NOTION_TOKEN"] != nil, env["NOTION_DATABASE_ID"] != nil || env["NOTION_OCCURRENCES_DATABASE_ID"] != nil {
+    // Mirrors the pipeline fallback (pipeline.py `_publish_artifacts`). The default
+    // .env ships the Notion and Obsidian keys empty, so a key alone is not a connection.
+    if envBool(env, "PUBLISH_TARGETS_EXPLICIT", false) {
+        return []
+    }
+    let filled = { (key: String) in !(env[key] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    if filled("NOTION_TOKEN"), filled("NOTION_DATABASE_ID") || filled("NOTION_OCCURRENCES_DATABASE_ID") {
         return ["notion"]
     }
-    if env["OBSIDIAN_VAULT_PATH"] != nil {
+    if filled("OBSIDIAN_VAULT_PATH") {
         return ["obsidian"]
     }
-    return []
+    return ["journal"]
 }
 
 func normalizePublicationTargets(_ targets: Set<String>) -> [String] {
