@@ -7,11 +7,13 @@ from typing import Any
 from ..artifacts import MeetingArtifacts, write_notion_receipt
 from ..config import Config
 from ..language import config_language, label
+from ..profiles import STUDENT, WORKER, artifacts_profile, user_profile
 from .meeting_format import (
     action_items,
     decisions,
     duration_text,
     iso_day,
+    key_concepts,
     meeting_date,
     participants,
     transcript_turns,
@@ -83,6 +85,10 @@ def _build_properties(
         properties["Participants"] = {"rich_text": [_rich_text(participants_text)]}
     if metadata.get("url") or frontmatter.get("url"):
         properties["URL"] = {"url": str(metadata.get("url") or frontmatter.get("url"))}
+    # Work and study notes share one table; the column only appears once the user studies.
+    if user_profile(config) != WORKER:
+        lecture = artifacts_profile(config, artifacts) == STUDENT
+        properties["Type"] = {"select": {"name": "Study" if lecture else "Work"}}
     properties.update({
         "Source": {"select": {"name": "Teams"}},
         "Status": {"select": {"name": "Pubblicato"}},
@@ -229,6 +235,26 @@ def _build_blocks(config: Config, artifacts: MeetingArtifacts) -> list[dict[str,
     if artifacts.user_notes:
         blocks.append(_titled_callout("📝", t("my_notes"), "purple_background", _paragraphs(artifacts.user_notes)))
 
+    if artifacts_profile(config, artifacts) == STUDENT:
+        blocks.extend(_lecture_blocks(config, summary, lang))
+    else:
+        blocks.extend(_meeting_blocks(config, summary, lang))
+
+    if artifacts.archived_audio_file or config.notion_include_transcript:
+        blocks.append(_divider())
+    if artifacts.archived_audio_file:
+        # Notion only links web URLs, so the local recording is shown as a path to open from Finder.
+        blocks.append(_callout(f"{t('audio')}: {artifacts.archived_audio_file}", color="gray_background", icon="🎧"))
+    if config.notion_include_transcript:
+        blocks.append(_transcript_toggle(t("full_transcript"), artifacts.transcript_text or t("no_transcript")))
+    return blocks[:MAX_CHILDREN]
+
+
+def _meeting_blocks(config: Config, summary: dict[str, Any], lang: str) -> list[dict[str, Any]]:
+    def t(key: str) -> str:
+        return label(lang, key)
+
+    blocks: list[dict[str, Any]] = []
     columns = []
     if config.notion_include_decisions:
         columns.append(_heading("✅ " + t("decisions"), level=3) + _decision_items(summary.get("decisions"), lang))
@@ -246,15 +272,35 @@ def _build_blocks(config: Config, artifacts: MeetingArtifacts) -> list[dict[str,
     if callouts:
         blocks.append(_divider())
         blocks.extend(callouts)
+    return blocks
 
-    if artifacts.archived_audio_file or config.notion_include_transcript:
+
+def _lecture_blocks(config: Config, summary: dict[str, Any], lang: str) -> list[dict[str, Any]]:
+    """Concepts are often a few lines each, so they get the full width instead of columns."""
+    def t(key: str) -> str:
+        return label(lang, key)
+
+    blocks: list[dict[str, Any]] = []
+    if config.notion_include_key_concepts:
         blocks.append(_divider())
-    if artifacts.archived_audio_file:
-        # Notion only links web URLs, so the local recording is shown as a path to open from Finder.
-        blocks.append(_callout(f"{t('audio')}: {artifacts.archived_audio_file}", color="gray_background", icon="🎧"))
-    if config.notion_include_transcript:
-        blocks.append(_transcript_toggle(t("full_transcript"), artifacts.transcript_text or t("no_transcript")))
-    return blocks[:MAX_CHILDREN]
+        blocks.extend(_heading("💡 " + t("key_concepts"), level=3))
+        blocks.extend(_concept_items(summary.get("key_concepts"), lang))
+    if config.notion_include_assignments:
+        blocks.append(_divider())
+        blocks.extend(_heading("📌 " + t("assignments"), level=3))
+        blocks.extend(_action_items(summary.get("assignments"), lang, empty="no_assignments"))
+
+    callouts = []
+    if config.notion_include_exam_hints and _values(summary.get("exam_hints")):
+        callouts.append(_list_callout("🎯", t("exam_hints"), summary.get("exam_hints"), "green_background"))
+    if config.notion_include_review_questions and _values(summary.get("review_questions")):
+        callouts.append(_list_callout("❓", t("review_questions"), summary.get("review_questions"), "yellow_background"))
+    if config.notion_include_references and _values(summary.get("references")):
+        callouts.append(_list_callout("📚", t("references"), summary.get("references"), "gray_background"))
+    if callouts:
+        blocks.append(_divider())
+        blocks.extend(callouts)
+    return blocks
 
 
 def _header_callout(config: Config, artifacts: MeetingArtifacts, lang: str) -> dict[str, Any]:
@@ -383,6 +429,8 @@ def _values(values: Any) -> list[str]:
 
 def _dict_value_text(value: dict[str, Any]) -> str:
     preferred = [
+        "term",
+        "explanation",
         "text",
         "task",
         "topic",
@@ -408,7 +456,17 @@ def _decision_items(values: Any, lang: str) -> list[dict[str, Any]]:
     return items[: MAX_CHILDREN - 1] or [_empty_note(label(lang, "no_decisions"))]
 
 
-def _action_items(values: Any, lang: str) -> list[dict[str, Any]]:
+def _concept_items(values: Any, lang: str) -> list[dict[str, Any]]:
+    items = []
+    for term, explanation in key_concepts(values):
+        rich_text = [_text(term[:MAX_TEXT], bold=True)]
+        if explanation:
+            rich_text.append(_text(f" — {explanation}"[:MAX_TEXT]))
+        items.append(_bullet_rich(rich_text))
+    return items[: MAX_CHILDREN - 1] or [_empty_note(label(lang, "no_key_concepts"))]
+
+
+def _action_items(values: Any, lang: str, empty: str = "no_action_items") -> list[dict[str, Any]]:
     items = []
     for item in action_items(values):
         rich_text = [_text(item["task"][:MAX_TEXT])]
@@ -418,7 +476,7 @@ def _action_items(values: Any, lang: str) -> list[dict[str, Any]]:
             rich_text.append(_text("  📅 "))
             rich_text.append(_date_mention(item["due"]) or _text(item["due"], color="orange"))
         items.append({"object": "block", "type": "to_do", "to_do": {"rich_text": rich_text, "checked": item["done"]}})
-    return items[: MAX_CHILDREN - 1] or [_empty_note(label(lang, "no_action_items"))]
+    return items[: MAX_CHILDREN - 1] or [_empty_note(label(lang, empty))]
 
 
 def _date_mention(value: str) -> dict[str, Any] | None:

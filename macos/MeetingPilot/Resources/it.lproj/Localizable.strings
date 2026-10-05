@@ -645,3 +645,27 @@
 "Le call rilevate, come Teams, registrano sempre microfono e audio del Mac." = "Le call rilevate, come Teams, registrano sempre microfono e audio del Mac.";
 "Nuova registrazione" = "Nuova registrazione";
 "Passa alla call" = "Passa alla call";
+
+/* Student and worker profile */
+"Profilo" = "Profilo";
+"Profilo salvato" = "Profilo salvato";
+"Studente o lavoratore?" = "Studente o lavoratore?";
+"Scegli uno o entrambi: Meeting Pilot scriverà note pensate per le tue lezioni, le tue riunioni o tutte e due." = "Scegli uno o entrambi: Meeting Pilot scriverà note pensate per le tue lezioni, le tue riunioni o tutte e due.";
+"Puoi cambiarlo quando vuoi in Impostazioni." = "Puoi cambiarlo quando vuoi in Impostazioni.";
+"Continua" = "Continua";
+"Studente" = "Studente";
+"Lavoratore" = "Lavoratore";
+"Lezioni e seminari: concetti chiave, compiti, domande di ripasso." = "Lezioni e seminari: concetti chiave, compiti, domande di ripasso.";
+"Riunioni e call: decisioni, action item, rischi." = "Riunioni e call: decisioni, action item, rischi.";
+"Una registrazione diventa una lezione quando il titolo lo dice, ad esempio \"Lezione\" o \"Corso di\". Durante la registrazione puoi cambiarlo nella sidebar dal vivo." = "Una registrazione diventa una lezione quando il titolo lo dice, ad esempio \"Lezione\" o \"Corso di\". Durante la registrazione puoi cambiarlo nella sidebar dal vivo.";
+"Riunioni di lavoro" = "Riunioni di lavoro";
+"Lezioni" = "Lezioni";
+"Concetti chiave" = "Concetti chiave";
+"Compiti e scadenze" = "Compiti e scadenze";
+"Per l'esame" = "Per l'esame";
+"Domande di ripasso" = "Domande di ripasso";
+"Riferimenti" = "Riferimenti";
+"Dal titolo" = "Dal titolo";
+"Riunione di lavoro" = "Riunione di lavoro";
+"Lezione" = "Lezione";
+"Tipo di nota" = "Tipo di nota";

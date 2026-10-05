@@ -54,15 +54,12 @@ final class AppModel: ObservableObject {
     @Published var teamsOCREnabled = false
     @Published var obsidianFolder = "Meeting Pilot"
     @Published var obsidianFilenameTemplate = "{date} - {title}.md"
-    @Published var includeOverview = true
-    @Published var includeSummary = true
-    @Published var includeTopics = true
-    @Published var includeDecisions = true
-    @Published var includeActionItems = true
-    @Published var includeOpenQuestions = true
-    @Published var includeRisks = true
-    @Published var includeSpeakers = true
-    @Published var includeTranscript = true
+    /// Which sections published notes include; a missing entry means included.
+    @Published var includedSections: [PageSection: Bool] = [:]
+    /// USER_PROFILE: whether recordings become meeting notes, study notes or either.
+    @Published var userProfile: UserProfile = .worker
+    /// A fresh install asks once, before the permissions; see `ProfileSetupWindow`.
+    @Published var needsProfileChoice = false
     @Published var keepAudio = false
     @Published var permissionsReady = 0
     @Published var permissionRows: [PermissionRow] = []
@@ -213,7 +210,16 @@ final class AppModel: ObservableObject {
         self.appLanguage = AppLanguage.current.rawValue
         self.appTheme = MeetingPilotTheme(rawValue: UserDefaults.standard.string(forKey: "MeetingPilotAppTheme")) ?? .dark
         EnvFile.onFailure = { [weak self] message in self?.statusMessage = message }
+        let isFreshInstall = !FileManager.default.fileExists(atPath: envURL.path)
         ConfigLocator.ensureConfigFile(at: envURL)
+        if EnvFile.load(from: envURL)["USER_PROFILE"] == nil {
+            if isFreshInstall {
+                needsProfileChoice = true
+            } else {
+                // Installs from before profiles only ever made meeting notes.
+                EnvFile.update(at: envURL, values: ["USER_PROFILE": UserProfile.worker.rawValue])
+            }
+        }
         EnvFile.update(at: envURL, values: ["BUSINESS_GLOSSARY_FILE": glossaryURL.path])
         let templatesURL = configRoot.appendingPathComponent(SummaryTemplateCatalog.fileName)
         self.customSummaryTemplates = SummaryTemplateCatalog.loadCustom(from: templatesURL)
@@ -377,15 +383,12 @@ final class AppModel: ObservableObject {
         obsidianVaultPath = env["OBSIDIAN_VAULT_PATH"] ?? ""
         obsidianFolder = env["OBSIDIAN_FOLDER"] ?? "Meeting Pilot"
         obsidianFilenameTemplate = env["OBSIDIAN_FILENAME_TEMPLATE"] ?? "{date} - {title}.md"
-        includeOverview = globalEnvBool(env, "INCLUDE_OVERVIEW", legacyKey: "NOTION_INCLUDE_OVERVIEW", true)
-        includeSummary = globalEnvBool(env, "INCLUDE_SUMMARY", legacyKey: "NOTION_INCLUDE_SUMMARY", true)
-        includeTopics = globalEnvBool(env, "INCLUDE_TOPICS", legacyKey: "NOTION_INCLUDE_TOPICS", true)
-        includeDecisions = globalEnvBool(env, "INCLUDE_DECISIONS", legacyKey: "NOTION_INCLUDE_DECISIONS", true)
-        includeActionItems = globalEnvBool(env, "INCLUDE_ACTION_ITEMS", legacyKey: "NOTION_INCLUDE_ACTION_ITEMS", true)
-        includeOpenQuestions = globalEnvBool(env, "INCLUDE_OPEN_QUESTIONS", legacyKey: "NOTION_INCLUDE_OPEN_QUESTIONS", true)
-        includeRisks = globalEnvBool(env, "INCLUDE_RISKS", legacyKey: "NOTION_INCLUDE_RISKS", true)
-        includeSpeakers = globalEnvBool(env, "INCLUDE_SPEAKERS", legacyKey: "NOTION_INCLUDE_SPEAKERS", true)
-        includeTranscript = globalEnvBool(env, "INCLUDE_TRANSCRIPT", legacyKey: "NOTION_INCLUDE_TRANSCRIPT", true)
+        includedSections = Dictionary(uniqueKeysWithValues: PageSection.allCases.map { section in
+            let included = section.legacyEnvKey.map { globalEnvBool(env, section.envKey, legacyKey: $0, true) }
+                ?? envBool(env, section.envKey, true)
+            return (section, included)
+        })
+        userProfile = env["USER_PROFILE"].flatMap(UserProfile.init(rawValue:)) ?? .worker
         keepAudio = envBool(env, "KEEP_AUDIO", false)
         recorderFolder = inbox.path
         inboxLabel = compactPath(inbox.path)
@@ -1363,33 +1366,21 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func savePageSections(
-        overview: Bool,
-        summary: Bool,
-        topics: Bool,
-        decisions: Bool,
-        actionItems: Bool,
-        openQuestions: Bool,
-        risks: Bool,
-        speakers: Bool,
-        transcript: Bool
-    ) {
+    func savePageSections(_ sections: [PageSection: Bool]) {
         EnvFile.update(
             at: envURL,
-            values: [
-                "INCLUDE_OVERVIEW": overview ? "true" : "false",
-                "INCLUDE_SUMMARY": summary ? "true" : "false",
-                "INCLUDE_TOPICS": topics ? "true" : "false",
-                "INCLUDE_DECISIONS": decisions ? "true" : "false",
-                "INCLUDE_ACTION_ITEMS": actionItems ? "true" : "false",
-                "INCLUDE_OPEN_QUESTIONS": openQuestions ? "true" : "false",
-                "INCLUDE_RISKS": risks ? "true" : "false",
-                "INCLUDE_SPEAKERS": speakers ? "true" : "false",
-                "INCLUDE_TRANSCRIPT": transcript ? "true" : "false"
-            ]
+            values: Dictionary(uniqueKeysWithValues: sections.map { ($0.key.envKey, $0.value ? "true" : "false") })
         )
         statusMessage = "Formato note salvato"
         refresh()
+    }
+
+    func saveUserProfile(_ profile: UserProfile) {
+        EnvFile.update(at: envURL, values: ["USER_PROFILE": profile.rawValue])
+        userProfile = profile
+        needsProfileChoice = false
+        statusMessage = "Profilo salvato"
+        watcher.restartIfRunning()
     }
 
     func saveKeepAudio(_ keep: Bool) {

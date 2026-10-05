@@ -52,6 +52,9 @@ enum DebugSnapshots {
                 size: NSSize(width: 480, height: 82), theme: .dark, name: "recording-prompt-source", in: directory
             )
         }
+        if only == nil || only!.contains("profile") {
+            capture(ProfileSetupView(onChoose: { _ in }), size: NSSize(width: 540, height: 284), theme: .dark, name: "profile-setup", in: directory)
+        }
         if only == nil || only!.contains("live") {
             let store = LiveSidebarStore()
             store.state = LiveSidebarState(
@@ -79,6 +82,7 @@ enum DebugSnapshots {
         if let diary = ProcessInfo.processInfo.environment["MEETING_PILOT_SNAPSHOT_DIARY"], !diary.isEmpty { model.journalRoot = diary }
         model.watcher.watcherActive = true
         model.accessibilityGranted = true
+        model.userProfile = UserProfile(rawValue: ProcessInfo.processInfo.environment["MEETING_PILOT_SNAPSHOT_PROFILE"] ?? "") ?? .both
         model.publicationTargets = ["journal", "notion", "obsidian"]
         model.obsidianVaultPath = NSString(string: "~/Meeting Pilot Demo Vault").expandingTildeInPath
         model.notion.token = "demo"

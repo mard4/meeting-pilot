@@ -140,7 +140,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
                 self?.model.startInstalledServicesAutomatically()
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
-                self?.showMissingPermissionsIfNeeded()
+                self?.askProfileThenPermissions()
             }
         }
 
@@ -322,6 +322,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     @objc private func quit() {
         NSApp.terminate(nil)
+    }
+
+    /// A fresh install first says who it is for, then gets the permission checklist.
+    private func askProfileThenPermissions() {
+        guard model.needsProfileChoice else {
+            showMissingPermissionsIfNeeded()
+            return
+        }
+        ProfileSetupWindow.shared.show { [weak self] profile in
+            self?.model.saveUserProfile(profile)
+            self?.showMissingPermissionsIfNeeded()
+        }
     }
 
     private func showMissingPermissionsIfNeeded() {

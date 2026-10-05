@@ -1,4 +1,8 @@
-"""Human-readable meeting facts shared by every publisher (Notion, Obsidian, Diary)."""
+"""Human-readable meeting facts shared by every publisher (Notion, Obsidian, Diary).
+
+Work meetings carry decisions, action items, open questions and risks; lectures
+carry key concepts, assignments, exam hints, review questions and references
+(see profiles.py). Summary, topics and transcript are common to both."""
 from __future__ import annotations
 
 import re
@@ -112,8 +116,23 @@ def decisions(values: Any) -> list[tuple[str, str]]:
     return output
 
 
+def key_concepts(values: Any) -> list[tuple[str, str]]:
+    """(term, explanation) pairs from a lecture's key concepts."""
+    output = []
+    for value in _as_list(values):
+        if isinstance(value, dict):
+            term = present(value.get("term") or value.get("concept") or value.get("name"))
+            explanation = present(value.get("explanation") or value.get("definition") or value.get("text"))
+        else:
+            term, explanation = present(value), ""
+        if term or explanation:
+            output.append((term or explanation, explanation if term else ""))
+    return output
+
+
 def action_items(values: Any) -> list[dict[str, Any]]:
-    """{'task', 'owner', 'due', 'done'} dicts."""
+    """{'task', 'owner', 'due', 'done'} dicts. Lecture assignments use the same shape,
+    without an owner."""
     output = []
     for value in _as_list(values):
         if isinstance(value, dict):

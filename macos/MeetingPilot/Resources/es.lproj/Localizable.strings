@@ -665,3 +665,27 @@
 "Le call rilevate, come Teams, registrano sempre microfono e audio del Mac." = "Las llamadas detectadas, como Teams, siempre graban el micrófono y el audio del Mac.";
 "Nuova registrazione" = "Nueva grabación";
 "Passa alla call" = "Cambiar a la llamada";
+
+/* Student and worker profile */
+"Profilo" = "Perfil";
+"Profilo salvato" = "Perfil guardado";
+"Studente o lavoratore?" = "¿Estudiante o profesional?";
+"Scegli uno o entrambi: Meeting Pilot scriverà note pensate per le tue lezioni, le tue riunioni o tutte e due." = "Elige uno o ambos: Meeting Pilot escribirá notas pensadas para tus clases, tus reuniones o ambas.";
+"Puoi cambiarlo quando vuoi in Impostazioni." = "Puedes cambiarlo cuando quieras en Ajustes.";
+"Continua" = "Continuar";
+"Studente" = "Estudiante";
+"Lavoratore" = "Profesional";
+"Lezioni e seminari: concetti chiave, compiti, domande di ripasso." = "Clases y seminarios: conceptos clave, tareas, preguntas de repaso.";
+"Riunioni e call: decisioni, action item, rischi." = "Reuniones y llamadas: decisiones, acciones, riesgos.";
+"Una registrazione diventa una lezione quando il titolo lo dice, ad esempio \"Lezione\" o \"Corso di\". Durante la registrazione puoi cambiarlo nella sidebar dal vivo." = "Una grabación se convierte en clase cuando el título lo indica, por ejemplo \"Clase\" o \"Asignatura\". Mientras grabas, puedes cambiarlo en la barra lateral en directo.";
+"Riunioni di lavoro" = "Reuniones de trabajo";
+"Lezioni" = "Clases";
+"Concetti chiave" = "Conceptos clave";
+"Compiti e scadenze" = "Tareas y plazos";
+"Per l'esame" = "Para el examen";
+"Domande di ripasso" = "Preguntas de repaso";
+"Riferimenti" = "Referencias";
+"Dal titolo" = "Según el título";
+"Riunione di lavoro" = "Reunión de trabajo";
+"Lezione" = "Clase";
+"Tipo di nota" = "Tipo de nota";

@@ -29,6 +29,8 @@ struct SummarizerInput: Decodable {
     let locale: String?
     let customPrompt: String?
     let outputLanguage: String?
+    /// "student" for a lecture (study notes), otherwise meeting notes. See `profiles.py`.
+    let profile: String?
 }
 
 enum JSONValue: Codable {
@@ -139,7 +141,8 @@ struct AppleIntelligenceSummarizer {
     static func summarize(_ input: SummarizerInput, transcript: PreparedTranscript, model: SystemLanguageModel) async throws -> String {
         let chunks = splitText(transcript.text, maximumCharacters: 6_000)
         var partialNotes: [String] = []
-        let chunkSchema = try makeChunkSchema()
+        let lecture = input.profile == "student"
+        let chunkSchema = try lecture ? makeLectureChunkSchema() : makeChunkSchema()
         let localeInstruction = transcript.translatedFrom.map {
             "The transcript was machine-translated to \(transcript.languageName) from \($0); names may be transliterated."
         } ?? "The transcript is in \(transcript.languageName)."
@@ -148,9 +151,12 @@ struct AppleIntelligenceSummarizer {
         let language = input.outputLanguage ?? "Italian"
         let languageInstruction = "Write every field in \(language), translating from the transcript language when it differs; keep names of people, products and proper nouns as spoken."
         for (index, chunk) in chunks.enumerated() {
+            let task = lecture
+                ? "Extract faithful study notes from a lecture transcript. Never invent definitions, dates, deadlines, exam information, or references."
+                : "Extract faithful operational notes from a meeting transcript. Never invent names, dates, decisions, owners, deadlines, questions, or risks."
             let session = LanguageModelSession(model: model, instructions: """
                 \(localeInstruction)
-                Extract faithful operational notes from a meeting transcript. Never invent names, dates, decisions, owners, deadlines, questions, or risks. Keep the result concise. \(languageInstruction)
+                \(task) Keep the result concise. \(languageInstruction)
                 \(customInstructionText)
                 """)
             let response = try await session.respond(
@@ -163,10 +169,16 @@ struct AppleIntelligenceSummarizer {
             partialNotes.append(response.content.jsonString)
         }
 
-        let condensed = try await condenseIfNeeded(partialNotes, model: model)
+        let condensed = try await condenseIfNeeded(partialNotes, model: model, lecture: lecture)
         let context = try metadataContext(input)
         let encodedPartials = "[" + condensed.joined(separator: ",") + "]"
-        let finalSession = LanguageModelSession(model: model, instructions: """
+        let finalSession = lecture
+            ? LanguageModelSession(model: model, instructions: """
+            \(localeInstruction)
+            Create structured study notes for a lecture using only the supplied extracts and metadata. Never invent information. Create a concise descriptive title of 3-8 words for what the lecture covered; never include platform names, attendee names, email addresses, dates, times, or technical recording filenames. known_projects lists the user's courses: use the course as tag, reusing a known course only when the lecture is clearly about it; otherwise propose a concise new course name. Participants may only come from calendar_metadata and the participant names identified from Teams; generic labels such as Speaker 1 or SPEAKER_00 are not names. Key concepts are the terms, definitions, formulas and methods the lecture explains, each with a short faithful explanation. Assignments are homework, readings, projects and exam or submission dates that were announced; use nil when a deadline is unknown. Exam hints are only what the lecturer said will be examined or stressed as especially important. Review questions are 3-6 questions a student can answer from this lecture alone. References are books, chapters, pages, slides, papers or links that were mentioned. Provide the theme as the lecture's main topic in 2-5 words. \(languageInstruction)
+            \(customInstructionText)
+            """)
+            : LanguageModelSession(model: model, instructions: """
             \(localeInstruction)
             Create structured meeting notes using only the supplied extracts and metadata. Never invent information. Create a concise descriptive title of 3-8 words for the meeting subject; never include platform names, attendee names, email addresses, dates, times, or technical recording filenames. Choose the project tag by analysing the conversation and comparing it with known_projects: reuse a known project only when it is clearly relevant; otherwise propose a concise new project tag. Participants may only come from calendar_metadata and the participant names identified from Teams; generic labels such as Speaker 1 or SPEAKER_00 are not names. Use nil when a date, owner, or deadline is unknown. Every action item status must be exactly "open". Provide one concise reusable tag and one concise theme of 2-5 words when the meeting has a clear subject. \(languageInstruction)
             \(customInstructionText)
@@ -182,21 +194,24 @@ struct AppleIntelligenceSummarizer {
             Faithful transcript extracts:
             \(encodedPartials)
             """,
-            schema: try makeMeetingSchema()
+            schema: try lecture ? makeLectureSchema() : makeMeetingSchema()
         )
         return response.content.jsonString
     }
 
     @available(macOS 26.0, *)
-    static func condenseIfNeeded(_ notes: [String], model: SystemLanguageModel) async throws -> [String] {
+    static func condenseIfNeeded(_ notes: [String], model: SystemLanguageModel, lecture: Bool) async throws -> [String] {
         guard notes.count > 8 else { return notes }
         var result: [String] = []
-        let schema = try makeChunkSchema()
+        let schema = try lecture ? makeLectureChunkSchema() : makeChunkSchema()
+        let preserved = lecture
+            ? "key concepts, assignments, exam hints, references"
+            : "decisions, action items, open questions, risks"
         for start in stride(from: 0, to: notes.count, by: 6) {
             let end = min(start + 6, notes.count)
             let batch = Array(notes[start..<end])
             let session = LanguageModelSession(model: model, instructions: """
-                Merge meeting-note extracts without adding facts. Preserve decisions, action items, open questions, risks, and meaningful topics. Remove only duplication and keep the result concise.
+                Merge \(lecture ? "lecture" : "meeting")-note extracts without adding facts. Preserve \(preserved), and meaningful topics. Remove only duplication and keep the result concise.
                 """)
             let response = try await session.respond(
                 to: "[" + batch.joined(separator: ",") + "]",
@@ -204,7 +219,7 @@ struct AppleIntelligenceSummarizer {
             )
             result.append(response.content.jsonString)
         }
-        return try await condenseIfNeeded(result, model: model)
+        return try await condenseIfNeeded(result, model: model, lecture: lecture)
     }
 
     @available(macOS 26.0, *)
@@ -265,6 +280,68 @@ struct AppleIntelligenceSummarizer {
             ]
         )
         return try GenerationSchema(root: root, dependencies: [decision, action])
+    }
+
+    @available(macOS 26.0, *)
+    static func makeLectureChunkSchema() throws -> GenerationSchema {
+        let string = DynamicGenerationSchema(type: String.self)
+        let strings = DynamicGenerationSchema(arrayOf: string)
+        let root = DynamicGenerationSchema(
+            name: "ChunkStudyNotes",
+            description: "Faithful concise study notes extracted from one or more lecture transcript parts",
+            properties: [
+                .init(name: "summary", description: "Concise factual summary", schema: string),
+                .init(name: "topics", schema: strings),
+                .init(name: "key_concepts", description: "Term followed by its explanation", schema: strings),
+                .init(name: "assignments", description: "Announced homework, readings and deadlines", schema: strings),
+                .init(name: "exam_hints", schema: strings),
+                .init(name: "references", schema: strings),
+            ]
+        )
+        return try GenerationSchema(root: root, dependencies: [])
+    }
+
+    /// Study notes for a lecture: the shared fields of `makeMeetingSchema`, with key
+    /// concepts, assignments, exam hints, review questions and references in place of
+    /// decisions, action items, open questions and risks.
+    @available(macOS 26.0, *)
+    static func makeLectureSchema() throws -> GenerationSchema {
+        let string = DynamicGenerationSchema(type: String.self)
+        let strings = DynamicGenerationSchema(arrayOf: string)
+        let concept = DynamicGenerationSchema(
+            name: "KeyConcept",
+            properties: [
+                .init(name: "term", schema: string),
+                .init(name: "explanation", schema: string),
+            ]
+        )
+        let assignment = DynamicGenerationSchema(
+            name: "Assignment",
+            properties: [
+                .init(name: "task", schema: string),
+                .init(name: "due_date", schema: string, isOptional: true),
+            ]
+        )
+        let concepts = DynamicGenerationSchema(arrayOf: .init(referenceTo: "KeyConcept"))
+        let assignments = DynamicGenerationSchema(arrayOf: .init(referenceTo: "Assignment"))
+        let root = DynamicGenerationSchema(
+            name: "StructuredStudyNotes",
+            properties: [
+                .init(name: "title", schema: string),
+                .init(name: "tag", description: "The course, without #", schema: string, isOptional: true),
+                .init(name: "theme", description: "The lecture's main topic, 2-5 words", schema: string, isOptional: true),
+                .init(name: "date", description: "ISO date/time", schema: string, isOptional: true),
+                .init(name: "participants", schema: strings),
+                .init(name: "summary", schema: string),
+                .init(name: "topics", schema: strings),
+                .init(name: "key_concepts", schema: concepts),
+                .init(name: "assignments", schema: assignments),
+                .init(name: "exam_hints", schema: strings),
+                .init(name: "review_questions", schema: strings),
+                .init(name: "references", schema: strings),
+            ]
+        )
+        return try GenerationSchema(root: root, dependencies: [concept, assignment])
     }
 
     struct PreparedTranscript {

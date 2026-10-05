@@ -47,6 +47,34 @@ enum MeetingSidecar {
         }
     }
 
+    /// `{"profile": "worker" | "student"}`, chosen in the live sidebar; absent means the
+    /// pipeline decides from the title (see `profiles.py`).
+    static func profileURL(for audioURL: URL) -> URL {
+        directory(for: audioURL).appendingPathComponent("profile.json")
+    }
+
+    static func readProfileChoice(for audioURL: URL) -> UserProfile? {
+        guard let data = try? Data(contentsOf: profileURL(for: audioURL)),
+              let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let choice = payload["profile"] as? String
+        else { return nil }
+        return UserProfile(rawValue: choice).flatMap { $0 == .both ? nil : $0 }
+    }
+
+    static func writeProfileChoice(_ choice: UserProfile?, for audioURL: URL) {
+        let url = profileURL(for: audioURL)
+        guard let choice else {
+            try? FileManager.default.removeItem(at: url)
+            return
+        }
+        do {
+            let data = try JSONSerialization.data(withJSONObject: ["profile": choice.rawValue])
+            try data.write(to: url, options: .atomic)
+        } catch {
+            AppLog.append("Salvataggio tipo di nota non riuscito: \(error.localizedDescription)")
+        }
+    }
+
     static func readTemplateChoice(for audioURL: URL) -> String {
         guard let data = try? Data(contentsOf: templateURL(for: audioURL)),
               let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],

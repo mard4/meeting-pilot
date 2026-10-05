@@ -211,6 +211,8 @@ struct SettingsOverviewView: View {
                 )
             }
 
+            ProfileSettingsCard()
+
             VStack(alignment: .leading, spacing: 8) {
                 Text(localized("Lingua app"))
                     .font(.system(size: 13, weight: .bold))
@@ -352,6 +354,40 @@ struct SettingsOverviewView: View {
             audioFolder = model.recorderFolder
         }
         .onChange(of: audioFolder) { _ in model.saveRecorderFolder(audioFolder) }
+    }
+}
+
+/// Student, worker or both (USER_PROFILE); one of the two always stays selected.
+struct ProfileSettingsCard: View {
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(localized("Profilo"))
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(MeetingPilotDesign.tertiaryText(for: colorScheme))
+            ProfileRoleCards(
+                student: Binding(
+                    get: { model.userProfile.isStudent },
+                    set: { model.saveUserProfile(UserProfile(student: $0, worker: model.userProfile.isWorker)) }
+                ),
+                worker: Binding(
+                    get: { model.userProfile.isWorker },
+                    set: { model.saveUserProfile(UserProfile(student: model.userProfile.isStudent, worker: $0)) }
+                )
+            )
+            if model.userProfile == .both {
+                Text(localized("Una registrazione diventa una lezione quando il titolo lo dice, ad esempio \"Lezione\" o \"Corso di\". Durante la registrazione puoi cambiarlo nella sidebar dal vivo."))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(MeetingPilotDesign.textDimColor)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
     }
 }
 

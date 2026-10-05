@@ -665,3 +665,27 @@
 "Le call rilevate, come Teams, registrano sempre microfono e audio del Mac." = "Les appels détectés, comme Teams, enregistrent toujours le microphone et l'audio du Mac.";
 "Nuova registrazione" = "Nouvel enregistrement";
 "Passa alla call" = "Passer à l'appel";
+
+/* Student and worker profile */
+"Profilo" = "Profil";
+"Profilo salvato" = "Profil enregistré";
+"Studente o lavoratore?" = "Étudiant ou professionnel ?";
+"Scegli uno o entrambi: Meeting Pilot scriverà note pensate per le tue lezioni, le tue riunioni o tutte e due." = "Choisissez l'un ou les deux : Meeting Pilot rédigera des notes adaptées à vos cours, à vos réunions ou aux deux.";
+"Puoi cambiarlo quando vuoi in Impostazioni." = "Vous pouvez le modifier à tout moment dans les Réglages.";
+"Continua" = "Continuer";
+"Studente" = "Étudiant";
+"Lavoratore" = "Professionnel";
+"Lezioni e seminari: concetti chiave, compiti, domande di ripasso." = "Cours et séminaires : notions clés, devoirs, questions de révision.";
+"Riunioni e call: decisioni, action item, rischi." = "Réunions et appels : décisions, actions, risques.";
+"Una registrazione diventa una lezione quando il titolo lo dice, ad esempio \"Lezione\" o \"Corso di\". Durante la registrazione puoi cambiarlo nella sidebar dal vivo." = "Un enregistrement devient un cours quand son titre l'indique, par exemple « Séminaire » ou « Examen ». Pendant l'enregistrement, vous pouvez le changer dans la barre latérale en direct.";
+"Riunioni di lavoro" = "Réunions de travail";
+"Lezioni" = "Cours";
+"Concetti chiave" = "Notions clés";
+"Compiti e scadenze" = "Devoirs et échéances";
+"Per l'esame" = "Pour l'examen";
+"Domande di ripasso" = "Questions de révision";
+"Riferimenti" = "Références";
+"Dal titolo" = "D'après le titre";
+"Riunione di lavoro" = "Réunion de travail";
+"Lezione" = "Cours";
+"Tipo di nota" = "Type de note";

@@ -48,6 +48,10 @@ final class LiveSidebarStore: ObservableObject {
     @Published var notes = ""
     @Published private(set) var templateChoice = SummaryTemplateCatalog.auto
     @Published private(set) var templateOptions: [SummaryTemplateOption] = []
+    /// Work meeting or lecture for this recording; nil leaves it to the title (see `profiles.py`).
+    @Published private(set) var profileChoice: UserProfile?
+    /// Only someone who is both a student and a worker has anything to choose.
+    @Published private(set) var showsProfileChoice = false
     private var lastLoadedData: Data?
     private var audioURL: URL?
     private var notesSaveWork: DispatchWorkItem?
@@ -62,6 +66,15 @@ final class LiveSidebarStore: ObservableObject {
         templateChoice = MeetingSidecar.readTemplateChoice(for: audioURL)
         let customURL = ConfigLocator.configDirectory().appendingPathComponent(SummaryTemplateCatalog.fileName)
         templateOptions = SummaryTemplateCatalog.options(custom: SummaryTemplateCatalog.loadCustom(from: customURL))
+        profileChoice = MeetingSidecar.readProfileChoice(for: audioURL)
+        let env = EnvFile.load(from: ConfigLocator.configDirectory().appendingPathComponent(".env"))
+        showsProfileChoice = env["USER_PROFILE"] == UserProfile.both.rawValue
+    }
+
+    func selectProfile(_ choice: UserProfile?) {
+        guard let audioURL else { return }
+        profileChoice = choice
+        MeetingSidecar.writeProfileChoice(choice, for: audioURL)
     }
 
     func notesDidChange() {
@@ -300,6 +313,37 @@ struct LiveSidebarView: View {
         .background(Color.orange.opacity(0.12))
     }
 
+    private static let profileOptions: [(choice: UserProfile?, title: String, symbol: String)] = [
+        (nil, "Dal titolo", "sparkles"),
+        (.worker, "Riunione di lavoro", "briefcase"),
+        (.student, "Lezione", "graduationcap"),
+    ]
+
+    /// Icon-only next to the template menu: the sidebar is narrow and its items say the rest.
+    private var profileMenu: some View {
+        let current = Self.profileOptions.first { $0.choice == store.profileChoice } ?? Self.profileOptions[0]
+        return Menu {
+            ForEach(Self.profileOptions, id: \.title) { option in
+                Button {
+                    store.selectProfile(option.choice)
+                } label: {
+                    if option.choice == store.profileChoice {
+                        Label(localized(option.title), systemImage: "checkmark")
+                    } else {
+                        Label(localized(option.title), systemImage: option.symbol)
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: current.symbol)
+                .font(.system(size: 11, weight: .medium))
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(localized("Tipo di nota: \(localized(current.title))"))
+        .accessibilityLabel(localized("Tipo di nota"))
+    }
+
     /// Granola-style notes: the summary treats each line typed here as a point it must
     /// cover (see `summary_guidance` in the pipeline).
     private var notesSection: some View {
@@ -310,6 +354,9 @@ struct LiveSidebarView: View {
                     .tracking(0.8)
                     .foregroundStyle(.white.opacity(0.6))
                 Spacer()
+                if store.showsProfileChoice {
+                    profileMenu
+                }
                 Menu {
                     ForEach(store.templateOptions) { option in
                         Button {

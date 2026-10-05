@@ -15,6 +15,7 @@ from ..config import Config
 from .apple_intelligence_client import AppleIntelligenceUnavailable, summarize_with_apple_intelligence
 from ..business_glossary import summary_instructions as business_glossary_instructions
 from ..language import config_language, language_name
+from ..profiles import STUDENT, resolve_profile
 from .summary_templates import summary_guidance
 from ..tag_catalog import catalog_values
 
@@ -24,8 +25,61 @@ Reply with valid JSON only, no Markdown.
 Never invent participants, decisions or deadlines: use null when they are missing.
 """
 
+STUDENT_SYSTEM_PROMPT = """You turn lecture transcripts into study notes.
+Reply with valid JSON only, no Markdown.
+Never invent deadlines, exam information or references: use null or an empty list when they are missing.
+"""
 
-def summarize_with_openai_compatible(config: Config, artifacts: MeetingArtifacts) -> dict[str, Any]:
+PARTICIPANTS_RULE = "Only use calendar_metadata and the participant names identified from Teams for participants; do not treat generic labels such as Speaker 1 or SPEAKER_00 as participant names."
+
+
+def _meeting_request(language: str) -> tuple[str, dict[str, Any]]:
+    task = f"Create structured meeting notes written entirely in {language}: title, tag, theme, summary, topics, decisions, action items, open questions and risks must all be in {language}, translating from the transcript language when it differs. Keep names of people, products and proper nouns as spoken. Generate a concise, descriptive title of 3-8 words that captures the meeting subject. Never include the platform, participant names, email addresses, dates, times, or technical recording filenames in the title. Choose the project tag by analysing the conversation and comparing it with known_projects: reuse a known project only when it is clearly relevant; otherwise propose a concise new project tag. " + PARTICIPANTS_RULE
+    schema = {
+        "title": "string",
+        "tag": "one concise, reusable label for this meeting, 2-5 words, without #",
+        "theme": "one concise meeting theme, 2-5 words",
+        "date": "ISO date/time string or null",
+        "participants": ["string"],
+        "summary": "string",
+        "topics": ["string"],
+        "decisions": [{"text": "string", "owner": "string or null"}],
+        "action_items": [
+            {
+                "owner": "string or null",
+                "task": "string",
+                "due_date": "string or null",
+                "status": "open",
+            }
+        ],
+        "open_questions": ["string"],
+        "risks": ["string"],
+    }
+    return task, schema
+
+
+def _lecture_request(language: str) -> tuple[str, dict[str, Any]]:
+    task = f"Create structured study notes for this lecture written entirely in {language}: title, tag, theme, summary, topics, key concepts, assignments, exam hints, review questions and references must all be in {language}, translating from the transcript language when it differs. Keep names of people, products and proper nouns as spoken. Generate a concise, descriptive title of 3-8 words that captures what the lecture covered. Never include the platform, participant names, email addresses, dates, times, or technical recording filenames in the title. known_projects lists the user's courses: use the course as tag, reusing a known course only when the lecture is clearly about it; otherwise propose a concise new course name. Key concepts are the terms, definitions, formulas and methods the lecture explains, each with a short explanation faithful to the lecturer. Assignments are homework, readings, projects and exam or submission dates the lecturer announced. Exam hints are only what the lecturer said will be examined or stressed as especially important. Review questions are 3-6 questions a student can answer from this lecture alone. References are books, chapters, pages, slides, papers or links that were mentioned. " + PARTICIPANTS_RULE
+    schema = {
+        "title": "string",
+        "tag": "the course this lecture belongs to, 1-5 words, without #",
+        "theme": "the lecture's main topic, 2-5 words",
+        "date": "ISO date/time string or null",
+        "participants": ["string"],
+        "summary": "string",
+        "topics": ["string"],
+        "key_concepts": [{"term": "string", "explanation": "string"}],
+        "assignments": [{"task": "string", "due_date": "string or null"}],
+        "exam_hints": ["string"],
+        "review_questions": ["string"],
+        "references": ["string"],
+    }
+    return task, schema
+
+
+def summarize_with_openai_compatible(
+    config: Config, artifacts: MeetingArtifacts, profile: str | None = None
+) -> dict[str, Any]:
     transcript = artifacts.transcript_text.strip()
     summary = artifacts.summary_markdown.strip()
     frontmatter = artifacts.frontmatter
@@ -34,35 +88,19 @@ def summarize_with_openai_compatible(config: Config, artifacts: MeetingArtifacts
     if not transcript and not summary:
         raise ValueError("No transcript or summary was found for summarization.")
 
+    profile = profile or resolve_profile(config, artifacts.session_dir, meeting_metadata or {}, artifacts.title)
+    language = language_name(config_language(config))
+    task, schema = _lecture_request(language) if profile == STUDENT else _meeting_request(language)
     user_prompt = {
-        "task": f"Create structured meeting notes written entirely in {language_name(config_language(config))}: title, tag, theme, summary, topics, decisions, action items, open questions and risks must all be in {language_name(config_language(config))}, translating from the transcript language when it differs. Keep names of people, products and proper nouns as spoken. Generate a concise, descriptive title of 3-8 words that captures the meeting subject. Never include the platform, participant names, email addresses, dates, times, or technical recording filenames in the title. Choose the project tag by analysing the conversation and comparing it with known_projects: reuse a known project only when it is clearly relevant; otherwise propose a concise new project tag. Only use calendar_metadata and the participant names identified from Teams for participants; do not treat generic labels such as Speaker 1 or SPEAKER_00 as participant names.",
-        "schema": {
-            "title": "string",
-            "tag": "one concise, reusable label for this meeting, 2-5 words, without #",
-            "theme": "one concise meeting theme, 2-5 words",
-            "date": "ISO date/time string or null",
-            "participants": ["string"],
-            "summary": "string",
-            "topics": ["string"],
-            "decisions": [{"text": "string", "owner": "string or null"}],
-            "action_items": [
-                {
-                    "owner": "string or null",
-                    "task": "string",
-                    "due_date": "string or null",
-                    "status": "open",
-                }
-            ],
-            "open_questions": ["string"],
-            "risks": ["string"],
-        },
+        "task": task,
+        "schema": schema,
         "frontmatter": frontmatter,
         "calendar_metadata": meeting_metadata,
         "known_projects": known_projects,
         "existing_summary": summary,
         "transcript": transcript[:120_000],
     }
-    system_prompt = SYSTEM_PROMPT
+    system_prompt = STUDENT_SYSTEM_PROMPT if profile == STUDENT else SYSTEM_PROMPT
     if config.summary_prompt:
         system_prompt += f"\nCustom instructions from the user:\n{config.summary_prompt}\n"
     guidance = summary_guidance(config, artifacts)
@@ -158,12 +196,19 @@ def strip_model_wrapping(content: str) -> str:
 
 
 def summarize(config: Config, artifacts: MeetingArtifacts) -> dict[str, Any]:
+    """The summary records whether it was written as meeting or study notes, so
+    publishers and later re-publishing render the sections it actually has."""
+    profile = resolve_profile(config, artifacts.session_dir, artifacts.meeting_metadata or {}, artifacts.title)
+    result: dict[str, Any] | None = None
     if config.summary_provider_mode == "apple":
         try:
-            return summarize_with_apple_intelligence(config, artifacts)
+            result = summarize_with_apple_intelligence(config, artifacts, profile)
         except AppleIntelligenceUnavailable as exc:
             print(f"{exc}. Falling back to the configured OpenAI-compatible provider...")
-    return summarize_with_openai_compatible(config, artifacts)
+    if result is None:
+        result = summarize_with_openai_compatible(config, artifacts, profile)
+    result["profile"] = profile
+    return result
 
 
 def _known_projects(config: Config) -> list[str]:

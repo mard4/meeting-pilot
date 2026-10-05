@@ -33,8 +33,28 @@ class SummaryProviderDispatchTests(unittest.TestCase):
             ) as compatible:
                 result = summarize(config, artifacts)
 
-            self.assertEqual(result, fallback)
-            compatible.assert_called_once_with(config, artifacts)
+            self.assertEqual(result, {"title": "Fallback", "profile": "worker"})
+            compatible.assert_called_once_with(config, artifacts, "worker")
+
+    def test_a_lecture_is_summarized_as_study_notes_and_says_so(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            artifacts = MeetingArtifacts(
+                session_dir=root,
+                audio_file=root / "audio.m4a",
+                title="Lezione di Analisi 1",
+                transcript_text="Oggi vediamo i limiti.",
+            )
+            config = SimpleNamespace(summary_provider_mode="local", user_profile="both")
+
+            with patch(
+                "meeting_pilot.summarization.omlx_client.summarize_with_openai_compatible",
+                return_value={"title": "Limiti"},
+            ) as compatible:
+                result = summarize(config, artifacts)
+
+            self.assertEqual(result["profile"], "student")
+            compatible.assert_called_once_with(config, artifacts, "student")
 
 
 if __name__ == "__main__":

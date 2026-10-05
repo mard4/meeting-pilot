@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ..profiles import STUDENT, artifacts_profile
+
 AUTO = "auto"
 GENERAL = "general"
 
@@ -170,7 +172,10 @@ def summary_guidance(config: object, artifacts: object) -> str:
             "These transcript labels are real participant names, identified from who was talking in "
             f"the Teams call: {', '.join(teams_names)}. Use them as participants and action item owners."
         )
-    if template.instructions:
+    # The built-in templates describe work meetings (owners, blockers, clients); a lecture
+    # takes its structure from the study-notes schema. The user's own templates still apply.
+    lecture = artifacts_profile(config, artifacts) == STUDENT
+    if template.instructions and not (lecture and template in BUILTIN_TEMPLATES):
         parts.append(f"Meeting type: {template.name}.\n{template.instructions}")
     notes = (getattr(artifacts, "user_notes", "") or "").strip()
     if notes:

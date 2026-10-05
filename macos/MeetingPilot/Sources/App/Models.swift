@@ -316,3 +316,71 @@ enum StepState {
     case active
     case pending
 }
+
+/// Who uses the app (USER_PROFILE). A worker's recordings become meeting notes, a
+/// student's become study notes, and someone who is both gets either, decided per
+/// recording (see `profiles.py`).
+enum UserProfile: String {
+    case worker
+    case student
+    case both
+
+    init(student: Bool, worker: Bool) {
+        switch (student, worker) {
+        case (true, true): self = .both
+        case (true, false): self = .student
+        default: self = .worker
+        }
+    }
+
+    var isStudent: Bool { self != .worker }
+    var isWorker: Bool { self != .student }
+}
+
+/// A section of the published note, saved as `INCLUDE_<rawValue>` in .env and read by
+/// every publisher. Meetings and lectures share the first group; the other two only
+/// appear in their own kind of note.
+enum PageSection: String, CaseIterable, Identifiable {
+    case overview = "OVERVIEW"
+    case summary = "SUMMARY"
+    case topics = "TOPICS"
+    case speakers = "SPEAKERS"
+    case transcript = "TRANSCRIPT"
+    case decisions = "DECISIONS"
+    case actionItems = "ACTION_ITEMS"
+    case openQuestions = "OPEN_QUESTIONS"
+    case risks = "RISKS"
+    case keyConcepts = "KEY_CONCEPTS"
+    case assignments = "ASSIGNMENTS"
+    case examHints = "EXAM_HINTS"
+    case reviewQuestions = "REVIEW_QUESTIONS"
+    case references = "REFERENCES"
+
+    static let shared: [PageSection] = [.overview, .summary, .topics, .speakers, .transcript]
+    static let meeting: [PageSection] = [.decisions, .actionItems, .openQuestions, .risks]
+    static let lecture: [PageSection] = [.keyConcepts, .assignments, .examHints, .reviewQuestions, .references]
+
+    var id: String { rawValue }
+    var envKey: String { "INCLUDE_\(rawValue)" }
+    /// Sections older than profiles were first saved for Notion only.
+    var legacyEnvKey: String? { PageSection.lecture.contains(self) ? nil : "NOTION_INCLUDE_\(rawValue)" }
+
+    var title: String {
+        switch self {
+        case .overview: return "Overview"
+        case .summary: return "Sintesi"
+        case .topics: return "Topic"
+        case .speakers: return "Speaker rilevati"
+        case .transcript: return "Transcript completo"
+        case .decisions: return "Decisioni"
+        case .actionItems: return "Action item"
+        case .openQuestions: return "Domande aperte"
+        case .risks: return "Rischi"
+        case .keyConcepts: return "Concetti chiave"
+        case .assignments: return "Compiti e scadenze"
+        case .examHints: return "Per l'esame"
+        case .reviewQuestions: return "Domande di ripasso"
+        case .references: return "Riferimenti"
+        }
+    }
+}

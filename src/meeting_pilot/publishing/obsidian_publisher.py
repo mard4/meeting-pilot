@@ -8,12 +8,14 @@ from typing import Any
 from ..artifacts import MeetingArtifacts, write_obsidian_receipt
 from ..config import Config
 from ..language import config_language, label
+from ..profiles import STUDENT, artifacts_profile
 from .meeting_format import (
     action_items,
     decisions,
     duration_text,
     has_time,
     iso_day,
+    key_concepts,
     meeting_date,
     parse_datetime,
     participants,
@@ -110,10 +112,11 @@ def _note_content(
         return label(lang, key)
 
     summary = artifacts.omlx_summary or {}
-    parts = ["---", *_frontmatter_lines(config, artifacts, title, date), "---", "", f"# {title}"]
+    lecture = artifacts_profile(config, artifacts) == STUDENT
+    parts = ["---", *_frontmatter_lines(config, artifacts, title, date, lecture), "---", "", f"# {title}"]
 
     if header_callout and _include(config, "overview"):
-        parts.extend(["", *_header_callout(artifacts, lang)])
+        parts.extend(["", *_header_callout(artifacts, lang, lecture)])
 
     if _include(config, "summary"):
         parts.extend(["", f"## {t('summary')}", "", str(summary.get("summary") or artifacts.summary_markdown or t("no_summary")).strip()])
@@ -124,6 +127,22 @@ def _note_content(
     if artifacts.user_notes:
         parts.extend(["", f"## {t('my_notes')}", artifacts.user_notes])
 
+    if lecture:
+        parts.extend(_lecture_sections(config, summary, t))
+    else:
+        parts.extend(_meeting_sections(config, summary, t))
+
+    if artifacts.archived_audio_file:
+        parts.extend(["", f"🎧 [{t('open_audio')}]({artifacts.archived_audio_file.as_uri()})"])
+
+    if artifacts.transcript_text and _include(config, "transcript"):
+        parts.extend(["", *_transcript_callout(t("full_transcript"), artifacts.transcript_text)])
+
+    return "\n".join(parts).rstrip() + "\n"
+
+
+def _meeting_sections(config: Config, summary: dict[str, Any], t: Any) -> list[str]:
+    parts: list[str] = []
     if _include(config, "decisions"):
         rows = [f"- {text}" + (f" — *{owner}*" if owner else "") for text, owner in decisions(summary.get("decisions"))]
         parts.extend(["", f"## {t('decisions')}", "", *(rows or [f"*{t('no_decisions')}*"])])
@@ -136,17 +155,36 @@ def _note_content(
         values = _plain_values(summary.get(key)) if _include(config, key) else []
         if values:
             parts.extend(["", f"> [!{kind}] {t(key)}", *(f"> - {value}" for value in values)])
-
-    if artifacts.archived_audio_file:
-        parts.extend(["", f"🎧 [{t('open_audio')}]({artifacts.archived_audio_file.as_uri()})"])
-
-    if artifacts.transcript_text and _include(config, "transcript"):
-        parts.extend(["", *_transcript_callout(t("full_transcript"), artifacts.transcript_text)])
-
-    return "\n".join(parts).rstrip() + "\n"
+    return parts
 
 
-def _frontmatter_lines(config: Config, artifacts: MeetingArtifacts, title: str, date: str) -> list[str]:
+def _lecture_sections(config: Config, summary: dict[str, Any], t: Any) -> list[str]:
+    parts: list[str] = []
+    if _include(config, "key_concepts"):
+        rows = [
+            f"- **{term}**" + (f" — {explanation}" if explanation else "")
+            for term, explanation in key_concepts(summary.get("key_concepts"))
+        ]
+        parts.extend(["", f"## {t('key_concepts')}", "", *(rows or [f"*{t('no_key_concepts')}*"])])
+
+    if _include(config, "assignments"):
+        rows = [_task_line(item) for item in action_items(summary.get("assignments"))]
+        parts.extend(["", f"## {t('assignments')}", "", *(rows or [f"*{t('no_assignments')}*"])])
+
+    for key, kind in (("exam_hints", "tip"), ("review_questions", "question")):
+        values = _plain_values(summary.get(key)) if _include(config, key) else []
+        if values:
+            parts.extend(["", f"> [!{kind}] {t(key)}", *(f"> - {value}" for value in values)])
+
+    references = _plain_values(summary.get("references")) if _include(config, "references") else []
+    if references:
+        parts.extend(["", f"## {t('references')}", "", *(f"- {value}" for value in references)])
+    return parts
+
+
+def _frontmatter_lines(
+    config: Config, artifacts: MeetingArtifacts, title: str, date: str, lecture: bool = False
+) -> list[str]:
     summary = artifacts.omlx_summary or {}
     metadata = artifacts.meeting_metadata or {}
     frontmatter = artifacts.frontmatter
@@ -176,10 +214,12 @@ def _frontmatter_lines(config: Config, artifacts: MeetingArtifacts, title: str, 
         lines.append("participants:")
         lines.extend(f'  - "{_yaml_escape(name)}"' for name in people)
 
-    tags = ["meeting", *(_tag(value) for value in (project, theme) if value)]
+    tags = ["lecture" if lecture else "meeting", *(_tag(value) for value in (project, theme) if value)]
     lines.append("tags:")
     lines.extend(f"  - {tag}" for tag in dict.fromkeys(tag for tag in tags if tag))
 
+    if lecture:
+        lines.append('type: "study"')
     lines.extend([
         'source: "Teams"',
         'status: "Published"',
@@ -198,7 +238,7 @@ def _frontmatter_lines(config: Config, artifacts: MeetingArtifacts, title: str, 
     return lines
 
 
-def _header_callout(artifacts: MeetingArtifacts, lang: str) -> list[str]:
+def _header_callout(artifacts: MeetingArtifacts, lang: str, lecture: bool = False) -> list[str]:
     metadata = artifacts.meeting_metadata or {}
     when = when_text(artifacts, lang)
     duration = duration_text(artifacts)
@@ -212,7 +252,7 @@ def _header_callout(artifacts: MeetingArtifacts, lang: str) -> list[str]:
     tags = [
         f"**{label(lang, key)}:** {value}"
         for key, value in (
-            ("project", metadata.get("project") or artifacts.frontmatter.get("project")),
+            ("course" if lecture else "project", metadata.get("project") or artifacts.frontmatter.get("project")),
             ("theme", metadata.get("theme") or artifacts.frontmatter.get("theme")),
         )
         if value

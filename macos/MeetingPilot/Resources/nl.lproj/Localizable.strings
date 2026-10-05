@@ -665,3 +665,27 @@
 "Le call rilevate, come Teams, registrano sempre microfono e audio del Mac." = "Gedetecteerde gesprekken, zoals Teams, nemen altijd de microfoon en de Mac-audio op.";
 "Nuova registrazione" = "Nieuwe opname";
 "Passa alla call" = "Naar gesprek overschakelen";
+
+/* Student and worker profile */
+"Profilo" = "Profiel";
+"Profilo salvato" = "Profiel opgeslagen";
+"Studente o lavoratore?" = "Student of professional?";
+"Scegli uno o entrambi: Meeting Pilot scriverà note pensate per le tue lezioni, le tue riunioni o tutte e due." = "Kies er één of beide: Meeting Pilot schrijft notities voor je colleges, je vergaderingen of allebei.";
+"Puoi cambiarlo quando vuoi in Impostazioni." = "Je kunt dit altijd wijzigen in Instellingen.";
+"Continua" = "Doorgaan";
+"Studente" = "Student";
+"Lavoratore" = "Professional";
+"Lezioni e seminari: concetti chiave, compiti, domande di ripasso." = "Colleges en seminars: kernbegrippen, opdrachten, herhalingsvragen.";
+"Riunioni e call: decisioni, action item, rischi." = "Vergaderingen en gesprekken: besluiten, actiepunten, risico's.";
+"Una registrazione diventa una lezione quando il titolo lo dice, ad esempio \"Lezione\" o \"Corso di\". Durante la registrazione puoi cambiarlo nella sidebar dal vivo." = "Een opname wordt een college als de titel dat zegt, bijvoorbeeld \"Hoorcollege\" of \"Tentamen\". Tijdens de opname kun je dit wijzigen in de live zijbalk.";
+"Riunioni di lavoro" = "Werkvergaderingen";
+"Lezioni" = "Colleges";
+"Concetti chiave" = "Kernbegrippen";
+"Compiti e scadenze" = "Opdrachten en deadlines";
+"Per l'esame" = "Voor het tentamen";
+"Domande di ripasso" = "Herhalingsvragen";
+"Riferimenti" = "Referenties";
+"Dal titolo" = "Op basis van titel";
+"Riunione di lavoro" = "Werkvergadering";
+"Lezione" = "College";
+"Tipo di nota" = "Notitietype";

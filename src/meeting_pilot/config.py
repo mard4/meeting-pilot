@@ -85,6 +85,14 @@ class Config:
     output_language: str = "it"
     # "auto" picks a template from the meeting title; see summary_templates.py.
     summary_template: str = "auto"
+    # "worker", "student" or "both"; see profiles.py.
+    user_profile: str = "worker"
+    # Sections only lectures have (see profiles.py); the shared ones use the fields above.
+    notion_include_key_concepts: bool = True
+    notion_include_assignments: bool = True
+    notion_include_exam_hints: bool = True
+    notion_include_review_questions: bool = True
+    notion_include_references: bool = True
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -169,6 +177,12 @@ class Config:
             file_stable_seconds=int(os.getenv("FILE_STABLE_SECONDS", "10")),
             output_language=resolve_output_language(),
             summary_template=os.getenv("SUMMARY_TEMPLATE", "auto").strip() or "auto",
+            user_profile=os.getenv("USER_PROFILE", "worker").strip().lower() or "worker",
+            notion_include_key_concepts=_bool_env("INCLUDE_KEY_CONCEPTS", True),
+            notion_include_assignments=_bool_env("INCLUDE_ASSIGNMENTS", True),
+            notion_include_exam_hints=_bool_env("INCLUDE_EXAM_HINTS", True),
+            notion_include_review_questions=_bool_env("INCLUDE_REVIEW_QUESTIONS", True),
+            notion_include_references=_bool_env("INCLUDE_REFERENCES", True),
         )
 
     def ensure_dirs(self) -> None:

@@ -30,42 +30,20 @@ struct SectionToggle: View {
 
 struct PageSectionsCard: View {
     @EnvironmentObject private var model: AppModel
-    @State private var includeOverview = true
-    @State private var includeSummary = true
-    @State private var includeTopics = true
-    @State private var includeDecisions = true
-    @State private var includeActionItems = true
-    @State private var includeOpenQuestions = true
-    @State private var includeRisks = true
-    @State private var includeSpeakers = true
-    @State private var includeTranscript = true
+    @State private var included: [PageSection: Bool] = [:]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .leading), count: 2), spacing: 9) {
-                SectionToggle("Overview", isOn: $includeOverview)
-                SectionToggle("Sintesi", isOn: $includeSummary)
-                SectionToggle("Topic", isOn: $includeTopics)
-                SectionToggle("Decisioni", isOn: $includeDecisions)
-                SectionToggle("Action item", isOn: $includeActionItems)
-                SectionToggle("Domande aperte", isOn: $includeOpenQuestions)
-                SectionToggle("Rischi", isOn: $includeRisks)
-                SectionToggle("Speaker rilevati", isOn: $includeSpeakers)
-                SectionToggle("Transcript completo", isOn: $includeTranscript)
+            sectionGrid(PageSection.shared)
+            if model.userProfile.isWorker {
+                sectionGroup("Riunioni di lavoro", sections: PageSection.meeting)
+            }
+            if model.userProfile.isStudent {
+                sectionGroup("Lezioni", sections: PageSection.lecture)
             }
 
             Button("Salva formato") {
-                model.savePageSections(
-                    overview: includeOverview,
-                    summary: includeSummary,
-                    topics: includeTopics,
-                    decisions: includeDecisions,
-                    actionItems: includeActionItems,
-                    openQuestions: includeOpenQuestions,
-                    risks: includeRisks,
-                    speakers: includeSpeakers,
-                    transcript: includeTranscript
-                )
+                model.savePageSections(included)
             }
             .buttonStyle(CompactButtonStyle())
         }
@@ -73,15 +51,28 @@ struct PageSectionsCard: View {
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
         .onAppear {
-            includeOverview = model.includeOverview
-            includeSummary = model.includeSummary
-            includeTopics = model.includeTopics
-            includeDecisions = model.includeDecisions
-            includeActionItems = model.includeActionItems
-            includeOpenQuestions = model.includeOpenQuestions
-            includeRisks = model.includeRisks
-            includeSpeakers = model.includeSpeakers
-            includeTranscript = model.includeTranscript
+            included = model.includedSections
+        }
+    }
+
+    private func sectionGroup(_ title: String, sections: [PageSection]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(localized(title))
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(MeetingPilotDesign.textDimColor)
+            sectionGrid(sections)
+        }
+        .padding(.top, 4)
+    }
+
+    private func sectionGrid(_ sections: [PageSection]) -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .leading), count: 2), spacing: 9) {
+            ForEach(sections) { section in
+                SectionToggle(section.title, isOn: Binding(
+                    get: { included[section] ?? true },
+                    set: { included[section] = $0 }
+                ))
+            }
         }
     }
 }

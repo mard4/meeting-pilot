@@ -9,6 +9,7 @@ from ..artifacts import MeetingArtifacts
 from ..config import Config
 from ..tag_catalog import catalog_values
 from ..language import config_language, language_name
+from ..profiles import STUDENT, WORKER
 from .summary_templates import summary_guidance
 
 
@@ -16,7 +17,9 @@ class AppleIntelligenceUnavailable(RuntimeError):
     """The system on-device model cannot be used on this Mac right now."""
 
 
-def summarize_with_apple_intelligence(config: Config, artifacts: MeetingArtifacts) -> dict[str, Any]:
+def summarize_with_apple_intelligence(
+    config: Config, artifacts: MeetingArtifacts, profile: str = WORKER
+) -> dict[str, Any]:
     command_path = Path(config.apple_intelligence_summarizer_cmd).expanduser()
     if not command_path.is_file():
         raise AppleIntelligenceUnavailable(f"Apple Intelligence helper not found: {command_path}")
@@ -37,6 +40,7 @@ def summarize_with_apple_intelligence(config: Config, artifacts: MeetingArtifact
                     part for part in (config.summary_prompt, summary_guidance(config, artifacts)) if part
                 ),
                 "outputLanguage": language_name(config_language(config)),
+                "profile": profile,
             },
             ensure_ascii=False,
         ),
@@ -88,7 +92,7 @@ def summarize_with_apple_intelligence(config: Config, artifacts: MeetingArtifact
         raise RuntimeError(f"Apple Intelligence returned invalid JSON. See {log_path}") from exc
     if not isinstance(data, dict):
         raise RuntimeError(f"Apple Intelligence returned an invalid summary. See {log_path}")
-    return _normalize_summary(data, artifacts)
+    return _normalize_summary(data, artifacts, profile)
 
 
 def _known_projects(config: Config) -> list[str]:
@@ -98,7 +102,7 @@ def _known_projects(config: Config) -> list[str]:
         return []
 
 
-def _normalize_summary(data: dict[str, Any], artifacts: MeetingArtifacts) -> dict[str, Any]:
+def _normalize_summary(data: dict[str, Any], artifacts: MeetingArtifacts, profile: str = WORKER) -> dict[str, Any]:
     """Enforce facts that guided generation cannot safely infer."""
     participants = artifacts.meeting_metadata.get("participants")
     if not isinstance(participants, list):
@@ -120,12 +124,14 @@ def _normalize_summary(data: dict[str, Any], artifacts: MeetingArtifacts) -> dic
             owner = str(decision.get("owner") or "").strip()
             decision["owner"] = allowed_owners.get(owner.casefold())
 
-    for item in data.get("action_items", []):
+    # Lecture assignments carry a due date like action items, but no owner.
+    for item in data.get("assignments" if profile == STUDENT else "action_items", []):
         if not isinstance(item, dict):
             continue
-        owner = str(item.get("owner") or "").strip()
-        item["owner"] = allowed_owners.get(owner.casefold())
-        item["status"] = "open"
+        if profile != STUDENT:
+            owner = str(item.get("owner") or "").strip()
+            item["owner"] = allowed_owners.get(owner.casefold())
+            item["status"] = "open"
         due_date = str(item.get("due_date") or "").strip()
         if due_date.casefold() in {"", "nil", "null", "none"}:
             item["due_date"] = None
