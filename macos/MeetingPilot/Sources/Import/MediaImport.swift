@@ -73,7 +73,9 @@ enum MediaImportInspector {
     static let copiedExtensions: Set<String> = ["m4a", "mp3", "wav", "aac", "flac"]
 
     static func draft(for url: URL, history: MediaImportHistory) async -> MediaImportDraft {
-        var draft = MediaImportDraft(sourceURL: url, recordedAt: fileDate(of: url))
+        // A file's own dates say when it reached this Mac (a download, a copy), not when it
+        // was recorded, so without a recording date in the media the import is dated now.
+        var draft = MediaImportDraft(sourceURL: url, recordedAt: Date())
         if let fingerprint = MediaImportHistory.fingerprint(of: url) {
             draft.previouslyImportedAt = history.importDate(for: fingerprint)
         }
@@ -88,6 +90,7 @@ enum MediaImportInspector {
             if duration.isNumeric, duration.seconds > 0 {
                 draft.durationSeconds = duration.seconds
             }
+            // Cameras, QuickTime, screen recordings and Voice Memos write when they recorded.
             if let item = try await asset.load(.creationDate), let date = try await item.load(.dateValue) {
                 draft.recordedAt = date
             }
@@ -95,13 +98,6 @@ enum MediaImportInspector {
             draft.problem = localized("Formato non supportato: convertilo in MP4, MOV, M4A o MP3.")
         }
         return draft
-    }
-
-    /// A copied or downloaded file is created when it arrives but keeps the original
-    /// modification date, so the earlier of the two is closer to the recording.
-    private static func fileDate(of url: URL) -> Date {
-        let values = try? url.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey])
-        return [values?.creationDate, values?.contentModificationDate].compactMap { $0 }.min() ?? Date()
     }
 }
 

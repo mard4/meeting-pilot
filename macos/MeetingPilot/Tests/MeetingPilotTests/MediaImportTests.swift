@@ -202,6 +202,19 @@ final class MediaImportTests: XCTestCase {
         XCTAssertNil(SlideDeck.bestMatch(for: URL(fileURLWithPath: "/D/deck.pdf"), among: []))
     }
 
+    /// A downloaded song or podcast carries only the date it reached the Mac, which says
+    /// nothing about when it was recorded: the import is dated now.
+    func testFilesWithoutARecordingDateAreDatedNow() async throws {
+        let audio = folder.appendingPathComponent("Episodio 12.aiff")
+        try FileManager.default.copyItem(at: URL(fileURLWithPath: "/System/Library/Sounds/Glass.aiff"), to: audio)
+        try FileManager.default.setAttributes([.creationDate: date("2025-08-21 00:56"), .modificationDate: date("2025-08-21 00:56")], ofItemAtPath: audio.path)
+
+        let draft = await MediaImportInspector.draft(for: audio, history: MediaImportHistory(url: folder.appendingPathComponent("h.json")))
+
+        XCTAssertNil(draft.problem)
+        XCTAssertLessThan(abs(draft.recordedAt.timeIntervalSinceNow), 60)
+    }
+
     func testFilesWithoutAudioCannotBeImported() async throws {
         let text = folder.appendingPathComponent("notes.mp3")
         try Data("not audio".utf8).write(to: text)

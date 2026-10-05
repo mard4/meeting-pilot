@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -225,6 +226,7 @@ def test_command_line_import_extracts_a_video_soundtrack(tmp_path: Path, monkeyp
 def test_command_line_import_copies_audio_files_and_leaves_the_original_alone(tmp_path: Path, monkeypatch) -> None:
     podcast = tmp_path / "Episodio 12.mp3"
     podcast.write_bytes(b"audio")
+    os.utime(podcast, (1_755_734_183, 1_755_734_183))  # downloaded on 2025-08-21
     monkeypatch.setattr("meeting_pilot.media_import.audio_duration_seconds", lambda _path: None)
     calls = _capture_process(monkeypatch, tmp_path)
 
@@ -233,7 +235,8 @@ def test_command_line_import_copies_audio_files_and_leaves_the_original_alone(tm
     assert calls["audio"] != podcast.resolve() and calls["audio_bytes"] == b"audio"
     assert calls["info"]["media_kind"] == "audio"
     assert "title" not in calls["info"]
-    assert calls["info"]["recorded_at"].startswith(datetime.fromtimestamp(podcast.stat().st_mtime).strftime("%Y-%m-%d"))
+    # A downloaded file's own date is not when it was recorded: the import is dated now.
+    assert calls["info"]["recorded_at"].startswith(datetime.now().strftime("%Y-%m-%d"))
     assert calls["slides"] is None
     assert podcast.exists() and not sidecar_dir(podcast).exists()
 

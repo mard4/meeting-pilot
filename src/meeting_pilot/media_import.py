@@ -93,7 +93,8 @@ def import_media_file(
         "media_kind": "video" if video else "audio",
         "original_name": media.name,
         "original_path": str(media),
-        "recorded_at": recorded_at or datetime.fromtimestamp(media.stat().st_mtime).isoformat(timespec="seconds"),
+        # The file's own date is when it was downloaded or copied, not recorded.
+        "recorded_at": recorded_at or datetime.now().isoformat(timespec="seconds"),
     }
     if title and title.strip():
         info["title"] = title.strip()

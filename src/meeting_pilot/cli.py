@@ -49,7 +49,7 @@ def main() -> None:
     )
     import_parser.add_argument("media_file", type=Path)
     import_parser.add_argument("--title", help="Use this title instead of a generated one.")
-    import_parser.add_argument("--date", help="When it was recorded, e.g. 2026-09-28T10:00. Defaults to the file date.")
+    import_parser.add_argument("--date", help="When it was recorded, e.g. 2026-09-28T10:00. Defaults to now.")
     import_parser.add_argument("--slides", type=Path, help="PDF of the slides shown, placed next to the transcript.")
     import_parser.add_argument("--dry-run", action="store_true", help="Skip publishing.")
 
