@@ -2,6 +2,45 @@ import AppKit
 import ApplicationServices
 import Foundation
 
+/// What the built-in recorder captures when no call is detected (RECORDING_AUDIO_SOURCE).
+/// A detected call always records `.both`.
+enum RecordingAudioSource: String, CaseIterable, Identifiable {
+    /// Only the microphone: an in-person lecture or meeting, everyone in one room.
+    case microphone
+    /// Only what the Mac plays: an online lecture, webinar or video you don't speak in.
+    case system
+    /// Microphone and Mac audio: a call, with you and the others on separate tracks.
+    case both
+
+    var id: String { rawValue }
+    var capturesMicrophone: Bool { self != .system }
+    var capturesSystemAudio: Bool { self != .microphone }
+
+    var title: String {
+        switch self {
+        case .microphone: return "Microfono"
+        case .system: return "Audio del Mac"
+        case .both: return "Entrambi"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .microphone: return "Lezioni e riunioni in presenza: registra tutta la stanza."
+        case .system: return "Lezioni online, webinar e video in cui non parli."
+        case .both: return "Tu dal microfono, gli altri dall'audio del Mac."
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .microphone: return "mic.fill"
+        case .system: return "speaker.wave.2.fill"
+        case .both: return "person.2.wave.2.fill"
+        }
+    }
+}
+
 /// The recorder configuration from .env that recording decisions depend on.
 struct RecorderSettings {
     var mode: String
@@ -10,6 +49,7 @@ struct RecorderSettings {
     var promptEnabled: Bool
     var promptDelaySeconds: Int
     var teamsOCREnabled: Bool
+    var audioSource: RecordingAudioSource = .both
 
     static let fallback = RecorderSettings(
         mode: "macos_prompt", folder: "", openTarget: "", promptEnabled: true, promptDelaySeconds: 3, teamsOCREnabled: false
@@ -24,6 +64,9 @@ final class RecordingController: ObservableObject {
     @Published var nativeRecordingPaused = false
     @Published var externalRecordingActive = false
     @Published var nativeRecordingPath = ""
+    /// Started while a call was detected. Only call recordings capture Teams metadata
+    /// and stop by themselves when the call ends.
+    @Published var nativeRecordingIsCall = false
     @Published var runtimeStatus = "Non ancora letto"
     @Published var runtimeTitle = "-"
     @Published var runtimeParticipants = "-"
@@ -47,6 +90,7 @@ final class RecordingController: ObservableObject {
     private var activeRecordingTitle = ""
     private var meetingWasDetected = false
     private var recordingPromptShownForCurrentMeeting = false
+    private var switchPromptShownForCurrentCall = false
     private var microphoneWasActive = false
     private var recordingObservedMeeting = false
     private var recordingObservedStrongCallSignal = false
@@ -62,6 +106,7 @@ final class RecordingController: ObservableObject {
                 self?.nativeRecordingActive = active
                 if !active {
                     self?.nativeRecordingPaused = false
+                    self?.nativeRecordingIsCall = false
                 }
                 self?.nativeRecordingPath = path?.path ?? ""
                 if active {
@@ -78,7 +123,7 @@ final class RecordingController: ObservableObject {
                     self?.log("Registrazione salvata con avviso: \(url.lastPathComponent)\n\(warning.localizedDescription)")
                 } else {
                     self?.onStatusMessage("Registrazione completa salvata")
-                    self?.log("Registrazione audio sistema + microfono salvata: \(url.lastPathComponent)")
+                    self?.log("Registrazione salvata: \(url.lastPathComponent)")
                 }
                 self?.onNeedsRefresh()
             }
@@ -131,7 +176,7 @@ final class RecordingController: ObservableObject {
             RecordingPromptWindow.shared.show(
                 meetingTitle: title,
                 timeoutSeconds: 15,
-                onRecord: { [weak self] in
+                onRecord: { [weak self] _ in
                     self?.handleRecordAction(meetingTitle: title)
                 }
             )
@@ -143,17 +188,35 @@ final class RecordingController: ObservableObject {
         platform.meetingPromptTitle() ?? platform.fallbackMeetingTitle
     }
 
+    /// With a call in progress Record means the call; otherwise the built-in recorder asks
+    /// what to capture, starting from the default in Settings.
     func showManualRecordingPrompt() {
-        showRecordingPrompt(title: currentMeetingPromptTitle(), delaySeconds: 0)
-    }
-
-    func handleRecordAction(meetingTitle: String) {
-        warnAboutMissingAccessibilityBeforeRecording()
         let settings = settings()
-        if settings.mode == "macos_prompt" {
-            startNativeRecording(title: meetingTitle)
+        guard settings.mode == "macos_prompt", !hasActiveAudioMeeting() else {
+            showRecordingPrompt(title: currentMeetingPromptTitle(), delaySeconds: 0)
             return
         }
+        RecordingPromptWindow.shared.show(
+            meetingTitle: "",
+            timeoutSeconds: 30,
+            audioSource: settings.audioSource,
+            onRecord: { [weak self] source in
+                self?.handleRecordAction(meetingTitle: localized("Registrazione"), source: source ?? settings.audioSource)
+            }
+        )
+    }
+
+    /// `source` only applies when no call is detected: a call in progress when Record is
+    /// pressed is always recorded whole, with both microphone and Mac audio.
+    func handleRecordAction(meetingTitle: String, source: RecordingAudioSource = .both) {
+        let settings = settings()
+        let isCall = hasActiveAudioMeeting()
+        if settings.mode == "macos_prompt" {
+            if isCall { warnAboutMissingAccessibilityBeforeRecording() }
+            startNativeRecording(title: meetingTitle, source: isCall ? .both : source, isCall: isCall)
+            return
+        }
+        warnAboutMissingAccessibilityBeforeRecording()
         if settings.mode == "transcribex" {
             startTranscribeXRecording(title: meetingTitle, folder: settings.folder)
             return
@@ -163,17 +226,26 @@ final class RecordingController: ObservableObject {
         onNeedsRefresh()
     }
 
-    func startNativeRecording(title: String) {
-        nativeRecorder.start(folder: URL(fileURLWithPath: settings().folder), title: title) { [weak self] result in
+    func startNativeRecording(title: String, source: RecordingAudioSource = .both, isCall: Bool = true) {
+        nativeRecorder.start(
+            folder: URL(fileURLWithPath: settings().folder),
+            title: title,
+            source: source,
+            isCall: isCall
+        ) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self else { return }
                 switch result {
                 case .success(let url):
                     self.onStatusMessage("Registrazione avviata")
                     self.nativeRecordingPath = url.path
-                    self.startAutomaticTeamsMetadataCapture(title: title)
-                    self.observeCallAtRecordingStart()
-                    self.log("Registrazione avviata: \(url.lastPathComponent)")
+                    self.nativeRecordingIsCall = isCall
+                    self.switchPromptShownForCurrentCall = false
+                    if isCall {
+                        self.startAutomaticTeamsMetadataCapture(title: title)
+                        self.observeCallAtRecordingStart()
+                    }
+                    self.log("Registrazione avviata (\(source.rawValue)\(isCall ? ", call" : "")): \(url.lastPathComponent)")
                 case .failure(let error):
                     self.onStatusMessage("Recorder non avviato")
                     presentErrorAlert("Non riesco ad avviare il recorder macOS", detail: error.localizedDescription)
@@ -240,7 +312,11 @@ final class RecordingController: ObservableObject {
     /// its end while recording.
     func pollMeeting() {
         if nativeRecordingActive {
-            monitorAutomaticRecordingStop()
+            if nativeRecordingIsCall {
+                monitorAutomaticRecordingStop()
+            } else {
+                offerSwitchToCallIfNeeded()
+            }
             return
         }
         if externalRecordingActive {
@@ -276,6 +352,41 @@ final class RecordingController: ObservableObject {
         runtimeStatus = "Call \(platform.displayName) rilevata: \(title)"
         recordingPromptShownForCurrentMeeting = true
         showRecordingPrompt(title: title, requiresActiveMeeting: true)
+    }
+
+    /// A microphone or Mac-audio recording never stops by itself. When a call starts
+    /// meanwhile, offer once per call to save it and record the call instead.
+    private func offerSwitchToCallIfNeeded() {
+        guard let title = platform.meetingPromptTitle(), platform.processIsRunningInput() == true else {
+            switchPromptShownForCurrentCall = false
+            return
+        }
+        runtimeStatus = "Call \(platform.displayName) rilevata: \(title)"
+        guard !switchPromptShownForCurrentCall else { return }
+        switchPromptShownForCurrentCall = true
+        let delay = TimeInterval(max(0, settings().promptDelaySeconds))
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, self.nativeRecordingActive, !self.nativeRecordingIsCall, self.hasActiveAudioMeeting() else { return }
+            RecordingPromptWindow.shared.show(
+                meetingTitle: title,
+                timeoutSeconds: 15,
+                actionTitle: "Passa alla call",
+                onRecord: { [weak self] _ in
+                    self?.switchToCallRecording(title: title)
+                }
+            )
+        }
+    }
+
+    /// Saves the running recording as its own meeting and starts recording the call right
+    /// away; the first file is finished in the background.
+    private func switchToCallRecording(title: String) {
+        guard nativeRecordingActive, !nativeRecordingIsCall else { return }
+        if let url = nativeRecorder.stopWithoutWaiting() {
+            log("Registrazione salvata per passare alla call \(platform.displayName): \(url.lastPathComponent)")
+        }
+        nativeRecordingPaused = false
+        handleRecordAction(meetingTitle: title)
     }
 
     private func warnAboutMissingAccessibilityBeforeRecording() {
@@ -354,7 +465,7 @@ final class RecordingController: ObservableObject {
             ? "Registrazione fermata"
             : (automatic ? "Call terminata: preparo l'audio completo..." : "Preparo l'audio completo..."))
         if let url {
-            log("Stop registrazione\(automatic ? " automatico" : "") richiesto: unisco audio di sistema e microfono in \(url.lastPathComponent)")
+            log("Stop registrazione\(automatic ? " automatico" : "") richiesto: preparo \(url.lastPathComponent)")
         }
         onNeedsRefresh()
     }

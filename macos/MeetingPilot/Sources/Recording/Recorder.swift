@@ -32,7 +32,7 @@ struct RecorderView: View {
                 HStack(alignment: .top, spacing: 8) {
                     RecorderChoiceCard(
                         title: "Recorder integrato",
-                        subtitle: "Audio di sistema e microfono, senza altre app.",
+                        subtitle: "Microfono e audio del Mac, senza altre app.",
                         assetName: nil,
                         fallbackSymbol: "apple.logo",
                         selected: mode == "macos_prompt",
@@ -51,6 +51,10 @@ struct RecorderView: View {
                     }
                 }
                 .fixedSize(horizontal: false, vertical: true)
+
+                if mode == "macos_prompt" {
+                    AudioSourceSection()
+                }
 
                 if mode == "transcribex" {
                     VStack(alignment: .leading, spacing: 9) {
@@ -234,6 +238,39 @@ struct RecorderView: View {
             openTarget: openTarget,
             transcriptionProvider: transcriptionProvider
         )
+    }
+}
+
+/// The default source for recordings started by hand; a detected call overrides it.
+struct AudioSourceSection: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            MPSectionTitle("Sorgente audio")
+            HStack(alignment: .top, spacing: 8) {
+                ForEach(RecordingAudioSource.allCases) { source in
+                    RecorderChoiceCard(
+                        title: source.title,
+                        subtitle: source.subtitle,
+                        assetName: nil,
+                        fallbackSymbol: source.symbol,
+                        selected: model.recordingAudioSource == source
+                    ) {
+                        model.saveRecordingAudioSource(source)
+                    }
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Image(systemName: "phone.fill")
+                Text(localized("Le call rilevate, come Teams, registrano sempre microfono e audio del Mac."))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(MeetingPilotDesign.textDimColor)
+        }
+        .padding(.top, 4)
     }
 }
 

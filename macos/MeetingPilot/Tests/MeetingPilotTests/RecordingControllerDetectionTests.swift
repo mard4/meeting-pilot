@@ -81,15 +81,27 @@ final class RecordingControllerDetectionTests: XCTestCase {
 
     // MARK: Automatic stop (native recording)
 
-    func testMicrophoneInUseKeepsRecording() {
+    /// The state a native recording started while a call was detected leaves behind.
+    private func startCallRecording() {
         controller.nativeRecordingActive = true
+        controller.nativeRecordingIsCall = true
+    }
+
+    /// A microphone or Mac-audio recording started with no call in progress.
+    private func startNonCallRecording() {
+        controller.nativeRecordingActive = true
+        controller.nativeRecordingIsCall = false
+    }
+
+    func testMicrophoneInUseKeepsRecording() {
+        startCallRecording()
         platform.input = true
         controller.pollMeeting()
         XCTAssertEqual(controller.runtimeStatus, "Registrazione call Teams in corso")
     }
 
     func testMicrophoneReleaseStartsStopCountdownAndReturnCancelsIt() {
-        controller.nativeRecordingActive = true
+        startCallRecording()
         platform.input = true
         controller.pollMeeting()
 
@@ -108,7 +120,7 @@ final class RecordingControllerDetectionTests: XCTestCase {
     }
 
     func testCallControlsKeepRecordingWhenMicrophoneUnknown() {
-        controller.nativeRecordingActive = true
+        startCallRecording()
         platform.input = nil
         platform.callSignal = true
         controller.pollMeeting()
@@ -120,7 +132,7 @@ final class RecordingControllerDetectionTests: XCTestCase {
     }
 
     func testRecapWindowDoesNotBlockStopAfterCallControlsWereSeen() {
-        controller.nativeRecordingActive = true
+        startCallRecording()
         platform.input = nil
         platform.callSignal = true
         controller.pollMeeting()
@@ -132,7 +144,7 @@ final class RecordingControllerDetectionTests: XCTestCase {
     }
 
     func testMeetingWindowAloneKeepsRecordingBeforeControlsAreSeen() {
-        controller.nativeRecordingActive = true
+        startCallRecording()
         platform.input = nil
         platform.titles = ["Weekly sync meeting"]
         controller.pollMeeting()
@@ -140,12 +152,58 @@ final class RecordingControllerDetectionTests: XCTestCase {
     }
 
     func testNeverAutoStopsWithoutObservingAMeeting() {
-        controller.nativeRecordingActive = true
+        startCallRecording()
         platform.input = nil
         controller.pollMeeting()
         controller.pollMeeting()
         XCTAssertEqual(controller.runtimeStatus, "Non ancora letto")
         XCTAssertTrue(controller.nativeRecordingActive)
+    }
+
+    // MARK: Recordings outside calls
+
+    func testNonCallRecordingNeverStopsWhenTeamsReleasesTheMicrophone() {
+        startNonCallRecording()
+        platform.input = true
+        controller.pollMeeting()
+        platform.input = false
+        controller.pollMeeting()
+        controller.pollMeeting()
+
+        XCTAssertTrue(controller.nativeRecordingActive)
+        XCTAssertFalse(controller.runtimeStatus.hasPrefix("Verifico fine call"))
+        XCTAssertFalse(controller.runtimeStatus.hasPrefix("Fine call rilevata"))
+        XCTAssertEqual(logged, [])
+    }
+
+    func testCallStartingDuringNonCallRecordingIsDetectedWithoutStoppingIt() {
+        startNonCallRecording()
+        platform.title = "Weekly sync"
+        platform.input = true
+        controller.pollMeeting()
+
+        XCTAssertEqual(controller.runtimeStatus, "Call Teams rilevata: Weekly sync")
+        XCTAssertTrue(controller.nativeRecordingActive)
+        XCTAssertFalse(controller.nativeRecordingIsCall)
+    }
+
+    func testCallWindowWithoutMicrophoneDuringNonCallRecordingIsNotACall() {
+        startNonCallRecording()
+        platform.title = "Weekly sync"
+        platform.input = false
+        controller.pollMeeting()
+
+        XCTAssertEqual(controller.runtimeStatus, "Non ancora letto")
+    }
+
+    func testAudioSourcesCaptureWhatTheyName() {
+        XCTAssertTrue(RecordingAudioSource.microphone.capturesMicrophone)
+        XCTAssertFalse(RecordingAudioSource.microphone.capturesSystemAudio)
+        XCTAssertFalse(RecordingAudioSource.system.capturesMicrophone)
+        XCTAssertTrue(RecordingAudioSource.system.capturesSystemAudio)
+        XCTAssertTrue(RecordingAudioSource.both.capturesMicrophone)
+        XCTAssertTrue(RecordingAudioSource.both.capturesSystemAudio)
+        XCTAssertEqual(RecorderSettings.fallback.audioSource, .both)
     }
 
     // MARK: External recorder

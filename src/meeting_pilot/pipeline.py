@@ -13,7 +13,7 @@ from .publishing.obsidian_publisher import publish_to_obsidian
 from .meeting_metadata import find_meeting_metadata
 from .transcription.apple import run_apple_transcriber
 from .transcription.fluid_audio import run_fluid_audio
-from .transcription.session import create_session, validate_audio_file
+from .transcription.session import create_session, recorded_outside_a_call, validate_audio_file
 from .publishing.notion_publisher import publish_to_notion
 from .summarization.omlx_client import summarize
 from .platforms.teams.teams_scraper import read_saved_teams_runtime_metadata
@@ -23,7 +23,13 @@ from .tag_catalog import catalog_values
 def process_audio(config: Config, source_audio: Path, dry_run: bool = False) -> Path:
     config.ensure_dirs()
     meeting_metadata = find_meeting_metadata(config, source_audio)
-    runtime_metadata = read_saved_teams_runtime_metadata(config, reference_audio=source_audio)
+    # The saved Teams title and participants belong to whatever call ran in the last few
+    # hours, so a recording made outside a call must not inherit them.
+    runtime_metadata = (
+        {}
+        if recorded_outside_a_call(source_audio)
+        else read_saved_teams_runtime_metadata(config, reference_audio=source_audio)
+    )
     if runtime_metadata:
         meeting_metadata = {**runtime_metadata, **meeting_metadata}
         if runtime_metadata.get("title") and not meeting_metadata.get("match_found"):

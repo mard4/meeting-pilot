@@ -73,3 +73,4 @@ The app writes these for you; set them by hand only when running from source. Se
 | `TRANSCRIPTION_PROVIDER` | `fluid` (bundled, with speaker separation) or `apple`. |
 | `MEETINGS_ROOT`, `INBOX_AUDIO_DIR` | Archive root (default `~/TeamsMeetings`) and the folder the watcher reads recordings from. |
 | `RECORDER_MODE`, `RECORDING_PROMPT_ENABLED`, `RECORDING_PROMPT_DELAY_SECONDS` | Recorder mode (`macos_prompt` by default) and the banner shown when a meeting starts. |
+| `RECORDING_AUDIO_SOURCE` | What the built-in recorder captures outside calls: `microphone`, `system` (Mac audio) or `both` (default). Detected calls always record both. |

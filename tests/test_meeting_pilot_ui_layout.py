@@ -493,9 +493,11 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         prompt_window = _section(source, "final class RecordingPromptWindow", "enum NotificationBridge")
         prompt = _section(source, "struct RecordingPromptView", "final class PermissionsSetupWindow")
 
-        self.assertIn("NSSize(width: 440, height: 82)", prompt_window)
+        # The call prompt stays 440 wide; starting by hand adds the audio source picker.
+        self.assertIn("NSSize(width: audioSource == nil ? 440 : 480, height: 82)", prompt_window)
         self.assertIn("BrandTile(size: 40)", prompt)
-        self.assertIn(".frame(width: 440, height: 82)", prompt)
+        self.assertIn("width: CGFloat = 440", prompt)
+        self.assertIn(".frame(width: width, height: 82)", prompt)
         self.assertNotIn('Image(systemName: "waveform")', prompt)
 
     def test_obsidian_vault_is_chosen_inside_the_obsidian_card(self):

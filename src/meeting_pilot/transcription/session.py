@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -32,8 +33,20 @@ def create_session(config: Config, source_audio: Path) -> tuple[Path, Path]:
 
 def sidecar_dir(source_audio: Path) -> Path:
     """Per-recording folder the macOS app writes next to the audio: live sidebar notes,
-    the chosen summary template, and the separate microphone/system-audio tracks."""
+    the chosen summary template, the separate microphone/system-audio tracks, and how it
+    was recorded."""
     return source_audio.with_name(source_audio.stem + ".meetingpilot")
+
+
+def recorded_outside_a_call(source_audio: Path) -> bool:
+    """True when the app recorded this with no call detected (sidecar `recording.json`),
+    e.g. a lecture from the microphone. Recordings without that file, from older versions
+    or external recorders, still count as calls."""
+    try:
+        payload = json.loads((sidecar_dir(source_audio) / "recording.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return isinstance(payload, dict) and payload.get("call") is False
 
 
 def validate_audio_file(audio_file: Path) -> None:

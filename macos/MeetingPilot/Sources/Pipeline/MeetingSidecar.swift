@@ -32,6 +32,21 @@ enum MeetingSidecar {
         directory(for: audioURL).appendingPathComponent("teams_speakers.json")
     }
 
+    /// `{"audio_source": "microphone" | "system" | "both", "call": Bool}`. The pipeline
+    /// only applies Teams metadata to recordings that were calls.
+    static func recordingInfoURL(for audioURL: URL) -> URL {
+        directory(for: audioURL).appendingPathComponent("recording.json")
+    }
+
+    static func writeRecordingInfo(source: RecordingAudioSource, isCall: Bool, for audioURL: URL) {
+        do {
+            let data = try JSONSerialization.data(withJSONObject: ["audio_source": source.rawValue, "call": isCall])
+            try data.write(to: recordingInfoURL(for: audioURL), options: .atomic)
+        } catch {
+            AppLog.append("Salvataggio informazioni registrazione non riuscito: \(error.localizedDescription)")
+        }
+    }
+
     static func readTemplateChoice(for audioURL: URL) -> String {
         guard let data = try? Data(contentsOf: templateURL(for: audioURL)),
               let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],

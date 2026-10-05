@@ -38,6 +38,8 @@ final class AppModel: ObservableObject {
     @Published var recordingPromptEnabled = true
     @Published var recordingPromptDelaySeconds = 3
     @Published var recorderOpenTarget = ""
+    /// What the built-in recorder captures outside calls (RECORDING_AUDIO_SOURCE).
+    @Published var recordingAudioSource: RecordingAudioSource = .both
     @Published var transcriptionProvider = "fluid"
     @Published var appLanguage = "it"
     @Published var appTheme: MeetingPilotTheme = .dark
@@ -248,7 +250,8 @@ final class AppModel: ObservableObject {
             openTarget: recorderOpenTarget,
             promptEnabled: recordingPromptEnabled,
             promptDelaySeconds: recordingPromptDelaySeconds,
-            teamsOCREnabled: teamsOCREnabled
+            teamsOCREnabled: teamsOCREnabled,
+            audioSource: recordingAudioSource
         )
     }
 
@@ -362,6 +365,7 @@ final class AppModel: ObservableObject {
             || (env["RECORDING_PROMPT_ENABLED"] ?? "true").lowercased() == "true"
         recordingPromptDelaySeconds = Int(env["RECORDING_PROMPT_DELAY_SECONDS"] ?? "3") ?? 3
         recorderOpenTarget = env["RECORDER_OPEN_TARGET"] ?? defaultRecorderOpenTarget(for: recorderMode, folder: inbox.path)
+        recordingAudioSource = env["RECORDING_AUDIO_SOURCE"].flatMap(RecordingAudioSource.init(rawValue:)) ?? .both
         transcriptionProvider = env["TRANSCRIPTION_PROVIDER"] == "apple" ? "apple" : "fluid"
         teamsOCREnabled = (env["TEAMS_OCR_ENABLED"] ?? "false").lowercased() == "true"
         fluidAudioInstalled = fluidAudioCommandAvailable(in: env)
@@ -1432,6 +1436,13 @@ final class AppModel: ObservableObject {
         recording.resetMeetingDetection()
         requestAppleSpeechAuthorizationIfNeeded()
         refresh()
+    }
+
+    func saveRecordingAudioSource(_ source: RecordingAudioSource) {
+        guard source != recordingAudioSource else { return }
+        EnvFile.update(at: envURL, values: ["RECORDING_AUDIO_SOURCE": source.rawValue])
+        recordingAudioSource = source
+        statusMessage = "Recorder salvato"
     }
 
     func saveRecorderFolder(_ folder: String) {

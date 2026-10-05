@@ -398,7 +398,7 @@
 "Installer Millet non incluso in questa build" = "Millet-Installer ist in diesem Build nicht enthalten";
 "L'audio è salvo. Il motore Apple richiede che Dettatura sia attiva nelle impostazioni della tastiera." = "Das Audio ist gesichert. Die Apple-Engine benötigt aktiviertes Diktat in den Tastatur-Einstellungen.";
 "L'audio è salvo: puoi ripartire dalla trascrizione senza registrare nuovamente la call." = "Das Audio ist gesichert: Du kannst bei der Transkription neu ansetzen, ohne den Call erneut aufzunehmen.";
-"La registrazione combinata di audio di sistema e microfono richiede macOS 14.2 o successivo." = "Die gemeinsame Aufnahme von Systemaudio und Mikrofon erfordert macOS 14.2 oder neuer.";
+"Registrare l'audio del Mac richiede macOS 14.2 o successivo. Con macOS precedenti scegli solo il microfono." = "Die Aufnahme von Mac-Audio erfordert macOS 14.2 oder neuer. Wähle bei älteren Versionen nur das Mikrofon.";
 "La registrazione e' incompleta e non puo' essere trascritta. Registra di nuovo questa parte della riunione." = "Die Aufnahme ist unvollständig und kann nicht transkribiert werden. Nimm diesen Teil des Meetings erneut auf.";
 "La trascrizione e' ancora in corso per questa riunione" = "Die Transkription für dieses Meeting läuft noch";
 "La trascrizione e' gia' in corso per questa riunione" = "Die Transkription für dieses Meeting läuft bereits";
@@ -510,7 +510,7 @@
 
 /* Error surfacing, recorder and Notion page choice 2026-09 */
 "Recorder integrato" = "Integrierter Rekorder";
-"Audio di sistema e microfono, senza altre app." = "Systemaudio und Mikrofon, ohne weitere Apps.";
+"Microfono e audio del Mac, senza altre app." = "Mikrofon und Mac-Audio, ohne weitere Apps.";
 "Recorder esterno" = "Externer Rekorder";
 "Avanzato · usa TranscribeX, app di terze parti." = "Erweitert · nutzt TranscribeX, eine Drittanbieter-App.";
 "App di terze parti, non necessaria" = "Drittanbieter-App, nicht erforderlich";
@@ -654,3 +654,14 @@
 "Sidebar" = "Leiste";
 "Apri la chat delle riunioni" = "Meeting-Chat öffnen";
 "La sidebar dal vivo è disponibile durante una registrazione" = "Die Live-Seitenleiste ist während einer Aufnahme verfügbar";
+
+/* Recording audio source */
+"Sorgente audio" = "Audioquelle";
+"Audio del Mac" = "Mac-Audio";
+"Entrambi" = "Beides";
+"Lezioni e riunioni in presenza: registra tutta la stanza." = "Vorlesungen und Meetings vor Ort: nimmt den ganzen Raum auf.";
+"Lezioni online, webinar e video in cui non parli." = "Online-Vorlesungen, Webinare und Videos, in denen du nicht sprichst.";
+"Tu dal microfono, gli altri dall'audio del Mac." = "Du über das Mikrofon, die anderen über das Mac-Audio.";
+"Le call rilevate, come Teams, registrano sempre microfono e audio del Mac." = "Erkannte Calls wie Teams nehmen immer Mikrofon und Mac-Audio auf.";
+"Nuova registrazione" = "Neue Aufnahme";
+"Passa alla call" = "Zum Call wechseln";

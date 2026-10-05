@@ -11,13 +11,23 @@ import Foundation
 ///
 /// This is best-effort and additive: any failure here (missing models, conversion errors,
 /// a slow diarization pass) must never affect the primary recording path in
-/// `SystemMeetingAudioRecorder`. Only the system-audio leg is diarized — the microphone
+/// `MeetingAudioRecorder`. Only the system-audio leg is diarized — the microphone
 /// is by definition the local participant, so it's labelled rather than clustered.
+/// A microphone-only recording has no system audio: there the microphone hears the whole
+/// room and is the diarized leg ("room"), with no "me" leg at all.
 /// `@unchecked Sendable`: all mutable state is confined to `queue`, a single serial
 /// dispatch queue, so it's safe to capture `self` in the `@Sendable` closures handed to
 /// `StreamingNemotronMultilingualAsrManager` (an actor) even though the compiler can't
 /// verify that itself.
 final class LiveMeetingPipeline: @unchecked Sendable {
+    /// The audio whose voices are clustered into speakers.
+    enum DiarizedLeg {
+        /// The Mac's audio during a call: everyone but the person recording ("them").
+        case systemAudio
+        /// The only microphone of an in-person recording: everyone, including the person recording ("room").
+        case roomMicrophone
+    }
+
     struct LiveSpeakerSegment: Codable {
         let speakerId: String
         let startSeconds: Double
@@ -29,7 +39,7 @@ final class LiveMeetingPipeline: @unchecked Sendable {
         let text: String
         let kind: String  // "partial" (ghost text, may be revised) or "final" (line closed on a pause)
         let atSeconds: Double
-        let speaker: String  // "me" (microphone) or "them" (system audio)
+        let speaker: String  // "me" (microphone), "them" (system audio) or "room" (microphone-only recording)
         /// The Teams participant who was talking, for "them" lines when the tracker saw one.
         let name: String?
     }
@@ -83,7 +93,7 @@ final class LiveMeetingPipeline: @unchecked Sendable {
     private var transcript: [LiveTranscriptEntry] = []
     private var sessionStartedAt = Date()
 
-    private var systemAsr: AsrLeg!
+    private var diarizedAsr: AsrLeg!
     /// Created on the first microphone buffer, since only then is its format known.
     private var microphoneAsr: AsrLeg?
     private var finalized = false
@@ -133,10 +143,14 @@ final class LiveMeetingPipeline: @unchecked Sendable {
 
     /// Returns nil (rather than throwing) when the system audio format can't be bridged
     /// to FluidAudio's expected 16kHz mono input — live diarization is simply skipped.
-    init?(sourceFormat sourceASBD: AudioStreamBasicDescription, sessionFolder: URL) {
+    convenience init?(sourceFormat sourceASBD: AudioStreamBasicDescription, sessionFolder: URL) {
         var asbd = sourceASBD
-        guard let sourceFormat = AVAudioFormat(streamDescription: &asbd),
-            let targetFormat = AVAudioFormat(
+        guard let sourceFormat = AVAudioFormat(streamDescription: &asbd) else { return nil }
+        self.init(format: sourceFormat, sessionFolder: sessionFolder, diarizedLeg: .systemAudio)
+    }
+
+    init?(format sourceFormat: AVAudioFormat, sessionFolder: URL, diarizedLeg: DiarizedLeg) {
+        guard let targetFormat = AVAudioFormat(
                 commonFormat: .pcmFormatFloat32,
                 sampleRate: Self.targetSampleRate,
                 channels: 1,
@@ -158,9 +172,11 @@ final class LiveMeetingPipeline: @unchecked Sendable {
             try await StreamingNemotronMultilingualAsrManager.downloadAndPreloadShared(
                 languageCode: language, chunkMs: Self.asrChunkMs)
         }
-        let systemLeg = AsrLeg(speaker: "them", sampleRate: sourceFormat.sampleRate, silenceRMS: Self.systemSilenceRMS)
-        systemAsr = systemLeg
-        startAsr(systemLeg)
+        let leg = diarizedLeg == .systemAudio
+            ? AsrLeg(speaker: "them", sampleRate: sourceFormat.sampleRate, silenceRMS: Self.systemSilenceRMS)
+            : AsrLeg(speaker: "room", sampleRate: sourceFormat.sampleRate, silenceRMS: Self.microphoneSilenceRMS)
+        diarizedAsr = leg
+        startAsr(leg)
     }
 
     private func loadDiarizationModels() {
@@ -201,7 +217,7 @@ final class LiveMeetingPipeline: @unchecked Sendable {
             queue.sync { leg.ready = true }
             NSLog("LiveMeetingPipeline: streaming ASR ready for \(speaker)")
         } catch {
-            AppLog.append("Trascrizione dal vivo non disponibile per \(speaker == "me" ? "microfono" : "audio di sistema"): \(error.localizedDescription)")
+            AppLog.append("Trascrizione dal vivo non disponibile per \(speaker == "them" ? "audio di sistema" : "microfono"): \(error.localizedDescription)")
         }
     }
 
@@ -316,20 +332,10 @@ final class LiveMeetingPipeline: @unchecked Sendable {
         }
     }
 
-    /// Microphone buffers from the recorder's `AVAudioEngine` input tap. The buffer is
-    /// copied because the engine may reuse it after the tap block returns.
+    /// Microphone buffers from the recorder's `AVAudioEngine` input tap, when the Mac's
+    /// audio is recorded too: the microphone is then the person recording ("me").
     func ingestMicrophone(_ buffer: AVAudioPCMBuffer) {
-        guard buffer.frameLength > 0,
-              let copy = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: buffer.frameLength)
-        else { return }
-        copy.frameLength = buffer.frameLength
-        let source = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: buffer.audioBufferList))
-        let destination = UnsafeMutableAudioBufferListPointer(copy.mutableAudioBufferList)
-        for index in 0..<min(source.count, destination.count) {
-            guard let src = source[index].mData, let dst = destination[index].mData else { continue }
-            memcpy(dst, src, Int(source[index].mDataByteSize))
-            destination[index].mDataByteSize = source[index].mDataByteSize
-        }
+        guard let copy = Self.copy(buffer) else { return }
         queue.async { [self] in
             guard !finalized else { return }
             let leg: AsrLeg
@@ -345,6 +351,33 @@ final class LiveMeetingPipeline: @unchecked Sendable {
         }
     }
 
+    /// Microphone buffers of a microphone-only recording (`.roomMicrophone`): the whole
+    /// room, diarized like the Mac's audio is during a call.
+    func ingestRoom(_ buffer: AVAudioPCMBuffer) {
+        guard let copy = Self.copy(buffer) else { return }
+        queue.async { [self] in
+            guard !finalized else { return }
+            processDiarization(copy)
+            feedAsr(copy, into: diarizedAsr)
+        }
+    }
+
+    /// The engine may reuse a tap buffer after the tap block returns, so it is copied first.
+    private static func copy(_ buffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
+        guard buffer.frameLength > 0,
+              let copy = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: buffer.frameLength)
+        else { return nil }
+        copy.frameLength = buffer.frameLength
+        let source = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: buffer.audioBufferList))
+        let destination = UnsafeMutableAudioBufferListPointer(copy.mutableAudioBufferList)
+        for index in 0..<min(source.count, destination.count) {
+            guard let src = source[index].mData, let dst = destination[index].mData else { continue }
+            memcpy(dst, src, Int(source[index].mDataByteSize))
+            destination[index].mDataByteSize = source[index].mDataByteSize
+        }
+        return copy
+    }
+
     /// Must be called from the IOProc block. Copies the buffer synchronously (raw Core
     /// Audio memory is only valid for the duration of the callback) and hands the copy to
     /// `queue` for the actual conversion + diarization work, keeping the audio-capture
@@ -354,7 +387,7 @@ final class LiveMeetingPipeline: @unchecked Sendable {
         queue.async { [self] in
             checkSystemSignal(pcmCopy)
             processDiarization(pcmCopy)
-            feedAsr(pcmCopy, into: systemAsr)
+            feedAsr(pcmCopy, into: diarizedAsr)
         }
     }
 
@@ -496,7 +529,7 @@ final class LiveMeetingPipeline: @unchecked Sendable {
     func finalize() {
         queue.async { [self] in
             finalized = true
-            systemAsr.input.finish()
+            diarizedAsr.input.finish()
             microphoneAsr?.input.finish()
         }
     }

@@ -29,7 +29,7 @@ struct LiveSidebarTranscriptEntry: Codable, Identifiable {
     let text: String
     let kind: String  // "partial" or "final" — see LiveMeetingPipeline.LiveTranscriptEntry
     let atSeconds: Double
-    let speaker: String?  // "me" or "them"; absent in files written before the microphone leg
+    let speaker: String?  // "me", "them" or "room" (microphone-only); absent in files written before the microphone leg
     let name: String?  // Teams participant talking, for "them" lines when known
 }
 
@@ -380,7 +380,7 @@ struct LiveSidebarView: View {
                                     .font(.mpEyebrow(9))
                                     .tracking(0.6)
                                     .foregroundStyle(speakerColor(name))
-                            } else if entry.speaker != nil {
+                            } else if entry.speaker == "them" {
                                 Text(localized("Altri"))
                                     .font(.mpEyebrow(9))
                                     .tracking(0.6)
@@ -464,24 +464,56 @@ enum NotificationBridge {
 struct RecordingPromptView: View {
     let meetingTitle: String
     let timeoutSeconds: TimeInterval
+    /// Set when no call is detected: the prompt then offers the audio source instead of a title.
+    let initialAudioSource: RecordingAudioSource?
+    let actionTitle: String
+    let width: CGFloat
     let onClose: () -> Void
-    let onRecord: () -> Void
+    let onRecord: (RecordingAudioSource?) -> Void
 
     @State private var progress = 1.0
+    @State private var audioSource: RecordingAudioSource
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    init(
+        meetingTitle: String,
+        timeoutSeconds: TimeInterval,
+        initialAudioSource: RecordingAudioSource? = nil,
+        actionTitle: String = "Registra",
+        width: CGFloat = 440,
+        onClose: @escaping () -> Void,
+        onRecord: @escaping (RecordingAudioSource?) -> Void
+    ) {
+        self.meetingTitle = meetingTitle
+        self.timeoutSeconds = timeoutSeconds
+        self.initialAudioSource = initialAudioSource
+        self.actionTitle = actionTitle
+        self.width = width
+        self.onClose = onClose
+        self.onRecord = onRecord
+        _audioSource = State(initialValue: initialAudioSource ?? .both)
+    }
 
     var body: some View {
         HStack(spacing: 12) {
             BrandTile(size: 40)
 
-            VStack(alignment: .leading, spacing: 3) {
-                MPEyebrow("Riunione rilevata", color: MeetingPilotDesign.accentStrong)
-                Text(meetingTitle)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.95))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+            VStack(alignment: .leading, spacing: initialAudioSource == nil ? 3 : 5) {
+                if initialAudioSource == nil {
+                    MPEyebrow("Riunione rilevata", color: MeetingPilotDesign.accentStrong)
+                    Text(meetingTitle)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.95))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                } else {
+                    MPEyebrow("Nuova registrazione", color: MeetingPilotDesign.accentStrong)
+                    PromptAudioSourcePicker(selection: $audioSource)
+                }
             }
+            // The eyebrow is wider than the picker below it, so the spacer must not squeeze
+            // it. A meeting title must stay truncatable instead, or it squeezes the button.
+            .layoutPriority(initialAudioSource == nil ? 0 : 1)
 
             Spacer(minLength: 8)
 
@@ -491,15 +523,17 @@ struct RecordingPromptView: View {
             .buttonStyle(MPIconButtonStyle(size: 30))
             .help("Ignora")
 
-            Button(action: onRecord) {
-                Label(localized("Registra"), systemImage: "record.circle")
+            Button {
+                onRecord(initialAudioSource == nil ? nil : audioSource)
+            } label: {
+                Label(localized(actionTitle), systemImage: "record.circle")
             }
             .buttonStyle(MPPrimaryButtonStyle())
             .help("Avvia registrazione")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .frame(width: 440, height: 82)
+        .frame(width: width, height: 82)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color(nsColor: NSColor(hex: 0x131316)))
@@ -525,5 +559,46 @@ struct RecordingPromptView: View {
                 progress = 0
             }
         }
+    }
+}
+
+/// Microphone / Mac audio / both switch for the dark recording prompt. Only the selected
+/// segment carries its name, so three choices fit under the prompt's eyebrow.
+struct PromptAudioSourcePicker: View {
+    @Binding var selection: RecordingAudioSource
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(RecordingAudioSource.allCases) { source in
+                let selected = source == selection
+                Button {
+                    selection = source
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: source.symbol)
+                            .font(.system(size: 11, weight: .semibold))
+                        if selected {
+                            Text(localized(source.title))
+                                .font(.system(size: 12, weight: .semibold))
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+                    }
+                    .foregroundStyle(selected ? Color.white : Color.white.opacity(0.5))
+                    .padding(.horizontal, selected ? 10 : 0)
+                    .frame(minWidth: 30, minHeight: 24)
+                    .background(Capsule().fill(selected ? Color.white.opacity(0.16) : Color.clear))
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .help(localized(source.title))
+                .accessibilityLabel(localized(source.title))
+                .accessibilityAddTraits(selected ? [.isSelected] : [])
+            }
+        }
+        .padding(2)
+        .background(Capsule().fill(Color.white.opacity(0.06)))
+        .fixedSize()
+        .animation(.mpSnappy, value: selection)
     }
 }

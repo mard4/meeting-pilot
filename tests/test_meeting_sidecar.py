@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import json
 import subprocess
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
 from meeting_pilot.artifacts import collect_artifacts
 from meeting_pilot.transcription.fluid_audio import _two_track_transcript, run_fluid_audio
-from meeting_pilot.transcription.session import create_session
-from meeting_pilot.pipeline import _discard_audio
+from meeting_pilot.config import Config
+from meeting_pilot.transcription.session import create_session, recorded_outside_a_call, sidecar_dir
+from meeting_pilot.pipeline import _discard_audio, process_audio
 from meeting_pilot.summarization.summary_templates import resolve_template, summary_guidance
 
 
@@ -204,3 +206,76 @@ def test_published_note_includes_the_notes_typed_during_the_meeting(tmp_path: Pa
     note = Path(publish_to_obsidian(config, artifacts)["path"]).read_text(encoding="utf-8")
 
     assert "## Le mie note\n- presentazione venerdì" in note
+
+
+def test_only_recordings_marked_outside_a_call_say_so(tmp_path: Path) -> None:
+    audio = tmp_path / "Meeting Pilot - 2026-10-05 10-00-00 - Registrazione.m4a"
+    assert not recorded_outside_a_call(audio), "older recordings and external recorders count as calls"
+
+    sidecar = sidecar_dir(audio)
+    sidecar.mkdir()
+    (sidecar / "recording.json").write_text('{"audio_source": "microphone", "call": false}', encoding="utf-8")
+    assert recorded_outside_a_call(audio)
+
+    (sidecar / "recording.json").write_text('{"audio_source": "both", "call": true}', encoding="utf-8")
+    assert not recorded_outside_a_call(audio)
+
+    (sidecar / "recording.json").write_text("not json", encoding="utf-8")
+    assert not recorded_outside_a_call(audio)
+
+
+def _metadata_after_a_saved_teams_call(tmp_path: Path, monkeypatch, recording_info: str | None) -> dict:
+    """Runs the pipeline on a recording made while teams-runtime.json still describes
+    an earlier Teams call."""
+    for key, value in {
+        "MEETINGS_ROOT": str(tmp_path),
+        "JOURNAL_ROOT": str(tmp_path / "Diary"),
+        "PUBLISH_TARGETS": "journal",
+        "SUMMARY_ENABLED": "false",
+        "CALENDAR_METADATA_ENABLED": "false",
+        "MOVE_SOURCE_AUDIO": "false",
+        "TRANSCRIPTION_PROVIDER": "fluid",
+    }.items():
+        monkeypatch.setenv(key, value)
+    config = Config.from_env()
+    config.ensure_dirs()
+    source = config.inbox_audio_dir / "Meeting Pilot - 2026-10-05 10-00-00 - Registrazione.m4a"
+    source.write_bytes(b"audio")
+    if recording_info is not None:
+        sidecar_dir(source).mkdir()
+        (sidecar_dir(source) / "recording.json").write_text(recording_info, encoding="utf-8")
+    config.teams_runtime_metadata_file.write_text(
+        json.dumps({
+            "captured_at": datetime.now().isoformat(),
+            "source": "accessibility",
+            "title": "Weekly sync",
+            "participants": ["Giulia Bianchi"],
+            "confidence": "high",
+        }),
+        encoding="utf-8",
+    )
+
+    def transcribe(_config: Config, audio_file: Path) -> None:
+        (audio_file.parent / "audio.txt").write_text("Oggi parliamo di termodinamica.", encoding="utf-8")
+
+    monkeypatch.setattr("meeting_pilot.pipeline.validate_audio_file", lambda _path: None)
+    monkeypatch.setattr("meeting_pilot.pipeline.run_fluid_audio", transcribe)
+    session = process_audio(config, source)
+    path = session / "meeting_metadata.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+
+def test_recording_outside_a_call_does_not_inherit_the_last_teams_call(tmp_path: Path, monkeypatch) -> None:
+    metadata = _metadata_after_a_saved_teams_call(
+        tmp_path, monkeypatch, '{"audio_source": "microphone", "call": false}'
+    )
+
+    assert metadata.get("title") != "Weekly sync"
+    assert "participants" not in metadata
+
+
+def test_call_recording_still_gets_the_teams_title_and_participants(tmp_path: Path, monkeypatch) -> None:
+    metadata = _metadata_after_a_saved_teams_call(tmp_path, monkeypatch, '{"audio_source": "both", "call": true}')
+
+    assert metadata["title"] == "Weekly sync"
+    assert metadata["participants"] == ["Giulia Bianchi"]

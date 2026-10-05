@@ -289,7 +289,7 @@ enum NativeRecorderError: LocalizedError {
         case .systemAudioDenied:
             return "Per registrare anche le voci degli altri, abilita Meeting Pilot in Solo registrazione audio di sistema, quindi riapri l'app prima di riprovare."
         case .systemAudioRequiresTapAPI:
-            return "La registrazione combinata di audio di sistema e microfono richiede macOS 14.2 o successivo."
+            return "Registrare l'audio del Mac richiede macOS 14.2 o successivo. Con macOS precedenti scegli solo il microfono."
         case .alreadyRecording:
             return "C'e' gia' una registrazione nativa in corso."
         case .couldNotCreateFile:
@@ -301,7 +301,10 @@ enum NativeRecorderError: LocalizedError {
 }
 
 final class NativeAudioRecorder: NSObject {
-    private var recorder: AnyObject?
+    private var recorder: MeetingAudioRecorder?
+    /// Stopped with `stopWithoutWaiting()` and still writing their file; kept alive
+    /// until they finish.
+    private var finishingRecorders: [MeetingAudioRecorder] = []
     private var currentURL: URL?
     private var recording = false
     private var paused = false
@@ -313,7 +316,13 @@ final class NativeAudioRecorder: NSObject {
         recording
     }
 
-    func start(folder: URL, title: String, completion: @escaping (Result<URL, Error>) -> Void) {
+    func start(
+        folder: URL,
+        title: String,
+        source: RecordingAudioSource,
+        isCall: Bool,
+        completion: @escaping (Result<URL, Error>) -> Void
+    ) {
         if isRecording {
             completion(.failure(NativeRecorderError.alreadyRecording))
             return
@@ -321,18 +330,18 @@ final class NativeAudioRecorder: NSObject {
 
         let startRecording = { [weak self] in
             guard let self else { return }
-            guard #available(macOS 14.2, *) else {
+            if source.capturesSystemAudio, #unavailable(macOS 14.2) {
                 completion(.failure(NativeRecorderError.systemAudioRequiresTapAPI))
                 return
             }
 
-            let recorder = SystemMeetingAudioRecorder()
+            let recorder = MeetingAudioRecorder()
             self.recorder = recorder
-            recorder.start(folder: folder, title: title) { [weak self, weak recorder] result in
+            recorder.start(folder: folder, title: title, source: source, isCall: isCall) { [weak self, weak recorder] result in
                 guard let self, recorder != nil else { return }
                 switch result {
                 case .success(let url):
-                    SystemAudioPermissionState.setConfirmed(true)
+                    if source.capturesSystemAudio { SystemAudioPermissionState.setConfirmed(true) }
                     self.recording = true
                     self.paused = false
                     self.stopping = false
@@ -340,7 +349,7 @@ final class NativeAudioRecorder: NSObject {
                     self.onStateChange?(true, url)
                     completion(.success(url))
                 case .failure(let error):
-                    SystemAudioPermissionState.setConfirmed(false)
+                    if source.capturesSystemAudio { SystemAudioPermissionState.setConfirmed(false) }
                     self.recorder = nil
                     self.currentURL = nil
                     self.recording = false
@@ -349,16 +358,24 @@ final class NativeAudioRecorder: NSObject {
                     completion(.failure(error))
                 }
             } onFinished: { [weak self, weak recorder] url, warning in
-                guard let self, recorder != nil else { return }
-                self.recorder = nil
-                self.currentURL = url
-                self.recording = false
-                self.stopping = false
-                self.onStateChange?(false, url)
+                guard let self, let recorder else { return }
+                if self.recorder === recorder {
+                    self.recorder = nil
+                    self.currentURL = url
+                    self.recording = false
+                    self.stopping = false
+                    self.onStateChange?(false, url)
+                } else {
+                    self.finishingRecorders.removeAll { $0 === recorder }
+                }
                 self.onFinished?(url, warning)
             }
         }
 
+        guard source.capturesMicrophone else {
+            startRecording()
+            return
+        }
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized:
             startRecording()
@@ -377,25 +394,34 @@ final class NativeAudioRecorder: NSObject {
         let url = currentURL
         guard recording, !stopping else { return url }
         stopping = true
-        if #available(macOS 14.2, *), let recorder = recorder as? SystemMeetingAudioRecorder {
-            recorder.stop()
-        }
+        recorder?.stop()
+        return url
+    }
+
+    /// Stops like `stop()` but frees the recorder at once, so the next recording can start
+    /// while this file is still being written. `onFinished` still reports it when done.
+    func stopWithoutWaiting() -> URL? {
+        let url = currentURL
+        guard recording, !stopping, let recorder else { return url }
+        recorder.stop()
+        finishingRecorders.append(recorder)
+        self.recorder = nil
+        currentURL = nil
+        recording = false
+        paused = false
+        onStateChange?(false, url)
         return url
     }
 
     func pause() -> Bool {
-        guard recording, !paused, !stopping,
-              #available(macOS 14.2, *),
-              let recorder = recorder as? SystemMeetingAudioRecorder else { return false }
+        guard recording, !paused, !stopping, let recorder else { return false }
         recorder.pause()
         paused = true
         return true
     }
 
     func resume() -> Bool {
-        guard recording, paused, !stopping,
-              #available(macOS 14.2, *),
-              let recorder = recorder as? SystemMeetingAudioRecorder else { return false }
+        guard recording, paused, !stopping, let recorder else { return false }
         recorder.resume()
         paused = false
         return true
@@ -422,8 +448,9 @@ final class NativeAudioRecorder: NSObject {
     }
 }
 
-@available(macOS 14.2, *)
-final class SystemMeetingAudioRecorder: NSObject {
+/// Records the microphone, the Mac's audio, or both (see `RecordingAudioSource`) into one
+/// file. Capturing the Mac's audio needs the process-tap API of macOS 14.2.
+final class MeetingAudioRecorder: NSObject {
     private let ioQueue = DispatchQueue(label: "\(AppIdentity.bundleID).system-audio", qos: .userInitiated)
     private var tapID = AudioObjectID(kAudioObjectUnknown)
     private var aggregateDeviceID = AudioObjectID(kAudioObjectUnknown)
@@ -446,6 +473,8 @@ final class SystemMeetingAudioRecorder: NSObject {
     func start(
         folder: URL,
         title: String,
+        source: RecordingAudioSource,
+        isCall: Bool,
         completion: @escaping (Result<URL, Error>) -> Void,
         onFinished: @escaping (URL, Error?) -> Void
     ) {
@@ -454,13 +483,15 @@ final class SystemMeetingAudioRecorder: NSObject {
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
                 let finalURL = folder.appendingPathComponent(NativeAudioRecorder.fileName(for: title))
                 let temporaryStem = "MeetingPilot-\(UUID().uuidString)"
-                let systemAudioURL = FileManager.default.temporaryDirectory
-                    .appendingPathComponent("\(temporaryStem)-system.caf")
-                let microphoneURL = FileManager.default.temporaryDirectory
-                    .appendingPathComponent("\(temporaryStem)-microphone.m4a")
+                let systemAudioURL = source.capturesSystemAudio
+                    ? FileManager.default.temporaryDirectory.appendingPathComponent("\(temporaryStem)-system.caf")
+                    : nil
+                let microphoneURL = source.capturesMicrophone
+                    ? FileManager.default.temporaryDirectory.appendingPathComponent("\(temporaryStem)-microphone.m4a")
+                    : nil
                 try? FileManager.default.removeItem(at: finalURL)
-                try? FileManager.default.removeItem(at: systemAudioURL)
-                try? FileManager.default.removeItem(at: microphoneURL)
+                if let systemAudioURL { try? FileManager.default.removeItem(at: systemAudioURL) }
+                if let microphoneURL { try? FileManager.default.removeItem(at: microphoneURL) }
                 guard FileManager.default.createFile(
                     atPath: NativeAudioRecorder.lockURL(for: finalURL).path,
                     contents: Data()
@@ -475,22 +506,36 @@ final class SystemMeetingAudioRecorder: NSObject {
 
                 let sidecar = MeetingSidecar.directory(for: finalURL)
                 try FileManager.default.createDirectory(at: sidecar, withIntermediateDirectories: true)
-                try self.createSystemAudioTap(outputURL: systemAudioURL, sessionFolder: sidecar)
-                try self.prepareMicrophone(outputURL: microphoneURL)
-                try self.requireNoError(
-                    AudioDeviceStart(self.aggregateDeviceID, self.ioProcID),
-                    operation: "Avvio acquisizione audio di sistema"
-                )
-                guard self.microphoneRecorder?.record() == true else {
-                    throw NativeRecorderError.couldNotStart
+                MeetingSidecar.writeRecordingInfo(source: source, isCall: isCall, for: finalURL)
+                if let systemAudioURL {
+                    guard #available(macOS 14.2, *) else { throw NativeRecorderError.systemAudioRequiresTapAPI }
+                    try self.createSystemAudioTap(outputURL: systemAudioURL, sessionFolder: sidecar)
                 }
-                self.startLiveMicrophone()
-                let speakerTracker = TeamsSpeakerTracker(outputURL: MeetingSidecar.teamsSpeakersURL(for: finalURL))
-                speakerTracker.start()
-                self.livePipeline?.setSpeakerResolver { [weak speakerTracker] start, end in
-                    speakerTracker?.dominantSpeaker(from: start, to: end)
+                if let microphoneURL {
+                    try self.prepareMicrophone(outputURL: microphoneURL)
                 }
-                self.speakerTracker = speakerTracker
+                if systemAudioURL != nil {
+                    try self.requireNoError(
+                        AudioDeviceStart(self.aggregateDeviceID, self.ioProcID),
+                        operation: "Avvio acquisizione audio di sistema"
+                    )
+                }
+                if microphoneURL != nil {
+                    guard self.microphoneRecorder?.record() == true else {
+                        throw NativeRecorderError.couldNotStart
+                    }
+                    self.startLiveMicrophone(sessionFolder: sidecar)
+                }
+                // Names the voices heard in the Mac's audio after the Teams participant
+                // who was talking; without Teams it simply records nothing.
+                if systemAudioURL != nil {
+                    let speakerTracker = TeamsSpeakerTracker(outputURL: MeetingSidecar.teamsSpeakersURL(for: finalURL))
+                    speakerTracker.start()
+                    self.livePipeline?.setSpeakerResolver { [weak speakerTracker] start, end in
+                        speakerTracker?.dominantSpeaker(from: start, to: end)
+                    }
+                    self.speakerTracker = speakerTracker
+                }
                 completion(.success(finalURL))
             } catch {
                 self.cleanupFailedStart()
@@ -523,8 +568,9 @@ final class SystemMeetingAudioRecorder: NSObject {
     func resume() {
         guard paused, !finalizationStarted else { return }
         ioQueue.async {
-            guard self.aggregateDeviceID != kAudioObjectUnknown, let ioProcID = self.ioProcID else { return }
-            guard AudioDeviceStart(self.aggregateDeviceID, ioProcID) == noErr else { return }
+            if self.aggregateDeviceID != kAudioObjectUnknown, let ioProcID = self.ioProcID {
+                guard AudioDeviceStart(self.aggregateDeviceID, ioProcID) == noErr else { return }
+            }
             self.microphoneRecorder?.record()
             try? self.liveMicrophoneEngine?.start()
             self.speakerTracker?.resume()
@@ -533,21 +579,29 @@ final class SystemMeetingAudioRecorder: NSObject {
     }
 
     private func beginFinalization() {
-        guard !finalizationStarted,
-              let systemAudioURL,
-              let microphoneURL,
-              let finalURL else { return }
+        guard !finalizationStarted, let finalURL else { return }
         finalizationStarted = true
         livePipeline?.finalize()
         livePipeline = nil
         speakerTracker?.finish()
         speakerTracker = nil
+        let systemAudioURL = systemAudioURL
+        let microphoneURL = microphoneURL
         Task {
             do {
-                try await mixAudioTracks(from: [systemAudioURL, microphoneURL], into: finalURL)
-                await saveSeparateTracks(system: systemAudioURL, microphone: microphoneURL, for: finalURL)
-                try? FileManager.default.removeItem(at: systemAudioURL)
-                try? FileManager.default.removeItem(at: microphoneURL)
+                if let systemAudioURL {
+                    // The tap is raw PCM, so it is always exported, with the microphone mixed in when there is one.
+                    try await mixAudioTracks(from: [systemAudioURL] + [microphoneURL].compactMap { $0 }, into: finalURL)
+                    if let microphoneURL {
+                        await saveSeparateTracks(system: systemAudioURL, microphone: microphoneURL, for: finalURL)
+                    }
+                } else if let microphoneURL {
+                    // Already AAC: nothing to mix.
+                    try? FileManager.default.removeItem(at: finalURL)
+                    try FileManager.default.moveItem(at: microphoneURL, to: finalURL)
+                }
+                if let systemAudioURL { try? FileManager.default.removeItem(at: systemAudioURL) }
+                if let microphoneURL { try? FileManager.default.removeItem(at: microphoneURL) }
                 try? FileManager.default.removeItem(at: NativeAudioRecorder.lockURL(for: finalURL))
                 complete(url: finalURL, warning: nil)
             } catch {
@@ -618,8 +672,11 @@ final class SystemMeetingAudioRecorder: NSObject {
                 // The microphone track stays where it is; say where, so it can be recovered by hand.
                 AppLog.append("Recupero traccia microfono non riuscito, resta in \(microphoneURL.path): \(error.localizedDescription)")
             }
+            if let systemAudioURL { try? FileManager.default.removeItem(at: systemAudioURL) }
+        } else if let systemAudioURL {
+            // Without a microphone track the raw Mac audio is all there is: keep it for recovery by hand.
+            AppLog.append("Conversione dell'audio del Mac non riuscita, il file grezzo resta in \(systemAudioURL.path): \(error.localizedDescription)")
         }
-        if let systemAudioURL { try? FileManager.default.removeItem(at: systemAudioURL) }
         try? FileManager.default.removeItem(at: NativeAudioRecorder.lockURL(for: finalURL))
         complete(url: finalURL, warning: error)
     }
@@ -645,6 +702,7 @@ final class SystemMeetingAudioRecorder: NSObject {
         finishHandler = nil
     }
 
+    @available(macOS 14.2, *)
     private func createSystemAudioTap(outputURL: URL, sessionFolder: URL) throws {
         let tapDescription = CATapDescription(stereoGlobalTapButExcludeProcesses: [])
         tapDescription.name = "Meeting Pilot System Audio"
@@ -747,8 +805,9 @@ final class SystemMeetingAudioRecorder: NSObject {
         microphoneRecorder = recorder
     }
 
-    private func startLiveMicrophone() {
-        guard let pipeline = livePipeline else { return }
+    /// With the Mac's audio the microphone is the person recording. Without it, the
+    /// microphone hears everyone in the room, so it becomes the leg that is diarized.
+    private func startLiveMicrophone(sessionFolder: URL) {
         let engine = AVAudioEngine()
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
@@ -756,8 +815,17 @@ final class SystemMeetingAudioRecorder: NSObject {
             NSLog("LiveMeetingPipeline: microphone input format unavailable, live transcript of own voice disabled")
             return
         }
+        let roomMicrophone = systemAudioURL == nil
+        if roomMicrophone {
+            livePipeline = LiveMeetingPipeline(format: format, sessionFolder: sessionFolder, diarizedLeg: .roomMicrophone)
+        }
+        guard let pipeline = livePipeline else { return }
         input.installTap(onBus: 0, bufferSize: 4096, format: format) { buffer, _ in
-            pipeline.ingestMicrophone(buffer)
+            if roomMicrophone {
+                pipeline.ingestRoom(buffer)
+            } else {
+                pipeline.ingestMicrophone(buffer)
+            }
         }
         do {
             try engine.start()
@@ -788,7 +856,7 @@ final class SystemMeetingAudioRecorder: NSObject {
             AudioHardwareDestroyAggregateDevice(aggregateDeviceID)
         }
         aggregateDeviceID = AudioObjectID(kAudioObjectUnknown)
-        if tapID != kAudioObjectUnknown {
+        if tapID != kAudioObjectUnknown, #available(macOS 14.2, *) {
             AudioHardwareDestroyProcessTap(tapID)
         }
         tapID = AudioObjectID(kAudioObjectUnknown)
@@ -813,10 +881,18 @@ final class RecordingPromptWindow {
     private var panel: NSPanel?
     private var closeWorkItem: DispatchWorkItem?
 
-    func show(meetingTitle: String, timeoutSeconds: TimeInterval, onRecord: @escaping () -> Void) {
+    /// With `audioSource` the prompt starts a recording outside a call and lets the user
+    /// pick what to capture; `onRecord` then receives the choice.
+    func show(
+        meetingTitle: String,
+        timeoutSeconds: TimeInterval,
+        audioSource: RecordingAudioSource? = nil,
+        actionTitle: String = "Registra",
+        onRecord: @escaping (RecordingAudioSource?) -> Void
+    ) {
         close()
 
-        let size = NSSize(width: 440, height: 82)
+        let size = NSSize(width: audioSource == nil ? 440 : 480, height: 82)
         let panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: size),
             styleMask: [.borderless, .nonactivatingPanel],
@@ -834,10 +910,13 @@ final class RecordingPromptWindow {
         let view = RecordingPromptView(
             meetingTitle: meetingTitle,
             timeoutSeconds: timeoutSeconds,
+            initialAudioSource: audioSource,
+            actionTitle: actionTitle,
+            width: size.width,
             onClose: { [weak self] in self?.close() },
-            onRecord: { [weak self] in
+            onRecord: { [weak self] source in
                 self?.close()
-                onRecord()
+                onRecord(source)
             }
         )
         panel.contentView = NSHostingView(rootView: view)

@@ -398,7 +398,7 @@
 "Installer Millet non incluso in questa build" = "Installatieprogramma van Millet zit niet in deze build";
 "L'audio è salvo. Il motore Apple richiede che Dettatura sia attiva nelle impostazioni della tastiera." = "De audio is bewaard. De Apple-engine heeft Dicteren nodig in de toetsenbordinstellingen.";
 "L'audio è salvo: puoi ripartire dalla trascrizione senza registrare nuovamente la call." = "De audio is bewaard: je kunt bij de transcriptie opnieuw beginnen zonder het gesprek opnieuw op te nemen.";
-"La registrazione combinata di audio di sistema e microfono richiede macOS 14.2 o successivo." = "Systeemaudio en microfoon samen opnemen vereist macOS 14.2 of nieuwer.";
+"Registrare l'audio del Mac richiede macOS 14.2 o successivo. Con macOS precedenti scegli solo il microfono." = "Mac-audio opnemen vereist macOS 14.2 of nieuwer. Kies op oudere versies alleen de microfoon.";
 "La registrazione e' incompleta e non puo' essere trascritta. Registra di nuovo questa parte della riunione." = "De opname is onvolledig en kan niet worden getranscribeerd. Neem dit deel van de vergadering opnieuw op.";
 "La trascrizione e' ancora in corso per questa riunione" = "De transcriptie van deze vergadering loopt nog";
 "La trascrizione e' gia' in corso per questa riunione" = "De transcriptie van deze vergadering loopt al";
@@ -510,7 +510,7 @@
 
 /* Error surfacing, recorder and Notion page choice 2026-09 */
 "Recorder integrato" = "Ingebouwde recorder";
-"Audio di sistema e microfono, senza altre app." = "Systeemaudio en microfoon, zonder andere apps.";
+"Microfono e audio del Mac, senza altre app." = "Microfoon en Mac-audio, zonder andere apps.";
 "Recorder esterno" = "Externe recorder";
 "Avanzato · usa TranscribeX, app di terze parti." = "Geavanceerd · gebruikt TranscribeX, een app van derden.";
 "App di terze parti, non necessaria" = "App van derden, niet nodig";
@@ -654,3 +654,14 @@
 "Sidebar" = "Zijbalk";
 "Apri la chat delle riunioni" = "Open de vergaderchat";
 "La sidebar dal vivo è disponibile durante una registrazione" = "De live zijbalk is beschikbaar tijdens een opname";
+
+/* Recording audio source */
+"Sorgente audio" = "Audiobron";
+"Audio del Mac" = "Mac-audio";
+"Entrambi" = "Beide";
+"Lezioni e riunioni in presenza: registra tutta la stanza." = "Colleges en vergaderingen ter plekke: neemt de hele ruimte op.";
+"Lezioni online, webinar e video in cui non parli." = "Online colleges, webinars en video's waarin je niet spreekt.";
+"Tu dal microfono, gli altri dall'audio del Mac." = "Jij via de microfoon, de anderen via de Mac-audio.";
+"Le call rilevate, come Teams, registrano sempre microfono e audio del Mac." = "Gedetecteerde gesprekken, zoals Teams, nemen altijd de microfoon en de Mac-audio op.";
+"Nuova registrazione" = "Nieuwe opname";
+"Passa alla call" = "Naar gesprek overschakelen";

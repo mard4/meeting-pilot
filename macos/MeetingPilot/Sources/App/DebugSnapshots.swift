@@ -41,8 +41,15 @@ enum DebugSnapshots {
         }
         if only == nil || only!.contains("prompt") {
             capture(
-                RecordingPromptView(meetingTitle: "Q4 Product Roadmap Sync", timeoutSeconds: 20, onClose: {}, onRecord: {}),
+                RecordingPromptView(meetingTitle: "Q4 Product Roadmap Sync", timeoutSeconds: 20, onClose: {}, onRecord: { _ in }),
                 size: NSSize(width: 440, height: 82), theme: .dark, name: "recording-prompt", in: directory
+            )
+            capture(
+                RecordingPromptView(
+                    meetingTitle: "Nuova registrazione", timeoutSeconds: 20, initialAudioSource: .microphone,
+                    width: 480, onClose: {}, onRecord: { _ in }
+                ),
+                size: NSSize(width: 480, height: 82), theme: .dark, name: "recording-prompt-source", in: directory
             )
         }
         if only == nil || only!.contains("live") {
