@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import re
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from ..artifacts import MeetingArtifacts, write_obsidian_receipt
+from ..slides.deck import slides_pdf
 from ..config import Config
 from ..language import config_language, label
 from ..profiles import STUDENT, artifacts_profile
@@ -17,9 +19,11 @@ from .meeting_format import (
     iso_day,
     key_concepts,
     meeting_date,
+    original_file,
     parse_datetime,
     participants,
     present,
+    source_name,
     transcript_turns,
     when_text,
 )
@@ -38,7 +42,21 @@ def publish_to_obsidian(config: Config, artifacts: MeetingArtifacts) -> dict[str
     note_date = _note_date(artifacts)
     filename = _render_filename(config.obsidian_filename_template, title, note_date)
     note_path = _unique_path(folder / filename)
-    content = _note_content(config, artifacts, title, note_date)
+    slides = slide_link = None
+    pdf = slides_pdf(artifacts.session_dir) if artifacts.slides else None
+    if pdf:
+        # Next to the notes in a Slides folder; Obsidian opens a page from `file.pdf#page=N`.
+        copy = _unique_path(folder / "Slides" / f"{note_path.stem}.pdf")
+        copy.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(pdf, copy)
+        relative = copy.relative_to(vault_root).as_posix()
+        open_slide = label(config_language(config), "open_slide")
+        slides = f"[[{relative}]]"
+
+        def slide_link(page: int) -> str:
+            return f"[[{relative}#page={page}|{open_slide} {page}]]"
+
+    content = _note_content(config, artifacts, title, note_date, slides=slides, slide_link=slide_link)
     note_path.write_text(content, encoding="utf-8")
 
     receipt = {
@@ -100,11 +118,15 @@ def _note_content(
     title: str,
     date: str,
     header_callout: bool = True,
+    slides: str | None = None,
+    slide_link: Callable[[int], str] | None = None,
 ) -> str:
     """Obsidian-flavoured Markdown, also read by the in-app Diary.
 
     The Diary draws date, duration and participants in its own header from the
-    frontmatter, so it asks for the note without the header callout.
+    frontmatter, so it asks for the note without the header callout. `slides` is where
+    this destination keeps its copy of the slides, and `slide_link` links one of their
+    pages when the destination can open it.
     """
     lang = config_language(config)
 
@@ -113,7 +135,7 @@ def _note_content(
 
     summary = artifacts.omlx_summary or {}
     lecture = artifacts_profile(config, artifacts) == STUDENT
-    parts = ["---", *_frontmatter_lines(config, artifacts, title, date, lecture), "---", "", f"# {title}"]
+    parts = ["---", *_frontmatter_lines(config, artifacts, title, date, lecture, slides), "---", "", f"# {title}"]
 
     if header_callout and _include(config, "overview"):
         parts.extend(["", *_header_callout(artifacts, lang, lecture)])
@@ -136,7 +158,14 @@ def _note_content(
         parts.extend(["", f"🎧 [{t('open_audio')}]({artifacts.archived_audio_file.as_uri()})"])
 
     if artifacts.transcript_text and _include(config, "transcript"):
-        parts.extend(["", *_transcript_callout(t("full_transcript"), artifacts.transcript_text)])
+        if artifacts.slide_sections:
+            parts.extend(["", f"## {t('transcript_by_slide')}"])
+            for section in artifacts.slide_sections:
+                title_line = f"{t('slide')} {section.page} · {section.title}".rstrip(" ·")
+                links = [slide_link(section.page)] if slide_link else []
+                parts.extend(["", *_transcript_callout(title_line, "\n".join(section.lines()), kind="slide", first_lines=links)])
+        else:
+            parts.extend(["", *_transcript_callout(t("full_transcript"), artifacts.transcript_text)])
 
     return "\n".join(parts).rstrip() + "\n"
 
@@ -183,7 +212,12 @@ def _lecture_sections(config: Config, summary: dict[str, Any], t: Any) -> list[s
 
 
 def _frontmatter_lines(
-    config: Config, artifacts: MeetingArtifacts, title: str, date: str, lecture: bool = False
+    config: Config,
+    artifacts: MeetingArtifacts,
+    title: str,
+    date: str,
+    lecture: bool = False,
+    slides: str | None = None,
 ) -> list[str]:
     summary = artifacts.omlx_summary or {}
     metadata = artifacts.meeting_metadata or {}
@@ -221,7 +255,7 @@ def _frontmatter_lines(
     if lecture:
         lines.append('type: "study"')
     lines.extend([
-        'source: "Teams"',
+        f'source: "{_yaml_escape(source_name(artifacts, config_language(config)))}"',
         'status: "Published"',
         f'model: "{_yaml_escape(str(config.summary_model))}"',
         f'transcription_provider: "{_yaml_escape(str(config.transcription_provider))}"',
@@ -235,6 +269,10 @@ def _frontmatter_lines(
         lines.append(f'language: "{_yaml_escape(str(language))}"')
     if artifacts.archived_audio_file:
         lines.append(f'audio_path: "{_yaml_escape(str(artifacts.archived_audio_file))}"')
+    if original_file(artifacts):
+        lines.append(f'original_path: "{_yaml_escape(original_file(artifacts))}"')
+    if slides:
+        lines.append(f'slides: "{_yaml_escape(slides)}"')
     return lines
 
 
@@ -273,9 +311,12 @@ def _task_line(item: dict[str, Any]) -> str:
     return line
 
 
-def _transcript_callout(title: str, transcript: str) -> list[str]:
-    """Collapsed by default: the transcript is long and rarely re-read."""
-    lines = [f"> [!quote]- {title}"]
+def _transcript_callout(title: str, transcript: str, kind: str = "quote", first_lines: list[str] | None = None) -> list[str]:
+    """Collapsed by default: the transcript is long and rarely re-read. Grouped by slide,
+    each part is a `slide` callout, which the Diary shows next to the PDF."""
+    lines = [f"> [!{kind}]- {title}"]
+    for line in first_lines or []:
+        lines.extend([f"> {line}", ">"])
     turns = transcript_turns(transcript)
     if not turns:
         return lines + [f"> {line}" if line.strip() else ">" for line in transcript.strip().splitlines()]

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -47,6 +49,31 @@ def recorded_outside_a_call(source_audio: Path) -> bool:
     except (OSError, json.JSONDecodeError):
         return False
     return isinstance(payload, dict) and payload.get("call") is False
+
+
+def audio_duration_seconds(audio_file: Path) -> float | None:
+    """Length of a recording as macOS reports it, or None when it cannot be read."""
+    try:
+        result = subprocess.run(
+            ["/usr/bin/afinfo", str(audio_file)],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    match = re.search(r"estimated duration:\s*([0-9.]+)\s*sec", result.stdout)
+    return float(match.group(1)) if match else None
+
+
+def timeout_for_audio(base_seconds: int, audio_file: Path) -> int:
+    """`base_seconds` suits a meeting; a two-hour lecture or podcast needs at least as
+    long as the audio itself on top of it."""
+    duration = audio_duration_seconds(audio_file)
+    if not duration:
+        return base_seconds
+    return max(base_seconds, int(duration) + base_seconds)
 
 
 def validate_audio_file(audio_file: Path) -> None:

@@ -27,6 +27,7 @@ from .chat.meeting_chat import (
 from .publishing.notion_projects import assign_meeting_project
 from .tag_catalog import add_catalog_value, bootstrap_catalog_from_notion, catalog_values, discard_unconfirmed_initial_imports, import_catalog_from_notion, import_catalog_from_sources
 from .publishing.notion_setup import NotionSetupError, provision_notion_workspace
+from .media_import import import_media_file
 from .pipeline import process_audio, retry_from_transcript, retry_transcription
 from .platforms.teams.teams_scraper import capture_teams_runtime_metadata
 from .watcher import _source_key, mark_processed, watch
@@ -42,6 +43,15 @@ def main() -> None:
     run_once = subparsers.add_parser("run-once", help="Process one audio file immediately.")
     run_once.add_argument("audio_file", type=Path)
     run_once.add_argument("--dry-run", action="store_true", help="Skip Notion publishing.")
+
+    import_parser = subparsers.add_parser(
+        "import", help="Process a recording made elsewhere, such as a lecture video or a podcast."
+    )
+    import_parser.add_argument("media_file", type=Path)
+    import_parser.add_argument("--title", help="Use this title instead of a generated one.")
+    import_parser.add_argument("--date", help="When it was recorded, e.g. 2026-09-28T10:00. Defaults to the file date.")
+    import_parser.add_argument("--slides", type=Path, help="PDF of the slides shown, placed next to the transcript.")
+    import_parser.add_argument("--dry-run", action="store_true", help="Skip publishing.")
 
     watch_parser = subparsers.add_parser("watch", help="Watch the inbox folder forever.")
     watch_parser.add_argument("--dry-run", action="store_true", help="Skip Notion publishing.")
@@ -168,6 +178,12 @@ def main() -> None:
         key = _source_key(source)
         process_audio(config, source, dry_run=args.dry_run)
         mark_processed(config, source, key)
+        return
+
+    if args.command == "import":
+        import_media_file(
+            config, args.media_file, title=args.title, recorded_at=args.date, slides=args.slides, dry_run=args.dry_run
+        )
         return
 
     if args.command == "watch":

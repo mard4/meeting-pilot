@@ -91,6 +91,8 @@ final class AppModel: ObservableObject {
     @Published private var dismissedTranscriptionRetrySession = ""
     @Published var projectAccessSuspended = false
     @Published var runningAppPath = ""
+    /// Files waiting in the import sheet; set by the Import button, a drop or the menu.
+    @Published var importRequest: MediaImportRequest?
     var openDiaryWindow: (() -> Void)?
 
     let projectRoot: URL
@@ -100,6 +102,7 @@ final class AppModel: ObservableObject {
     let watcher: WatcherController
     let recording: RecordingController
     let notion: NotionConnection
+    let importer: MediaImporter
     private var childChangeSubscriptions: [AnyCancellable] = []
     private var timer: Timer?
     private var accessibilityPermissionTimer: Timer?
@@ -202,6 +205,7 @@ final class AppModel: ObservableObject {
         self.watcher = WatcherController(cli: cli)
         self.recording = RecordingController(cli: cli)
         self.notion = NotionConnection(envURL: envURL)
+        self.importer = MediaImporter(historyURL: configRoot.appendingPathComponent("imported-media.json"))
         let glossaryURL = configRoot.appendingPathComponent("business-glossary.txt")
         self.businessGlossary = (try? String(contentsOf: glossaryURL, encoding: .utf8)) ?? ""
         self.runningAppPath = Bundle.main.bundleURL.path
@@ -238,6 +242,7 @@ final class AppModel: ObservableObject {
             watcher.objectWillChange.eraseToAnyPublisher(),
             recording.objectWillChange.eraseToAnyPublisher(),
             notion.objectWillChange.eraseToAnyPublisher(),
+            importer.objectWillChange.eraseToAnyPublisher(),
         ]
         childChangeSubscriptions = children.map { publisher in
             publisher.sink { [weak self] in self?.objectWillChange.send() }
@@ -247,6 +252,8 @@ final class AppModel: ObservableObject {
         recording.onNeedsRefresh = { [weak self] in self?.refresh() }
         notion.onStatusMessage = { [weak self] message in self?.statusMessage = message }
         notion.onNeedsRefresh = { [weak self] in self?.refresh() }
+        importer.onStatusMessage = { [weak self] message in self?.statusMessage = message }
+        importer.onImported = { [weak self] in self?.refresh() }
     }
 
     private var recorderSettings: RecorderSettings {
@@ -1526,6 +1533,47 @@ final class AppModel: ObservableObject {
         businessGlossary = text
         EnvFile.update(at: envURL, values: ["BUSINESS_GLOSSARY_FILE": url.path])
         statusMessage = "Vocabolario aziendale salvato"
+    }
+
+    func chooseFilesToImport() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = true
+        panel.allowedContentTypes = MediaImportInspector.contentTypes
+        panel.prompt = localized("Importa")
+        panel.message = localized("Scegli registrazioni, video di lezioni o podcast da trascrivere, e se vuoi il PDF delle slide.")
+        guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
+        requestImport(panel.urls)
+    }
+
+    func chooseSlidesPDF() -> URL? {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.pdf]
+        panel.prompt = localized("Scegli")
+        panel.message = localized("Scegli il PDF delle slide mostrate durante la registrazione.")
+        return panel.runModal() == .OK ? panel.url : nil
+    }
+
+    /// Adds to a sheet that is already open instead of replacing its files.
+    func requestImport(_ urls: [URL]) {
+        guard var request = importRequest else {
+            importRequest = MediaImportRequest(urls: urls)
+            return
+        }
+        request.urls += urls.filter { !request.urls.contains($0) }
+        importRequest = request
+    }
+
+    /// Imported files land in the same inbox the recorder writes to, so the watcher
+    /// transcribes and publishes them like recordings.
+    func importMedia(_ drafts: [MediaImportDraft], options: MediaImportOptions) {
+        importRequest = nil
+        let inbox = recorderFolder.isEmpty ? defaultRecorderFolder(for: recorderMode) : recorderFolder
+        importer.start(drafts, options: options, inbox: expandPath(inbox))
     }
 
     func chooseRecorderFolder() -> String? {

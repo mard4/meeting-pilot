@@ -27,6 +27,11 @@ enum MeetingSidecar {
         directory(for: audioURL).appendingPathComponent("tracks", isDirectory: true)
     }
 
+    /// An imported lecture's slides: `slides.pdf` and its text, `slides.json` (see `SlideDeck`).
+    static func slidesDirectory(for audioURL: URL) -> URL {
+        directory(for: audioURL).appendingPathComponent("slides", isDirectory: true)
+    }
+
     /// Who was talking in the Teams call and when, written by `TeamsSpeakerTracker`.
     static func teamsSpeakersURL(for audioURL: URL) -> URL {
         directory(for: audioURL).appendingPathComponent("teams_speakers.json")
@@ -73,6 +78,17 @@ enum MeetingSidecar {
         } catch {
             AppLog.append("Salvataggio tipo di nota non riuscito: \(error.localizedDescription)")
         }
+    }
+
+    /// An imported file's `recording.json`: `"origin": "import"` plus where it came from
+    /// and when it was recorded (see `media_import.py`). Without it the pipeline would
+    /// treat the file as a call and match it against the calendar.
+    static func writeImportInfo(_ info: [String: Any], for audioURL: URL) throws {
+        var payload = info
+        payload["origin"] = "import"
+        payload["call"] = false
+        let data = try JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys])
+        try data.write(to: recordingInfoURL(for: audioURL), options: .atomic)
     }
 
     static func readTemplateChoice(for audioURL: URL) -> String {

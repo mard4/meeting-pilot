@@ -17,6 +17,7 @@ Both are organised by feature, with matching names where the two overlap:
 | Notion, Obsidian, Apple Notes, Diary | `Publishing/` | `publishing/` |
 | Meeting chat | `Chat/` | `chat/` |
 | Recording, live sidebar | `Recording/` | – |
+| Importing recordings and videos, slides | `Import/` | `media_import.py`, `slides/` |
 | Pipeline status, watcher | `Pipeline/` | `pipeline.py`, `watcher.py` |
 | App shell, settings, shared UI | `App/`, `DesignSystem/` | `cli.py`, `config.py` |
 
@@ -36,13 +37,14 @@ cp docs/env.example .env   # then fill it in
 ```bash
 meeting-pilot run-once /path/to/audio.m4a            # process one file
 meeting-pilot run-once /path/to/audio.m4a --dry-run  # without publishing
+meeting-pilot import "/path/to/Lecture 3.mp4" --title "Lecture 3" --date 2026-09-28T10:00 --slides "/path/to/Lecture 3.pdf"
 meeting-pilot watch                                  # watch the inbox folder
 meeting-pilot teams-scrape --output ~/TeamsMeetings/teams-runtime.json
 meeting-pilot chat --question "What did we decide about offline mode?" \
   --project "Atlas App" --theme Roadmap --theme Launch
 ```
 
-Meetings move through `~/TeamsMeetings/{inbox_audio,processing,done,failed}`. `teams-scrape` reads the meeting title and participants from the Teams window (Accessibility first, on-device OCR as a fallback); the next processing run uses them.
+Meetings move through `~/TeamsMeetings/{inbox_audio,processing,done,failed}`. Files imported in the app go through the same inbox, with `"origin": "import"` in the sidecar `recording.json`, so they skip calendar and Teams matching. Slides travel in the same sidecar as `slides/slides.pdf` and `slides/slides.json`; the pipeline writes `slide_alignment.json` into the session with the transcript grouped by slide. `teams-scrape` reads the meeting title and participants from the Teams window (Accessibility first, on-device OCR as a fallback); the next processing run uses them.
 
 To start the watcher at login without the app:
 

@@ -7,6 +7,8 @@ from typing import Any
 from ..artifacts import MeetingArtifacts, write_notion_receipt
 from ..config import Config
 from ..language import config_language, label
+from ..slides.deck import slides_pdf
+from .obsidian_publisher import _sanitize_filename
 from ..profiles import STUDENT, WORKER, artifacts_profile, user_profile
 from .meeting_format import (
     action_items,
@@ -16,6 +18,7 @@ from .meeting_format import (
     key_concepts,
     meeting_date,
     participants,
+    source_name,
     transcript_turns,
     when_text,
 )
@@ -25,6 +28,8 @@ from .meeting_format import (
 MAX_CHILDREN = 100
 MAX_RICH_TEXT = 100
 MAX_TEXT = 2000
+# A single-part file upload; larger slide decks stay out of Notion.
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 
 SPEAKER_COLORS = ["blue", "green", "orange", "purple", "pink", "brown", "red", "yellow"]
 CHIP_COLORS = ["blue_background", "purple_background", "green_background", "orange_background", "pink_background"]
@@ -47,14 +52,38 @@ def publish_to_notion(config: Config, artifacts: MeetingArtifacts) -> dict[str, 
     occurrences_schema = occurrences_source.get("properties") or {}
     wanted = _build_properties(config, artifacts, title, schema=occurrences_schema, keep_unsupported=True)
     occurrences_schema = _ensure_properties(notion, occurrences_source_id, occurrences_schema, wanted)
+    blocks = _build_blocks(config, artifacts, slides_upload=_upload_slides(notion, artifacts, title))
     page = notion.pages.create(
         parent={"type": "data_source_id", "data_source_id": occurrences_source_id},
         properties=_properties_supported_by_schema(wanted, occurrences_schema),
         icon={"type": "emoji", "emoji": "🗒️"},
-        children=_build_blocks(config, artifacts),
+        children=blocks[:MAX_CHILDREN],
     )
+    # A page is created with at most 100 blocks; a lecture split by slide can have more.
+    for start in range(MAX_CHILDREN, len(blocks), MAX_CHILDREN):
+        notion.blocks.children.append(block_id=page["id"], children=blocks[start:start + MAX_CHILDREN])
     write_notion_receipt(artifacts.session_dir, page)
     return page
+
+
+def _upload_slides(notion: Any, artifacts: MeetingArtifacts, title: str) -> str | None:
+    """The slides PDF uploaded to Notion, to show in the page; None without slides, for
+    a deck too large for one upload, or when Notion refuses it."""
+    pdf = slides_pdf(artifacts.session_dir) if artifacts.slides else None
+    uploads = getattr(notion, "file_uploads", None)
+    if pdf is None or uploads is None:
+        return None
+    if pdf.stat().st_size > MAX_UPLOAD_BYTES:
+        print("Slides larger than 20 MB are not uploaded to Notion.")
+        return None
+    filename = f"{_sanitize_filename(title)[:80] or 'slides'}.pdf"
+    try:
+        upload = uploads.create(mode="single_part", filename=filename, content_type="application/pdf")
+        uploads.send(upload["id"], file=(filename, pdf.read_bytes(), "application/pdf"))
+    except Exception as exc:
+        print(f"Publication warning: slides not uploaded to Notion: {exc}")
+        return None
+    return str(upload["id"])
 
 
 def _build_properties(
@@ -90,7 +119,7 @@ def _build_properties(
         lecture = artifacts_profile(config, artifacts) == STUDENT
         properties["Type"] = {"select": {"name": "Study" if lecture else "Work"}}
     properties.update({
-        "Source": {"select": {"name": "Teams"}},
+        "Source": {"select": {"name": source_name(artifacts, config_language(config))}},
         "Status": {"select": {"name": "Pubblicato"}},
         "Model": {"rich_text": [_rich_text(config.summary_model)]},
         "Session ID": {"rich_text": [_rich_text(artifacts.session_dir.name)]},
@@ -213,7 +242,7 @@ def _occurrence_title(artifacts: MeetingArtifacts, series_title: str) -> str:
     return series_title
 
 
-def _build_blocks(config: Config, artifacts: MeetingArtifacts) -> list[dict[str, Any]]:
+def _build_blocks(config: Config, artifacts: MeetingArtifacts, slides_upload: str | None = None) -> list[dict[str, Any]]:
     summary = artifacts.omlx_summary or {}
     blocks: list[dict[str, Any]] = []
     lang = config_language(config)
@@ -240,14 +269,23 @@ def _build_blocks(config: Config, artifacts: MeetingArtifacts) -> list[dict[str,
     else:
         blocks.extend(_meeting_blocks(config, summary, lang))
 
-    if artifacts.archived_audio_file or config.notion_include_transcript:
+    if artifacts.archived_audio_file or config.notion_include_transcript or slides_upload:
         blocks.append(_divider())
     if artifacts.archived_audio_file:
         # Notion only links web URLs, so the local recording is shown as a path to open from Finder.
         blocks.append(_callout(f"{t('audio')}: {artifacts.archived_audio_file}", color="gray_background", icon="🎧"))
+    if slides_upload:
+        blocks.extend(_heading("📑 " + t("slides")))
+        blocks.append({"object": "block", "type": "pdf", "pdf": {"type": "file_upload", "file_upload": {"id": slides_upload}}})
     if config.notion_include_transcript:
-        blocks.append(_transcript_toggle(t("full_transcript"), artifacts.transcript_text or t("no_transcript")))
-    return blocks[:MAX_CHILDREN]
+        if artifacts.slide_sections:
+            blocks.extend(_heading("🎙️ " + t("transcript_by_slide")))
+            for section in artifacts.slide_sections:
+                heading = f"{t('slide')} {section.page} · {section.title}".rstrip(" ·")
+                blocks.append(_transcript_toggle(heading, "\n".join(section.lines()), level=3))
+        else:
+            blocks.append(_transcript_toggle("🎙️ " + t("full_transcript"), artifacts.transcript_text or t("no_transcript")))
+    return blocks
 
 
 def _meeting_blocks(config: Config, summary: dict[str, Any], lang: str) -> list[dict[str, Any]]:
@@ -519,12 +557,13 @@ def _bullet_rich(rich_text: list[dict[str, Any]]) -> dict[str, Any]:
     return {"object": "block", "type": "bulleted_list_item", "bulleted_list_item": {"rich_text": rich_text}}
 
 
-def _transcript_toggle(title: str, transcript: str) -> dict[str, Any]:
+def _transcript_toggle(title: str, transcript: str, level: int = 2) -> dict[str, Any]:
+    kind = f"heading_{level}"
     return {
         "object": "block",
-        "type": "heading_2",
-        "heading_2": {
-            "rich_text": [_text("🎙️ " + title)],
+        "type": kind,
+        kind: {
+            "rich_text": [_text(title)],
             "is_toggleable": True,
             "children": _transcript_blocks(transcript),
         },

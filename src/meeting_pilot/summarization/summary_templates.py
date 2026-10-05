@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from ..profiles import STUDENT, artifacts_profile
+from ..slides.deck import slide_outline
 
 AUTO = "auto"
 GENERAL = "general"
@@ -147,8 +148,8 @@ def _keyword_matches(keyword: str, text: str) -> bool:
 
 
 def summary_guidance(config: object, artifacts: object) -> str:
-    """Extra system-prompt text shared by every summary provider: the meeting type
-    and the notes the user typed during the call."""
+    """Extra system-prompt text shared by every summary provider: the meeting type,
+    the notes the user typed during the call and the slides shown in it."""
     template = resolve_template(
         config,
         artifacts.session_dir,
@@ -184,5 +185,16 @@ def summary_guidance(config: object, artifacts: object) -> str:
             "the summary, decisions and action items cover every point, expanded with details from "
             "the transcript. Where a note conflicts with the transcript, follow the transcript.\n"
             f"User notes:\n{notes[:8000]}"
+        )
+    slides = getattr(artifacts, "slides", None) or []
+    if slides:
+        # The on-device model has a small context, so it gets the slide titles only.
+        compact = getattr(config, "summary_provider_mode", "") == "apple"
+        parts.append(
+            "These slides were shown during the recording. Follow their order and spell terms, "
+            "formulas and names as they do. When a key concept, task or reference comes from a slide, "
+            "add its number as (slide N). Summarize what was said: use slide text that was not "
+            "discussed only to complete a point that was.\n"
+            f"Slides:\n{slide_outline(slides, compact=compact)}"
         )
     return "\n\n".join(parts)

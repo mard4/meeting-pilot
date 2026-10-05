@@ -18,6 +18,7 @@ struct MenuBarOverview: View {
     let openApp: () -> Void
     let openChat: () -> Void
     let openDiary: () -> Void
+    let openImport: () -> Void
 
     private var pipelineSteps: [PipelineStep] {
         let stage = model.pipelineStage
@@ -73,6 +74,11 @@ struct MenuBarOverview: View {
                     }
                 }
                 Spacer()
+                Button(action: openImport) {
+                    Image(systemName: "square.and.arrow.down")
+                }
+                .buttonStyle(MPIconButtonStyle(size: 30))
+                .help(localized("Importa registrazioni, video di lezioni o podcast"))
                 RecordingControls(compact: true)
             }
 

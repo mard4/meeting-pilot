@@ -418,14 +418,48 @@ struct PublicationTargetsView: View {
 struct JournalNoteReader: View {
     let document: JournalDocument
     let text: String
+    /// The slide shown beside a page that has slides, chosen in either pane.
+    @State private var selectedSlide: Int?
 
     var body: some View {
         let note = parseJournalNote(text)
+        if let slides = journalSlidesURL(for: note, document: document) {
+            // Side by side only where both stay readable; a narrow window keeps the page
+            // and opens the slides from the header instead.
+            GeometryReader { geometry in
+                if geometry.size.width >= 640 {
+                    ScrollViewReader { proxy in
+                        HStack(spacing: 0) {
+                            reader(note)
+                            Rectangle().fill(MeetingPilotDesign.lineColor).frame(width: 1)
+                            JournalSlidesPane(url: slides, page: selectedSlide) { page in
+                                // Paging through the slides brings their part of the transcript into view.
+                                selectedSlide = page
+                                withAnimation(.mpSmooth) { proxy.scrollTo("slide-\(page)", anchor: .top) }
+                            }
+                            .frame(width: min(520, max(240, geometry.size.width * 0.42)))
+                        }
+                    }
+                } else {
+                    reader(note)
+                }
+            }
+        } else {
+            reader(note)
+        }
+    }
+
+    private func reader(_ note: JournalNote) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header(note)
                 Rectangle().fill(MeetingPilotDesign.lineColor).frame(height: 1)
-                MarkdownReader(text: note.body, hiddenTitle: note.meta["title"] ?? document.title)
+                MarkdownReader(
+                    text: note.body,
+                    hiddenTitle: note.meta["title"] ?? document.title,
+                    selectedSlide: selectedSlide,
+                    onSelectSlide: { selectedSlide = $0 }
+                )
             }
             .padding(.horizontal, 26)
             .padding(.vertical, 22)
@@ -457,7 +491,8 @@ struct JournalNoteReader: View {
                     MPBadge(text: duration, systemImage: "timer")
                 }
                 if let source = note.value("source") {
-                    MPBadge(text: source, systemImage: "video")
+                    // Calls come from Teams; anything else was imported from a file.
+                    MPBadge(text: source, systemImage: source == "Teams" ? "video" : "square.and.arrow.down")
                 }
             }
 
@@ -477,6 +512,24 @@ struct JournalNoteReader: View {
                         .foregroundStyle(MeetingPilotDesign.textFaintColor)
                 }
                 Spacer(minLength: 0)
+                if let slides = journalSlidesURL(for: note, document: document) {
+                    Button {
+                        NSWorkspace.shared.open(slides)
+                    } label: {
+                        Label(localized("Slide"), systemImage: "doc.richtext")
+                    }
+                    .buttonStyle(MPSecondaryButtonStyle(compact: true))
+                    .help("Apri le slide in Anteprima")
+                }
+                if let originalPath = note.value("original_path"), FileManager.default.fileExists(atPath: originalPath) {
+                    Button {
+                        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: originalPath)])
+                    } label: {
+                        Label(localized("File originale"), systemImage: "film")
+                    }
+                    .buttonStyle(MPSecondaryButtonStyle(compact: true))
+                    .help("Mostra nel Finder il video o l'audio importato")
+                }
                 if let audioPath = note.value("audio_path"), FileManager.default.fileExists(atPath: audioPath) {
                     Button {
                         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: audioPath)])
@@ -495,6 +548,10 @@ struct MarkdownReader: View {
     let text: String
     /// The page's own `# Title` repeats the header above it, so it is skipped.
     var hiddenTitle: String? = nil
+    /// For a transcript grouped by slide: the slide shown beside it, and what choosing
+    /// one of its parts does.
+    var selectedSlide: Int? = nil
+    var onSelectSlide: ((Int) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -573,6 +630,20 @@ struct MarkdownReader: View {
             .overlay(RoundedRectangle(cornerRadius: MPRadius.control, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
         case .transcript(let lines):
             TranscriptBlock(lines: lines)
+        case .slideTranscript(let page, let title, let lines, let anchor):
+            let block = SlideTranscriptBlock(
+                page: page,
+                title: title,
+                lines: lines,
+                selected: selectedSlide == page,
+                onSelect: onSelectSlide.map { select in { select(page) } }
+            )
+            // The first part spoken on a slide is where paging to it scrolls.
+            if anchor {
+                block.id("slide-\(page)")
+            } else {
+                block
+            }
         case .callout(let kind, let title, let content):
             JournalCallout(kind: kind, title: title, content: content)
         case .divider:
@@ -587,6 +658,7 @@ struct MarkdownReader: View {
         var codeLines: [String]?
         var inTranscriptSection = false
         var skippedTitle = false
+        var anchoredSlides: Set<Int> = []
 
         var index = 0
         while index < lines.count {
@@ -598,7 +670,19 @@ struct MarkdownReader: View {
                     content.append(unquoted(lines[index]))
                     index += 1
                 }
-                if header.kind == "quote", isTranscriptHeading(header.title) {
+                if header.kind == "slide", let page = slideNumber(header.title) {
+                    // Obsidian copies of the page link each part to its slide: `[[slides.pdf#page=3|…]]`.
+                    let turns = content
+                        .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("[[") }
+                        .map { $0.replacingOccurrences(of: "**", with: "") }
+                    let title = header.title.components(separatedBy: " · ").dropFirst().joined(separator: " · ")
+                    elements.append(.slideTranscript(
+                        page: page,
+                        title: title.isEmpty ? header.title : title,
+                        lines: transcriptLines(turns),
+                        anchor: anchoredSlides.insert(page).inserted
+                    ))
+                } else if header.kind == "quote", isTranscriptHeading(header.title) {
                     let turns = content.map { $0.replacingOccurrences(of: "**", with: "") }
                     elements.append(.heading2(header.title))
                     elements.append(.transcript(transcriptLines(turns)))
@@ -685,6 +769,11 @@ struct MarkdownReader: View {
         return text.replacingCharacters(in: match, with: "📅 " + formatter.string(from: date))
     }
 
+    /// "Slide 3 · Entropia", "Folie 3 · …": the first number is the page.
+    private func slideNumber(_ title: String) -> Int? {
+        title.range(of: #"\d+"#, options: .regularExpression).flatMap { Int(title[$0]) }
+    }
+
     private func isTranscriptHeading(_ heading: String) -> Bool {
         let lowered = heading.lowercased()
         return lowered.contains("transcript") || lowered.contains("trascrizion")
@@ -769,7 +858,7 @@ private struct TranscriptBlock: View {
                 Rectangle().fill(MeetingPilotDesign.lineColor).frame(height: 1)
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                        let turn = speakerTurn(line)
+                        let turn = transcriptTurn(line)
                         VStack(alignment: .leading, spacing: 2) {
                             if let speaker = turn.speaker {
                                 Text(speaker)
@@ -793,12 +882,14 @@ private struct TranscriptBlock: View {
         .overlay(RoundedRectangle(cornerRadius: MPRadius.panel, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
     }
 
-    private func speakerTurn(_ line: String) -> (speaker: String?, text: String) {
-        if let separator = line.range(of: ": "), line.distance(from: line.startIndex, to: separator.lowerBound) <= 32 {
-            return (String(line[..<separator.lowerBound]), String(line[separator.upperBound...]))
-        }
-        return (nil, line)
+}
+
+/// "Name: what they said", with names short enough not to be a sentence with a colon.
+func transcriptTurn(_ line: String) -> (speaker: String?, text: String) {
+    if let separator = line.range(of: ": "), line.distance(from: line.startIndex, to: separator.lowerBound) <= 32 {
+        return (String(line[..<separator.lowerBound]), String(line[separator.upperBound...]))
     }
+    return (nil, line)
 }
 
 enum ContentElement {
@@ -813,6 +904,7 @@ enum ContentElement {
     case quote(String)
     case code(String)
     case transcript([String])
+    case slideTranscript(page: Int, title: String, lines: [String], anchor: Bool)
     case callout(String, String, String)
     case divider
 }

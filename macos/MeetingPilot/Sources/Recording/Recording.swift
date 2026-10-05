@@ -427,13 +427,14 @@ final class NativeAudioRecorder: NSObject {
         return true
     }
 
-    fileprivate static func fileName(for title: String) -> String {
+    /// Imported files use the same name, with the date they were recorded.
+    static func fileName(for title: String, date: Date = Date(), fileExtension: String = "m4a") -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd HH-mm-ss"
-        let date = formatter.string(from: Date())
+        let stamp = formatter.string(from: date)
         let cleanTitle = sanitize(title).prefix(80)
-        return "Meeting Pilot - \(date) - \(cleanTitle).m4a"
+        return "Meeting Pilot - \(stamp) - \(cleanTitle).\(fileExtension)"
     }
 
     fileprivate static func lockURL(for audioURL: URL) -> URL {

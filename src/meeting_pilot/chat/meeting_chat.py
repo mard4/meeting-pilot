@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import json
 import re
 import sqlite3
@@ -15,6 +16,7 @@ import certifi
 
 from ..config import Config
 from ..language import NOT_FOUND_ANSWERS, config_language, label, language_name
+from ..slides.deck import TEXT_NAME, slides_dir, slides_from_texts
 from ..summarization.omlx_client import is_ollama, ollama_chat_request, strip_model_wrapping
 from .knowledge_base import default_knowledge_index_path, load_knowledge_documents
 from ..tag_catalog import catalog_values
@@ -268,7 +270,11 @@ def _documents_for_scope(config: Config, filters: MeetingChatFilters) -> list[_M
 
 
 def _meeting_documents(config: Config) -> list[_MeetingDocument]:
-    documents = _documents_from_journal_index(config.journal_root.expanduser() / "index.sqlite")
+    done_dir = config.done_dir.expanduser()
+    documents = [
+        _with_slides(document, done_dir / document.session_id)
+        for document in _documents_from_journal_index(config.journal_root.expanduser() / "index.sqlite")
+    ]
     by_key = {_document_key(document): document for document in documents}
     for document in _documents_from_done_dir(config.done_dir.expanduser()):
         by_key.setdefault(_document_key(document), document)
@@ -327,7 +333,9 @@ def _documents_from_done_dir(done_dir: Path) -> list[_MeetingDocument]:
         date = str(metadata.get("start") or metadata.get("recording_start") or summary.get("date") or "") or None
         project = str(project_metadata.get("project") or metadata.get("project") or summary.get("tag") or "")
         theme = str(theme_metadata.get("theme") or metadata.get("theme") or summary.get("theme") or "")
-        text = "\n".join(part for part in (str(summary.get("summary") or ""), _read_transcript(session)) if part)
+        text = "\n".join(
+            part for part in (str(summary.get("summary") or ""), _read_transcript(session), _slides_text(session)) if part
+        )
         for destination, url in _destinations_for_session(session):
             documents.append(
                 _MeetingDocument(
@@ -687,6 +695,21 @@ def _read_text(path: Path) -> str:
         return path.read_text(encoding="utf-8")
     except OSError:
         return ""
+
+
+def _with_slides(document: _MeetingDocument, session: Path) -> _MeetingDocument:
+    """A Diary page names its slides but holds only their titles; their text lives in
+    the archived session."""
+    slides = _slides_text(session)
+    return dataclasses.replace(document, text=f"{document.text}\n{slides}") if slides else document
+
+
+def _slides_text(session: Path) -> str:
+    """The text of the slides shown in a meeting or lecture, so answers can draw on them."""
+    payload = _read_json(slides_dir(session) / TEXT_NAME)
+    pages = payload.get("pages") if isinstance(payload.get("pages"), list) else []
+    slides = slides_from_texts([str(page.get("text") or "") for page in pages if isinstance(page, dict)])
+    return "\n".join(f"Slide {slide.page}: {' '.join(slide.text.split())}" for slide in slides if slide.text)
 
 
 def _read_transcript(session: Path) -> str:

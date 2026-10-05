@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -8,6 +9,7 @@ from typing import Any
 from ..artifacts import MeetingArtifacts, write_journal_receipt
 from .obsidian_publisher import _note_content, _note_date, _note_title, _sanitize_filename, _unique_path
 from ..config import Config
+from ..slides.deck import slides_pdf
 
 
 def publish_to_journal(config: Config, artifacts: MeetingArtifacts) -> dict[str, Any]:
@@ -18,7 +20,14 @@ def publish_to_journal(config: Config, artifacts: MeetingArtifacts) -> dict[str,
     dated_folder = root / _date_folder(date)
     dated_folder.mkdir(parents=True, exist_ok=True)
     note_path = _unique_path(dated_folder / f"{_sanitize_filename(date)} - {_sanitize_filename(title)}.md")
-    note_path.write_text(_note_content(config, artifacts, title, date, header_callout=False), encoding="utf-8")
+    slides = None
+    pdf = slides_pdf(artifacts.session_dir) if artifacts.slides else None
+    if pdf:
+        # Beside the note under the same name, so the Diary stays a portable folder.
+        copy = _unique_path(note_path.with_suffix(".pdf"))
+        shutil.copy2(pdf, copy)
+        slides = copy.name
+    note_path.write_text(_note_content(config, artifacts, title, date, header_callout=False, slides=slides), encoding="utf-8")
     _index_note(root / "index.sqlite", artifacts, title, date, note_path)
 
     receipt = {

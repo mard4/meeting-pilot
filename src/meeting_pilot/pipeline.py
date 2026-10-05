@@ -10,11 +10,14 @@ from .publishing.apple_notes_publisher import publish_to_apple_notes
 from .config import Config
 from .publishing.journal_publisher import publish_to_journal
 from .publishing.obsidian_publisher import publish_to_obsidian
+from .media_import import apply_user_title, import_metadata, imported_media, use_file_name_as_title
 from .meeting_metadata import find_meeting_metadata
 from .transcription.apple import run_apple_transcriber
 from .transcription.fluid_audio import run_fluid_audio
 from .transcription.session import create_session, recorded_outside_a_call, validate_audio_file
 from .publishing.notion_publisher import publish_to_notion
+from .slides import attach_slides
+from .summarization.long_transcripts import fit_for_summary
 from .summarization.omlx_client import summarize
 from .platforms.teams.teams_scraper import read_saved_teams_runtime_metadata
 from .tag_catalog import catalog_values
@@ -22,20 +25,7 @@ from .tag_catalog import catalog_values
 
 def process_audio(config: Config, source_audio: Path, dry_run: bool = False) -> Path:
     config.ensure_dirs()
-    meeting_metadata = find_meeting_metadata(config, source_audio)
-    # The saved Teams title and participants belong to whatever call ran in the last few
-    # hours, so a recording made outside a call must not inherit them.
-    runtime_metadata = (
-        {}
-        if recorded_outside_a_call(source_audio)
-        else read_saved_teams_runtime_metadata(config, reference_audio=source_audio)
-    )
-    if runtime_metadata:
-        meeting_metadata = {**runtime_metadata, **meeting_metadata}
-        if runtime_metadata.get("title") and not meeting_metadata.get("match_found"):
-            meeting_metadata["title"] = runtime_metadata["title"]
-        if runtime_metadata.get("participants") and not meeting_metadata.get("participants"):
-            meeting_metadata["participants"] = runtime_metadata["participants"]
+    meeting_metadata = _initial_metadata(config, source_audio)
     session_dir, audio_file = create_session(config, source_audio)
     (session_dir / "publication_targets.json").write_text(
         json.dumps({"targets": list(config.publish_targets)}, ensure_ascii=False),
@@ -56,11 +46,14 @@ def process_audio(config: Config, source_audio: Path, dry_run: bool = False) -> 
             raise ValueError(f"Unsupported transcription provider: {config.transcription_provider}")
         artifacts = collect_artifacts(session_dir, audio_file)
         artifacts.meeting_metadata = meeting_metadata
+        use_file_name_as_title(artifacts)
+        attach_slides(artifacts)
 
         if config.summary_enabled:
             summary_name = "Apple Intelligence" if config.summary_provider_mode == "apple" else config.summary_model
             print(f"Summarizing with {summary_name}...", flush=True)
-            artifacts.omlx_summary = summarize(config, artifacts)
+            artifacts.omlx_summary = summarize(config, fit_for_summary(config, artifacts))
+            apply_user_title(artifacts)
             write_omlx_summary(session_dir, artifacts.omlx_summary)
             print("Summary saved.", flush=True)
 
@@ -108,6 +101,8 @@ def retry_from_transcript(config: Config, session_dir: Path, dry_run: bool = Fal
             artifacts.meeting_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             artifacts.meeting_metadata = {}
+    use_file_name_as_title(artifacts)
+    attach_slides(artifacts)
 
     print(f"Retrying summary from existing transcript: {session_dir}", flush=True)
     existing_summary = session_dir / "omlx_summary.json"
@@ -120,7 +115,8 @@ def retry_from_transcript(config: Config, session_dir: Path, dry_run: bool = Fal
             artifacts.omlx_summary = None
     if config.summary_enabled and not artifacts.omlx_summary:
         print("Resumed session is starting summary generation...", flush=True)
-        artifacts.omlx_summary = summarize(config, artifacts)
+        artifacts.omlx_summary = summarize(config, fit_for_summary(config, artifacts))
+        apply_user_title(artifacts)
         write_omlx_summary(session_dir, artifacts.omlx_summary)
         print("Resumed session summary saved.", flush=True)
 
@@ -169,10 +165,13 @@ def retry_transcription(config: Config, session_dir: Path, dry_run: bool = False
             artifacts.meeting_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             artifacts.meeting_metadata = {}
+    use_file_name_as_title(artifacts)
+    attach_slides(artifacts)
 
     if config.summary_enabled:
         print("Transcription retry completed; starting summary generation...", flush=True)
-        artifacts.omlx_summary = summarize(config, artifacts)
+        artifacts.omlx_summary = summarize(config, fit_for_summary(config, artifacts))
+        apply_user_title(artifacts)
         write_omlx_summary(session_dir, artifacts.omlx_summary)
         print("Summary saved.", flush=True)
 
@@ -187,6 +186,30 @@ def retry_transcription(config: Config, session_dir: Path, dry_run: bool = False
     shutil.move(str(session_dir), str(destination))
     print(f"Done: {destination}")
     return destination
+
+
+def _initial_metadata(config: Config, source_audio: Path) -> dict:
+    """What is known about a recording before transcribing it."""
+    imported = imported_media(source_audio)
+    if imported is not None:
+        # Matching the calendar by file date would pin a downloaded lecture to whatever
+        # meeting happened then, and the saved Teams call is unrelated to it.
+        return import_metadata(imported)
+    meeting_metadata = find_meeting_metadata(config, source_audio)
+    # The saved Teams title and participants belong to whatever call ran in the last few
+    # hours, so a recording made outside a call must not inherit them.
+    runtime_metadata = (
+        {}
+        if recorded_outside_a_call(source_audio)
+        else read_saved_teams_runtime_metadata(config, reference_audio=source_audio)
+    )
+    if runtime_metadata:
+        meeting_metadata = {**runtime_metadata, **meeting_metadata}
+        if runtime_metadata.get("title") and not meeting_metadata.get("match_found"):
+            meeting_metadata["title"] = runtime_metadata["title"]
+        if runtime_metadata.get("participants") and not meeting_metadata.get("participants"):
+            meeting_metadata["participants"] = runtime_metadata["participants"]
+    return meeting_metadata
 
 
 def _done_destination(config: Config, session_dir: Path, collision_suffix: str) -> Path:

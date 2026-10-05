@@ -21,6 +21,12 @@ struct RootView: View {
         .foregroundStyle(MeetingPilotDesign.textColor)
         .tint(MeetingPilotDesign.accent)
         .preferredColorScheme(model.appTheme == .light ? .light : .dark)
+        .modifier(MediaImportDropTarget())
+        .sheet(item: $model.importRequest) { _ in
+            MediaImportSheet()
+                .environmentObject(model)
+                .preferredColorScheme(model.appTheme == .light ? .light : .dark)
+        }
     }
 
     @ViewBuilder
@@ -215,7 +221,14 @@ struct DashboardView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 MPPageHeader(title: "Panoramica", eyebrow: dateEyebrow) {
-                    RecordingControls()
+                    HStack(spacing: 8) {
+                        Button { model.chooseFilesToImport() } label: {
+                            Label(localized("Importa"), systemImage: "square.and.arrow.down")
+                        }
+                        .buttonStyle(MPSecondaryButtonStyle())
+                        .help("Importa registrazioni, video di lezioni o podcast (⌘I)")
+                        RecordingControls()
+                    }
                 }
 
                 HStack(spacing: 12) {
@@ -239,6 +252,9 @@ struct DashboardView: View {
 
                 if model.recording.nativeRecordingActive {
                     NativeRecordingStatusCard()
+                }
+                if !model.importer.jobs.isEmpty {
+                    MediaImportProgressCard()
                 }
                 if model.needsAccessibilityWarning {
                     AccessibilityWarningCard()

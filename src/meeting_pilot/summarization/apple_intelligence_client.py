@@ -63,6 +63,7 @@ def summarize_with_apple_intelligence(
         raise AppleIntelligenceUnavailable(f"Apple Intelligence unavailable: {reason}")
 
     command = [str(command_path), str(input_path), str(output_path)]
+    timeout_seconds = _timeout_for_transcript(config.apple_intelligence_timeout_seconds, artifacts.transcript_text)
     try:
         with log_path.open("w", encoding="utf-8") as log:
             log.write("$ " + " ".join(command) + "\n\n")
@@ -72,12 +73,12 @@ def summarize_with_apple_intelligence(
                 stderr=subprocess.STDOUT,
                 check=False,
                 text=True,
-                timeout=config.apple_intelligence_timeout_seconds,
+                timeout=timeout_seconds,
             )
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(
             f"Apple Intelligence summarization timed out after "
-            f"{config.apple_intelligence_timeout_seconds} seconds. See {log_path}"
+            f"{timeout_seconds} seconds. See {log_path}"
         ) from exc
     if result.returncode != 0:
         detail = log_path.read_text(encoding="utf-8", errors="replace")
@@ -93,6 +94,14 @@ def summarize_with_apple_intelligence(
     if not isinstance(data, dict):
         raise RuntimeError(f"Apple Intelligence returned an invalid summary. See {log_path}")
     return _normalize_summary(data, artifacts, profile)
+
+
+def _timeout_for_transcript(base_seconds: int, transcript: str) -> int:
+    """The helper summarizes 6,000-character parts one after another (see
+    AppleIntelligenceSummarizer.swift), so a lecture-length transcript gets about two
+    minutes per part."""
+    parts = len(transcript) // 6_000 + 1
+    return max(base_seconds, parts * 120)
 
 
 def _known_projects(config: Config) -> list[str]:

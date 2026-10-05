@@ -909,6 +909,32 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         self.assertIn(".clipped()", root)
         self.assertIn(".fixedSize(horizontal: true, vertical: false)", sidebar)
 
+    def test_recordings_can_be_imported_from_the_dashboard_menus_and_by_dropping_files(self):
+        source = SOURCE.read_text()
+        root = _section(source, "struct RootView", "struct Sidebar")
+        dashboard = _section(source, "struct DashboardView", "struct StatTile")
+        overview = _section(source, "struct MenuBarOverview", "private struct MenuBarMeetingRow")
+        app = _section(source, "struct MeetingPilotApp", "extension NSImage")
+
+        self.assertIn(".sheet(item: $model.importRequest)", root)
+        self.assertIn(".modifier(MediaImportDropTarget())", root)
+        self.assertIn("model.chooseFilesToImport()", dashboard)
+        self.assertIn("MediaImportProgressCard()", dashboard)
+        self.assertIn("Button(action: openImport)", overview)
+        self.assertIn('.keyboardShortcut("i", modifiers: .command)', app)
+
+    def test_imports_reach_the_inbox_only_when_complete(self):
+        source = SOURCE.read_text()
+        importer = _section(source, "final class MediaImporter", "\n}\n")
+
+        # The watcher lists only the inbox itself, so files prepared in a subfolder are invisible to it.
+        self.assertIn('.appendingPathComponent(".importing", isDirectory: true)', importer)
+        self.assertLess(
+            importer.index("moveItem(at: MeetingSidecar.directory(for: stagedAudio)"),
+            importer.index("moveItem(at: stagedAudio, to: finalAudio)"),
+        )
+        self.assertIn("MeetingSidecar.writeImportInfo(", importer)
+
 
 if __name__ == "__main__":
     unittest.main()

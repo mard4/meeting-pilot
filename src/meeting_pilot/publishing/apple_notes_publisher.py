@@ -114,7 +114,12 @@ def _note_body(config: Config, artifacts: MeetingArtifacts) -> str:
     )
 
     if artifacts.transcript_text and _include(config, "transcript"):
-        parts.extend(["", t("full_transcript"), artifacts.transcript_text])
+        if artifacts.slide_sections:
+            parts.extend(["", t("transcript_by_slide")])
+            for section in artifacts.slide_sections:
+                parts.extend(["", f"{t('slide')} {section.page} · {section.title}".rstrip(" ·"), "\n".join(section.lines())])
+        else:
+            parts.extend(["", t("full_transcript"), artifacts.transcript_text])
     return "\n".join(part for part in parts if part is not None)
 
 

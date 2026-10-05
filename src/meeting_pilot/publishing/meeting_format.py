@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Any
 
 from ..artifacts import MeetingArtifacts
+from ..language import label
 
 WEEKDAYS = {
     "it": ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"],
@@ -72,7 +73,11 @@ def duration_text(artifacts: MeetingArtifacts) -> str:
     if start and end and end > start:
         seconds = (end - start).total_seconds()
     else:
-        raw = (artifacts.omlx_summary or {}).get("duration") or artifacts.frontmatter.get("duration")
+        raw = (
+            (artifacts.omlx_summary or {}).get("duration")
+            or artifacts.frontmatter.get("duration")
+            or metadata.get("duration_seconds")
+        )
         try:
             seconds = float(raw) if raw not in (None, "") else None
         except (TypeError, ValueError):
@@ -95,6 +100,18 @@ def participants(artifacts: MeetingArtifacts) -> list[str]:
         if name and name not in names:
             names.append(name)
     return names
+
+
+def source_name(artifacts: MeetingArtifacts, lang: str) -> str:
+    """Where the recording came from: a Teams call, or a file the user imported."""
+    if (artifacts.meeting_metadata or {}).get("origin") == "import":
+        return label(lang, "imported_file")
+    return "Teams"
+
+
+def original_file(artifacts: MeetingArtifacts) -> str:
+    """The imported lecture video or podcast, which stays where the user keeps it."""
+    return str((artifacts.meeting_metadata or {}).get("original_path") or "").strip()
 
 
 def present(value: Any) -> str:

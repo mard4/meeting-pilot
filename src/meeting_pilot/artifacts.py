@@ -23,6 +23,10 @@ class MeetingArtifacts:
     archived_audio_file: Path | None = None
     # Notes the user typed in the live sidebar during the meeting.
     user_notes: str = ""
+    # Slides shown during the recording (slides.deck.Slide) and the transcript grouped
+    # by the slide shown meanwhile (slides.alignment.SlideSection); empty without slides.
+    slides: list[Any] = field(default_factory=list)
+    slide_sections: list[Any] = field(default_factory=list)
 
 
 def collect_artifacts(session_dir: Path, audio_file: Path) -> MeetingArtifacts:

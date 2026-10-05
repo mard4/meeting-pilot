@@ -31,12 +31,20 @@ enum DebugSnapshots {
             }
             if only == nil || "menubar".contains(only!) || only!.contains("menubar") {
                 capture(
-                    MenuBarOverview(openApp: {}, openChat: {}, openDiary: {}).environmentObject(model),
+                    MenuBarOverview(openApp: {}, openChat: {}, openDiary: {}, openImport: {}).environmentObject(model),
                     size: NSSize(width: 320, height: 330), theme: theme, name: "menubar-\(suffix)", in: directory
+                )
+            }
+            if only == nil || only!.contains("import") {
+                capture(
+                    MediaImportSheet(drafts: sampleImportDrafts()).environmentObject(model),
+                    size: NSSize(width: 620, height: 560), theme: theme, name: "import-sheet-\(suffix)", in: directory
                 )
             }
             if only == nil || only!.contains("diary") {
                 capture(DiaryNotebookView().environmentObject(model), size: NSSize(width: 820, height: 680), theme: theme, name: "diary-\(suffix)", in: directory)
+                // Wide enough for a page with slides to show them beside its transcript.
+                capture(DiaryNotebookView().environmentObject(model), size: NSSize(width: 1280, height: 760), theme: theme, name: "diary-wide-\(suffix)", in: directory)
             }
         }
         if only == nil || only!.contains("prompt") {
@@ -75,6 +83,26 @@ enum DebugSnapshots {
             store.notes = "- Offline mode → priority #1\n- Salesforce connector slips to Q1\n- Call Northwind this week"
             capture(LiveSidebarView(store: store, onClose: {}), size: NSSize(width: 340, height: 560), theme: .dark, name: "live-sidebar", in: directory)
         }
+    }
+
+    private static func sampleImportDrafts() -> [MediaImportDraft] {
+        let lecture = Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? Date()
+        return [
+            MediaImportDraft(
+                sourceURL: URL(fileURLWithPath: "/Users/demo/Lezioni/Analisi 2 - Lezione 7.mp4"),
+                recordedAt: lecture, isVideo: true, durationSeconds: 5_520,
+                slidesURL: URL(fileURLWithPath: "/Users/demo/Lezioni/Analisi 2 - Lezione 7 slide.pdf")
+            ),
+            MediaImportDraft(
+                sourceURL: URL(fileURLWithPath: "/Users/demo/Podcast/Episodio 42 - Product discovery.mp3"),
+                title: "Product discovery con Teresa", recordedAt: lecture.addingTimeInterval(-86_400 * 9),
+                durationSeconds: 3_130, previouslyImportedAt: lecture
+            ),
+            MediaImportDraft(
+                sourceURL: URL(fileURLWithPath: "/Users/demo/Downloads/webinar.webm"),
+                recordedAt: lecture, problem: localized("Formato non supportato: convertilo in MP4, MOV, M4A o MP3.")
+            ),
+        ]
     }
 
     private static func populate(_ model: AppModel) {

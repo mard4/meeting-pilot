@@ -30,7 +30,12 @@ struct MeetingPilotApp: App {
             EmptyView()
         }
         .commands {
-            CommandGroup(replacing: .newItem) {}
+            CommandGroup(replacing: .newItem) {
+                Button(localized("Importa registrazioni…")) {
+                    appDelegate.importFiles()
+                }
+                .keyboardShortcut("i", modifiers: .command)
+            }
         }
     }
 }
@@ -171,6 +176,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             openDiary: { [weak self] in
                 self?.closePopover()
                 self?.showDiaryWindow()
+            },
+            openImport: { [weak self] in
+                self?.closePopover()
+                self?.importFiles()
             }
         )
             .environmentObject(model)
@@ -187,6 +196,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         urls.forEach { model.notion.handleOAuthCallback($0) }
         DispatchQueue.main.async { [weak self] in
             self?.showMainWindow()
+        }
+    }
+
+    /// The sheet belongs to the main window, so it opens first; the file panel then
+    /// appears over it.
+    func importFiles() {
+        showMainWindow()
+        DispatchQueue.main.async { [weak self] in
+            self?.model.chooseFilesToImport()
         }
     }
 
