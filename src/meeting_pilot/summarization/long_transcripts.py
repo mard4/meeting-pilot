@@ -33,11 +33,13 @@ Write in the language of the transcript, as plain text without any preamble.
 """
 
 
-def fit_for_summary(config: Config, artifacts: MeetingArtifacts) -> MeetingArtifacts:
+def fit_for_summary(config: Config, artifacts: MeetingArtifacts, apple_fallback: bool = False) -> MeetingArtifacts:
     """Artifacts whose transcript fits one summary request; the published note keeps
-    the full transcript because only this copy is condensed."""
+    the full transcript because only this copy is condensed. `apple_fallback` is set
+    when Apple Intelligence was chosen but could not run, so the OpenAI-compatible
+    provider summarizes after all."""
     transcript = artifacts.transcript_text.strip()
-    if config.summary_provider_mode == "apple" or len(transcript) <= TRANSCRIPT_LIMIT:
+    if (config.summary_provider_mode == "apple" and not apple_fallback) or len(transcript) <= TRANSCRIPT_LIMIT:
         return artifacts
     parts = split_transcript(transcript, PART_CHARACTERS)
     condensed = []

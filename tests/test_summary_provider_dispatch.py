@@ -36,6 +36,32 @@ class SummaryProviderDispatchTests(unittest.TestCase):
             self.assertEqual(result, {"title": "Fallback", "profile": "worker"})
             compatible.assert_called_once_with(config, artifacts, "worker")
 
+    def test_the_fallback_condenses_a_transcript_too_long_for_one_request(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            artifacts = MeetingArtifacts(
+                session_dir=root,
+                audio_file=root / "audio.m4a",
+                title="Lezione",
+                transcript_text="Oggi vediamo i limiti.\n" * 8_000,
+            )
+            config = SimpleNamespace(summary_provider_mode="apple")
+
+            with patch(
+                "meeting_pilot.summarization.omlx_client.summarize_with_apple_intelligence",
+                side_effect=AppleIntelligenceUnavailable("language not supported"),
+            ), patch(
+                "meeting_pilot.summarization.long_transcripts._complete_text",
+                return_value="Limiti.",
+            ), patch(
+                "meeting_pilot.summarization.omlx_client.summarize_with_openai_compatible",
+                return_value={"title": "Limiti"},
+            ) as compatible:
+                summarize(config, artifacts)
+
+            summarized = compatible.call_args.args[1]
+            self.assertTrue(summarized.transcript_text.startswith("[Part 1 of "))
+
     def test_a_lecture_is_summarized_as_study_notes_and_says_so(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -47,13 +47,16 @@ def summarize_with_apple_intelligence(
         encoding="utf-8",
     )
 
-    availability = subprocess.run(
-        [str(command_path), "--availability"],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=20,
-    )
+    try:
+        availability = subprocess.run(
+            [str(command_path), "--availability"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=20,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise AppleIntelligenceUnavailable(f"Apple Intelligence unavailable: {exc}") from exc
     try:
         status = json.loads(availability.stdout)
     except json.JSONDecodeError:
@@ -67,6 +70,8 @@ def summarize_with_apple_intelligence(
     try:
         with log_path.open("w", encoding="utf-8") as log:
             log.write("$ " + " ".join(command) + "\n\n")
+            # Flushed first: the helper writes to the same file, so a buffered header would land after its output.
+            log.flush()
             result = subprocess.run(
                 command,
                 stdout=log,
@@ -81,11 +86,13 @@ def summarize_with_apple_intelligence(
             f"{timeout_seconds} seconds. See {log_path}"
         ) from exc
     if result.returncode != 0:
-        detail = log_path.read_text(encoding="utf-8", errors="replace")
-        if "Apple Intelligence unavailable" in detail:
-            raise AppleIntelligenceUnavailable(detail.strip())
+        # The helper's last line says why; the log starts with the command line.
+        lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        reason = next((line.strip() for line in reversed(lines) if line.strip()), "")
+        if "Apple Intelligence unavailable" in reason:
+            raise AppleIntelligenceUnavailable(reason)
         raise RuntimeError(
-            f"Apple Intelligence summarization failed with exit code {result.returncode}. See {log_path}"
+            f"Apple Intelligence summarization failed: {reason or f'exit code {result.returncode}'}. See {log_path}"
         )
     try:
         data = json.loads(output_path.read_text(encoding="utf-8"))
@@ -97,9 +104,9 @@ def summarize_with_apple_intelligence(
 
 
 def _timeout_for_transcript(base_seconds: int, transcript: str) -> int:
-    """The helper summarizes 6,000-character parts one after another (see
-    AppleIntelligenceSummarizer.swift), so a lecture-length transcript gets about two
-    minutes per part."""
+    """The helper summarizes parts of about 6,000 characters one after another (sized
+    to the model's context in AppleIntelligenceSummarizer.swift), so a lecture-length
+    transcript gets about two minutes per part."""
     parts = len(transcript) // 6_000 + 1
     return max(base_seconds, parts * 120)
 

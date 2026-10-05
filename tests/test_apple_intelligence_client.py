@@ -24,15 +24,20 @@ class AppleIntelligenceClientTests(unittest.TestCase):
             meeting_metadata={"participants": ["Mario", "Laura"]},
         )
 
-    def make_helper(self, root: Path, availability: str) -> Path:
+    def make_helper(self, root: Path, availability: str, failure: str = "") -> Path:
         helper = root / "AppleIntelligenceSummarizer"
+        run = (
+            f"printf '%s\\n' '{failure}' >&2\nexit 2"
+            if failure
+            else """printf '%s\\n' '{"title":"Riunione","summary":"Sintesi","participants":[],"topics":[],"decisions":[],"action_items":[],"open_questions":[],"risks":[]}' > "$2\""""
+        )
         helper.write_text(
             f"""#!/bin/sh
 if [ "$1" = "--availability" ]; then
   printf '%s\\n' '{{"status":"{availability}","reason":"test reason"}}'
   exit 0
 fi
-printf '%s\\n' '{{"title":"Riunione","summary":"Sintesi","participants":[],"topics":[],"decisions":[],"action_items":[],"open_questions":[],"risks":[]}}' > "$2"
+{run}
 """,
             encoding="utf-8",
         )
@@ -88,6 +93,44 @@ printf '%s\\n' '{{"title":"Riunione","summary":"Sintesi","participants":[],"topi
 
             with self.assertRaisesRegex(AppleIntelligenceUnavailable, "test reason"):
                 summarize_with_apple_intelligence(config, self.make_artifacts(root))
+
+    def config(self, helper: Path) -> SimpleNamespace:
+        return SimpleNamespace(
+            apple_intelligence_summarizer_cmd=str(helper),
+            apple_intelligence_timeout_seconds=30,
+            transcription_locale="it-IT",
+            summary_prompt="",
+        )
+
+    def test_a_failed_summary_reports_the_helpers_reason(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            helper = self.make_helper(root, "available", failure="Apple Intelligence is busy; retry later")
+
+            with self.assertRaisesRegex(RuntimeError, "busy; retry later") as raised:
+                summarize_with_apple_intelligence(self.config(helper), self.make_artifacts(root))
+
+            self.assertNotIsInstance(raised.exception, AppleIntelligenceUnavailable)
+
+    def test_an_unsupported_language_falls_back_without_the_command_line(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            reason = "Apple Intelligence unavailable: the transcript language is not supported"
+            helper = self.make_helper(root, "available", failure=reason)
+
+            with self.assertRaises(AppleIntelligenceUnavailable) as raised:
+                summarize_with_apple_intelligence(self.config(helper), self.make_artifacts(root))
+
+            self.assertEqual(str(raised.exception), reason)
+
+    def test_a_helper_that_cannot_start_counts_as_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            helper = self.make_helper(root, "available")
+            helper.chmod(0o644)
+
+            with self.assertRaises(AppleIntelligenceUnavailable):
+                summarize_with_apple_intelligence(self.config(helper), self.make_artifacts(root))
 
 
 if __name__ == "__main__":

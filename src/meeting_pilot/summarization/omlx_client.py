@@ -205,6 +205,10 @@ def summarize(config: Config, artifacts: MeetingArtifacts) -> dict[str, Any]:
             result = summarize_with_apple_intelligence(config, artifacts, profile)
         except AppleIntelligenceUnavailable as exc:
             print(f"{exc}. Falling back to the configured OpenAI-compatible provider...")
+            # Imported here: long_transcripts imports this module.
+            from .long_transcripts import fit_for_summary
+
+            artifacts = fit_for_summary(config, artifacts, apple_fallback=True)
     if result is None:
         result = summarize_with_openai_compatible(config, artifacts, profile)
     result["profile"] = profile

@@ -7,6 +7,7 @@ enum AppleIntelligenceSummarizerError: LocalizedError {
     case usage
     case invalidInput(String)
     case unavailable(String)
+    case tooLong
 
     var errorDescription: String? {
         switch self {
@@ -16,7 +17,79 @@ enum AppleIntelligenceSummarizerError: LocalizedError {
             return "Invalid summarizer input: \(detail)"
         case .unavailable(let detail):
             return "Apple Intelligence unavailable: \(detail)"
+        case .tooLong:
+            return "the transcript could not be condensed enough for the on-device model"
         }
+    }
+
+    /// The model's errors are a different type from macOS 27 (`LanguageModelError`), so
+    /// they are told apart by case name, which also builds with the macOS 26 SDK. Messages
+    /// starting "Apple Intelligence unavailable" make the pipeline use the other provider.
+    static func message(for error: Error) -> String {
+        if error is AppleIntelligenceSummarizerError {
+            return error.localizedDescription
+        }
+        let name = Mirror(reflecting: error).children.first?.label ?? String(describing: error)
+        switch name {
+        case "unsupportedLanguageOrLocale":
+            return "Apple Intelligence unavailable: the transcript language is not supported"
+        case "assetsUnavailable":
+            return "Apple Intelligence unavailable: the on-device model is not ready or is still downloading"
+        case "exceededContextWindowSize", "contextSizeExceeded":
+            return "a request did not fit the on-device model's context (\(error.localizedDescription))"
+        case "guardrailViolation", "refusal":
+            return "Apple Intelligence declined to summarize this transcript because of Apple's content safety rules; summarize it with another provider"
+        case "rateLimited", "concurrentRequests":
+            return "Apple Intelligence is busy; retry the summary in a few minutes"
+        default:
+            let detail = error.localizedDescription
+            return detail.localizedCaseInsensitiveContains("unsupported language")
+                ? "Apple Intelligence unavailable: the transcript language is not supported"
+                : detail
+        }
+    }
+}
+
+/// The on-device model reads its instructions, the prompt, the output schema and its
+/// answer from one context of 4,096 tokens on macOS 26. Sizes are estimated, erring
+/// high, so the helper builds with any macOS 26 SDK: `tokenCount(for:)` needs 26.4.
+enum ContextBudget {
+    static let tokens = 4_096
+    /// Room kept for the model's answer.
+    static let extractAnswerTokens = 900
+    static let finalAnswerTokens = 1_300
+
+    /// About three characters per token, or one for each Chinese, Japanese or Korean character.
+    static func estimate(_ text: String) -> Int {
+        text.reduce(0) { $0 + thirds($1) } / 3 + 1
+    }
+
+    @available(macOS 26.0, *)
+    static func estimate(_ schema: GenerationSchema) -> Int {
+        estimate(String(decoding: (try? JSONEncoder().encode(schema)) ?? Data(), as: UTF8.self))
+    }
+
+    static func truncated(_ text: String, toTokens limit: Int) -> String {
+        var used = 0
+        for index in text.indices {
+            used += thirds(text[index])
+            if used > max(0, limit - 1) * 3 {
+                return String(text[..<index]) + "…"
+            }
+        }
+        return text
+    }
+
+    private static func thirds(_ character: Character) -> Int {
+        let wide = character.unicodeScalars.contains { scalar in
+            switch scalar.value {
+            case 0x1100...0x11FF, 0x3040...0x30FF, 0x3400...0x4DBF, 0x4E00...0x9FFF, 0xAC00...0xD7AF, 0xF900...0xFAFF:
+                return true
+            default:
+                return false
+            }
+        }
+        return wide ? 3 : 1
     }
 }
 
@@ -96,11 +169,7 @@ struct AppleIntelligenceSummarizer {
             let data = try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
             try data.write(to: outputURL, options: .atomic)
         } catch {
-            let detail = error.localizedDescription
-            let message = detail.localizedCaseInsensitiveContains("unsupported language")
-                ? "Apple Intelligence unavailable: the transcript language is not supported"
-                : detail
-            FileHandle.standardError.write(Data("\(message)\n".utf8))
+            FileHandle.standardError.write(Data("\(AppleIntelligenceSummarizerError.message(for: error))\n".utf8))
             Foundation.exit(2)
         }
     }
@@ -139,87 +208,167 @@ struct AppleIntelligenceSummarizer {
 
     @available(macOS 26.0, *)
     static func summarize(_ input: SummarizerInput, transcript: PreparedTranscript, model: SystemLanguageModel) async throws -> String {
-        let chunks = splitText(transcript.text, maximumCharacters: 6_000)
+        let plan = try SummaryPlan(input, transcript: transcript)
         var partialNotes: [String] = []
-        let lecture = input.profile == "student"
-        let chunkSchema = try lecture ? makeLectureChunkSchema() : makeChunkSchema()
-        let localeInstruction = transcript.translatedFrom.map {
-            "The transcript was machine-translated to \(transcript.languageName) from \($0); names may be transliterated."
-        } ?? "The transcript is in \(transcript.languageName)."
-        let customInstruction = (input.customPrompt ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let customInstructionText = customInstruction.isEmpty ? "" : "\nAdditional user instructions:\n\(customInstruction)"
-        let language = input.outputLanguage ?? "Italian"
-        let languageInstruction = "Write every field in \(language), translating from the transcript language when it differs; keep names of people, products and proper nouns as spoken."
-        for (index, chunk) in chunks.enumerated() {
-            let task = lecture
-                ? "Extract faithful study notes from a lecture transcript. Never invent definitions, dates, deadlines, exam information, or references."
-                : "Extract faithful operational notes from a meeting transcript. Never invent names, dates, decisions, owners, deadlines, questions, or risks."
-            let session = LanguageModelSession(model: model, instructions: """
-                \(localeInstruction)
-                \(task) Keep the result concise. \(languageInstruction)
-                \(customInstructionText)
-                """)
-            let response = try await session.respond(
-                to: """
-                Transcript part \(index + 1) of \(chunks.count):
-                \(chunk)
-                """,
-                schema: chunkSchema
+        for (index, chunk) in plan.chunks.enumerated() {
+            let response = try await LanguageModelSession(model: model, instructions: plan.extractInstructions).respond(
+                to: plan.extractPrompt(chunk, index: index),
+                schema: plan.chunkSchema
             )
             partialNotes.append(response.content.jsonString)
         }
-
-        let condensed = try await condenseIfNeeded(partialNotes, model: model, lecture: lecture)
-        let context = try metadataContext(input)
-        let encodedPartials = "[" + condensed.joined(separator: ",") + "]"
-        let finalSession = lecture
-            ? LanguageModelSession(model: model, instructions: """
-            \(localeInstruction)
-            Create structured study notes for a lecture using only the supplied extracts and metadata. Never invent information. Create a concise descriptive title of 3-8 words for what the lecture covered; never include platform names, attendee names, email addresses, dates, times, or technical recording filenames. known_projects lists the user's courses: use the course as tag, reusing a known course only when the lecture is clearly about it; otherwise propose a concise new course name. Participants may only come from calendar_metadata and the participant names identified from Teams; generic labels such as Speaker 1 or SPEAKER_00 are not names. Key concepts are the terms, definitions, formulas and methods the lecture explains, each with a short faithful explanation. Assignments are homework, readings, projects and exam or submission dates that were announced; use nil when a deadline is unknown. Exam hints are only what the lecturer said will be examined or stressed as especially important. Review questions are 3-6 questions a student can answer from this lecture alone. References are books, chapters, pages, slides, papers or links that were mentioned. Provide the theme as the lecture's main topic in 2-5 words. \(languageInstruction)
-            \(customInstructionText)
-            """)
-            : LanguageModelSession(model: model, instructions: """
-            \(localeInstruction)
-            Create structured meeting notes using only the supplied extracts and metadata. Never invent information. Create a concise descriptive title of 3-8 words for the meeting subject; never include platform names, attendee names, email addresses, dates, times, or technical recording filenames. Choose the project tag by analysing the conversation and comparing it with known_projects: reuse a known project only when it is clearly relevant; otherwise propose a concise new project tag. Participants may only come from calendar_metadata and the participant names identified from Teams; generic labels such as Speaker 1 or SPEAKER_00 are not names. Use nil when a date, owner, or deadline is unknown. Every action item status must be exactly "open". Provide one concise reusable tag and one concise theme of 2-5 words when the meeting has a clear subject. \(languageInstruction)
-            \(customInstructionText)
-            """)
-        let response = try await finalSession.respond(
-            to: """
-            Metadata:
-            \(context)
-
-            Existing summary, if any:
-            \(input.existingSummary ?? "")
-
-            Faithful transcript extracts:
-            \(encodedPartials)
-            """,
-            schema: try lecture ? makeLectureSchema() : makeMeetingSchema()
+        let condensed = try await condense(partialNotes, toTokens: plan.extractsBudget, schema: plan.chunkSchema, model: model, lecture: plan.lecture)
+        let response = try await LanguageModelSession(model: model, instructions: plan.finalInstructions).respond(
+            to: plan.finalPrompt("[" + condensed.joined(separator: ",") + "]"),
+            schema: plan.finalSchema
         )
         return response.content.jsonString
     }
 
+    /// Every request the summary makes, sized to the model's context.
     @available(macOS 26.0, *)
-    static func condenseIfNeeded(_ notes: [String], model: SystemLanguageModel, lecture: Bool) async throws -> [String] {
-        guard notes.count > 8 else { return notes }
-        var result: [String] = []
-        let schema = try lecture ? makeLectureChunkSchema() : makeChunkSchema()
+    struct SummaryPlan {
+        let lecture: Bool
+        let chunkSchema: GenerationSchema
+        let finalSchema: GenerationSchema
+        let extractInstructions: String
+        let finalInstructions: String
+        let chunks: [String]
+        /// Room for the transcript extracts in the final request.
+        let extractsBudget: Int
+        let metadata: String
+        let existingSummary: String
+
+        init(_ input: SummarizerInput, transcript: PreparedTranscript) throws {
+            lecture = input.profile == "student"
+            chunkSchema = try lecture ? makeLectureChunkSchema() : makeChunkSchema()
+            finalSchema = try lecture ? makeLectureSchema() : makeMeetingSchema()
+            let localeInstruction = transcript.translatedFrom.map {
+                "The transcript was machine-translated to \(transcript.languageName) from \($0); names may be transliterated."
+            } ?? "The transcript is in \(transcript.languageName)."
+            let language = input.outputLanguage ?? "Italian"
+            let languageInstruction = "Write every field in \(language), translating from the transcript language when it differs; keep names of people, products and proper nouns as spoken."
+            let finalTask = lecture
+                ? "Create structured study notes for a lecture using only the supplied extracts and metadata. Never invent information. Create a concise descriptive title of 3-8 words for what the lecture covered; never include platform names, attendee names, email addresses, dates, times, or technical recording filenames. known_projects lists the user's courses: use the course as tag, reusing a known course only when the lecture is clearly about it; otherwise propose a concise new course name. Participants may only come from calendar_metadata and the participant names identified from Teams; generic labels such as Speaker 1 or SPEAKER_00 are not names. Key concepts are the terms, definitions, formulas and methods the lecture explains, each with a short faithful explanation. Assignments are homework, readings, projects and exam or submission dates that were announced; use nil when a deadline is unknown. Exam hints are only what the lecturer said will be examined or stressed as especially important. Review questions are 3-6 questions a student can answer from this lecture alone. References are books, chapters, pages, slides, papers or links that were mentioned. Provide the theme as the lecture's main topic in 2-5 words."
+                : "Create structured meeting notes using only the supplied extracts and metadata. Never invent information. Create a concise descriptive title of 3-8 words for the meeting subject; never include platform names, attendee names, email addresses, dates, times, or technical recording filenames. Choose the project tag by analysing the conversation and comparing it with known_projects: reuse a known project only when it is clearly relevant; otherwise propose a concise new project tag. Participants may only come from calendar_metadata and the participant names identified from Teams; generic labels such as Speaker 1 or SPEAKER_00 are not names. Use nil when a date, owner, or deadline is unknown. Every action item status must be exactly \"open\". Provide one concise reusable tag and one concise theme of 2-5 words when the meeting has a clear subject."
+
+            // The final request is the tightest. What its fixed parts leave is shared out:
+            // the user's instructions (notes, slides, template) at most 30%, the metadata
+            // 20% and an earlier summary 10%; the transcript extracts get the rest.
+            let finalRoom = ContextBudget.tokens
+                - ContextBudget.estimate(localeInstruction + finalTask + languageInstruction)
+                - ContextBudget.estimate(finalSchema)
+                - ContextBudget.finalAnswerTokens
+            let customInstruction = ContextBudget.truncated(
+                (input.customPrompt ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
+                toTokens: finalRoom * 3 / 10
+            )
+            let customInstructionText = customInstruction.isEmpty ? "" : "\nAdditional user instructions:\n\(customInstruction)"
+            metadata = ContextBudget.truncated(try metadataContext(input), toTokens: finalRoom / 5)
+            existingSummary = ContextBudget.truncated(input.existingSummary ?? "", toTokens: finalRoom / 10)
+            finalInstructions = """
+                \(localeInstruction)
+                \(finalTask) \(languageInstruction)
+                \(customInstructionText)
+                """
+            let task = lecture
+                ? "Extract faithful study notes from a lecture transcript. Never invent definitions, dates, deadlines, exam information, or references."
+                : "Extract faithful operational notes from a meeting transcript. Never invent names, dates, decisions, owners, deadlines, questions, or risks."
+            extractInstructions = """
+                \(localeInstruction)
+                \(task) Keep the result concise. \(languageInstruction)
+                \(customInstructionText)
+                """
+            let partBudget = ContextBudget.tokens
+                - ContextBudget.estimate(extractInstructions)
+                - ContextBudget.estimate(chunkSchema)
+                - ContextBudget.extractAnswerTokens
+                - ContextBudget.estimate("Transcript part 999 of 999:\n")
+            let charactersPerToken = Double(transcript.text.count) / Double(ContextBudget.estimate(transcript.text))
+            chunks = splitText(transcript.text, maximumCharacters: max(1_000, Int(Double(partBudget) * charactersPerToken)))
+            extractsBudget = ContextBudget.tokens
+                - ContextBudget.estimate(finalInstructions)
+                - ContextBudget.estimate(finalSchema)
+                - ContextBudget.finalAnswerTokens
+                - ContextBudget.estimate(Self.finalPrompt(metadata: metadata, existingSummary: existingSummary, extracts: ""))
+        }
+
+        func extractPrompt(_ chunk: String, index: Int) -> String {
+            """
+            Transcript part \(index + 1) of \(chunks.count):
+            \(chunk)
+            """
+        }
+
+        func finalPrompt(_ extracts: String) -> String {
+            Self.finalPrompt(metadata: metadata, existingSummary: existingSummary, extracts: extracts)
+        }
+
+        private static func finalPrompt(metadata: String, existingSummary: String, extracts: String) -> String {
+            """
+            Metadata:
+            \(metadata)
+
+            Existing summary, if any:
+            \(existingSummary)
+
+            Faithful transcript extracts:
+            \(extracts)
+            """
+        }
+    }
+
+    /// Merges extracts, as many per request as fit, until all of them fit `tokens`.
+    @available(macOS 26.0, *)
+    static func condense(_ notes: [String], toTokens tokens: Int, schema: GenerationSchema, model: SystemLanguageModel, lecture: Bool) async throws -> [String] {
         let preserved = lecture
             ? "key concepts, assignments, exam hints, references"
             : "decisions, action items, open questions, risks"
-        for start in stride(from: 0, to: notes.count, by: 6) {
-            let end = min(start + 6, notes.count)
-            let batch = Array(notes[start..<end])
-            let session = LanguageModelSession(model: model, instructions: """
-                Merge \(lecture ? "lecture" : "meeting")-note extracts without adding facts. Preserve \(preserved), and meaningful topics. Remove only duplication and keep the result concise.
-                """)
-            let response = try await session.respond(
-                to: "[" + batch.joined(separator: ",") + "]",
-                schema: schema
-            )
-            result.append(response.content.jsonString)
+        func instructions(words: Int) -> String {
+            """
+            Merge \(lecture ? "lecture" : "meeting")-note extracts without adding facts. Preserve \(preserved), and meaningful topics. Remove only duplication and keep the result under \(words) words.
+            """
         }
-        return try await condenseIfNeeded(result, model: model, lecture: lecture)
+        let groupBudget = ContextBudget.tokens
+            - ContextBudget.estimate(instructions(words: 9_999))
+            - ContextBudget.estimate(schema)
+            - ContextBudget.extractAnswerTokens
+        var notes = notes
+        for _ in 0..<6 {
+            if ContextBudget.estimate("[" + notes.joined(separator: ",") + "]") <= tokens {
+                return notes
+            }
+            let groups = mergeGroups(notes, toTokens: groupBudget)
+            // An estimated token is about three characters, and a word about six.
+            let words = max(60, tokens / groups.count / 2)
+            var merged: [String] = []
+            for group in groups {
+                let response = try await LanguageModelSession(model: model, instructions: instructions(words: words)).respond(
+                    to: "[" + group.joined(separator: ",") + "]",
+                    schema: schema
+                )
+                merged.append(response.content.jsonString)
+            }
+            notes = merged
+        }
+        throw AppleIntelligenceSummarizerError.tooLong
+    }
+
+    /// Consecutive extracts packed into groups of at most `tokens` once encoded as a JSON
+    /// array; an extract larger than that gets a group of its own.
+    static func mergeGroups(_ notes: [String], toTokens tokens: Int) -> [[String]] {
+        var groups: [[String]] = []
+        var used = 0
+        for note in notes {
+            let cost = ContextBudget.estimate(note) + 1
+            if groups.isEmpty || used + cost > tokens {
+                groups.append([])
+                used = 0
+            }
+            groups[groups.count - 1].append(note)
+            used += cost
+        }
+        return groups
     }
 
     @available(macOS 26.0, *)
