@@ -24,6 +24,8 @@ def run_apple_transcriber(config: Config, audio_file: Path) -> None:
     try:
         with log_file.open("w", encoding="utf-8") as log:
             log.write("$ " + " ".join(command) + "\n\n")
+            # Flushed first: the helper writes to the same file, so a buffered header would land after its output.
+            log.flush()
             result = subprocess.run(
                 command,
                 stdout=log,
