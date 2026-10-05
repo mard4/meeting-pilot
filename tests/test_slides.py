@@ -323,3 +323,43 @@ def test_meeting_chat_can_answer_from_the_slides(tmp_path: Path) -> None:
 
     config = SimpleNamespace(journal_root=tmp_path / "Diary", done_dir=tmp_path / "done")
     assert any("Rendimento = 1 - Tc/Th" in document.text for document in _meeting_documents(config))
+
+
+def test_key_concepts_cite_the_slide_the_summary_names(tmp_path: Path) -> None:
+    from meeting_pilot.slides import cite_slides
+
+    artifacts = MeetingArtifacts(session_dir=tmp_path, audio_file=tmp_path / "a.m4a", title="x")
+    artifacts.slides = slides_from_texts(DECK)
+    artifacts.omlx_summary = {"key_concepts": [
+        {"term": "Entropia", "explanation": "Misura del disordine.", "slide": 3},
+        {"term": "Carnot", "explanation": "Rendimento massimo.", "slide": "slide 4"},
+        {"term": "Calore", "explanation": "Energia scambiata.", "slide": None},
+        {"term": "Altro", "explanation": "Non sulle slide.", "slide": 12},
+    ]}
+
+    cite_slides(artifacts, "it")
+    cite_slides(artifacts, "it")
+
+    explanations = [concept["explanation"] for concept in artifacts.omlx_summary["key_concepts"]]
+    assert explanations == [
+        "Misura del disordine. (Slide 3)",
+        "Rendimento massimo. (Slide 4)",
+        "Energia scambiata.",
+        "Non sulle slide.",
+    ]
+    artifacts.omlx_summary["key_concepts"][0]["explanation"] = "Misura del disordine."
+    cite_slides(artifacts, "de")
+    assert artifacts.omlx_summary["key_concepts"][0]["explanation"] == "Misura del disordine. (Folie 3)"
+
+
+def test_lecture_summaries_ask_for_the_slide_of_each_key_concept(tmp_path: Path) -> None:
+    from meeting_pilot.summarization.omlx_client import _lecture_request
+
+    _task, schema = _lecture_request("Italian")
+    assert "slide" in schema["key_concepts"][0]
+
+    session = _session_with_slides(tmp_path, DECK)
+    artifacts = MeetingArtifacts(session_dir=session, audio_file=session / "a.m4a", title="x", transcript_text="...")
+    attach_slides(artifacts)
+    guidance = summary_guidance(SimpleNamespace(summary_template="auto", summary_provider_mode="api"), artifacts)
+    assert "in its slide field" in guidance

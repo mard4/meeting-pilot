@@ -10,13 +10,14 @@ from .publishing.apple_notes_publisher import publish_to_apple_notes
 from .config import Config
 from .publishing.journal_publisher import publish_to_journal
 from .publishing.obsidian_publisher import publish_to_obsidian
+from .language import config_language
 from .media_import import apply_user_title, import_metadata, imported_media, use_file_name_as_title
 from .meeting_metadata import find_meeting_metadata
 from .transcription.apple import run_apple_transcriber
 from .transcription.fluid_audio import run_fluid_audio
 from .transcription.session import create_session, recorded_outside_a_call, validate_audio_file
 from .publishing.notion_publisher import publish_to_notion
-from .slides import attach_slides
+from .slides import attach_slides, cite_slides
 from .summarization.long_transcripts import fit_for_summary
 from .summarization.omlx_client import summarize
 from .platforms.teams.teams_scraper import read_saved_teams_runtime_metadata
@@ -54,6 +55,7 @@ def process_audio(config: Config, source_audio: Path, dry_run: bool = False) -> 
             print(f"Summarizing with {summary_name}...", flush=True)
             artifacts.omlx_summary = summarize(config, fit_for_summary(config, artifacts))
             apply_user_title(artifacts)
+            cite_slides(artifacts, config_language(config))
             write_omlx_summary(session_dir, artifacts.omlx_summary)
             print("Summary saved.", flush=True)
 
@@ -117,6 +119,7 @@ def retry_from_transcript(config: Config, session_dir: Path, dry_run: bool = Fal
         print("Resumed session is starting summary generation...", flush=True)
         artifacts.omlx_summary = summarize(config, fit_for_summary(config, artifacts))
         apply_user_title(artifacts)
+        cite_slides(artifacts, config_language(config))
         write_omlx_summary(session_dir, artifacts.omlx_summary)
         print("Resumed session summary saved.", flush=True)
 
@@ -172,6 +175,7 @@ def retry_transcription(config: Config, session_dir: Path, dry_run: bool = False
         print("Transcription retry completed; starting summary generation...", flush=True)
         artifacts.omlx_summary = summarize(config, fit_for_summary(config, artifacts))
         apply_user_title(artifacts)
+        cite_slides(artifacts, config_language(config))
         write_omlx_summary(session_dir, artifacts.omlx_summary)
         print("Summary saved.", flush=True)
 

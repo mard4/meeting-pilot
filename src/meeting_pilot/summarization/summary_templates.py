@@ -192,8 +192,9 @@ def summary_guidance(config: object, artifacts: object) -> str:
         compact = getattr(config, "summary_provider_mode", "") == "apple"
         parts.append(
             "These slides were shown during the recording. Follow their order and spell terms, "
-            "formulas and names as they do. When a key concept, task or reference comes from a slide, "
-            "add its number as (slide N). Summarize what was said: use slide text that was not "
+            "formulas and names as they do. Give each key concept the number of the slide that shows "
+            "it in its slide field, or null when no slide does. When a task or reference comes from a "
+            "slide, add its number as (slide N). Summarize what was said: use slide text that was not "
             "discussed only to complete a point that was.\n"
             f"Slides:\n{slide_outline(slides, compact=compact)}"
         )

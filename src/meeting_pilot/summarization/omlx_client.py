@@ -68,7 +68,7 @@ def _lecture_request(language: str) -> tuple[str, dict[str, Any]]:
         "participants": ["string"],
         "summary": "string",
         "topics": ["string"],
-        "key_concepts": [{"term": "string", "explanation": "string"}],
+        "key_concepts": [{"term": "string", "explanation": "string", "slide": "number of the slide showing it, or null"}],
         "assignments": [{"task": "string", "due_date": "string or null"}],
         "exam_hints": ["string"],
         "review_questions": ["string"],
