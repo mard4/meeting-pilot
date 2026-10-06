@@ -20,7 +20,8 @@ import certifi
 
 from ..artifacts import MeetingArtifacts
 from ..config import Config
-from .omlx_client import is_ollama, ollama_chat_request, strip_model_wrapping
+from .builtin_model import is_builtin, transcript_limit as builtin_transcript_limit
+from .omlx_client import is_ollama, ollama_chat_request, strip_model_wrapping, summary_endpoint
 
 # Matches the cap in `summarize_with_openai_compatible`.
 TRANSCRIPT_LIMIT = 120_000
@@ -39,9 +40,11 @@ def fit_for_summary(config: Config, artifacts: MeetingArtifacts, apple_fallback:
     when Apple Intelligence was chosen but could not run, so the OpenAI-compatible
     provider summarizes after all."""
     transcript = artifacts.transcript_text.strip()
-    if (config.summary_provider_mode == "apple" and not apple_fallback) or len(transcript) <= TRANSCRIPT_LIMIT:
+    # The Meeting Pilot model's context is smaller than a server's: its limit is too.
+    limit = builtin_transcript_limit() if is_builtin(config) else TRANSCRIPT_LIMIT
+    if (config.summary_provider_mode == "apple" and not apple_fallback) or len(transcript) <= limit:
         return artifacts
-    parts = split_transcript(transcript, PART_CHARACTERS)
+    parts = split_transcript(transcript, min(PART_CHARACTERS, limit))
     condensed = []
     for index, part in enumerate(parts, start=1):
         print(f"Long transcript: condensing part {index} of {len(parts)}...", flush=True)
@@ -79,24 +82,25 @@ def _complete_text(config: Config, system_prompt: str, user_prompt: str) -> str:
     headers = {"Content-Type": "application/json"}
     if config.summary_api_key:
         headers["Authorization"] = f"Bearer {config.summary_api_key}"
-    ollama = is_ollama(config)
-    if ollama:
-        url, body = ollama_chat_request(config, messages, temperature=0.2, json_output=False)
-    else:
-        url = f"{config.summary_base_url}/chat/completions"
-        body: dict[str, Any] = {"model": config.summary_model, "messages": messages, "temperature": 0.2}
-    request = urllib.request.Request(
-        url,
-        data=json.dumps(body).encode("utf-8"),
-        headers=headers,
-        method="POST",
-    )
-    timeout_seconds = max(15, int(getattr(config, "summary_timeout_seconds", 180)))
-    ssl_context = ssl.create_default_context(cafile=certifi.where())
-    try:
-        with urllib.request.urlopen(request, timeout=timeout_seconds, context=ssl_context) as response:
-            data = json.loads(response.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
-        raise RuntimeError(f"Summary provider request failed: {exc}") from exc
+    with summary_endpoint(config) as base_url:
+        ollama = is_ollama(config)
+        if ollama:
+            url, body = ollama_chat_request(config, messages, temperature=0.2, json_output=False)
+        else:
+            url = f"{base_url}/chat/completions"
+            body: dict[str, Any] = {"model": config.summary_model, "messages": messages, "temperature": 0.2}
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(body).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        timeout_seconds = max(15, int(getattr(config, "summary_timeout_seconds", 180)))
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        try:
+            with urllib.request.urlopen(request, timeout=timeout_seconds, context=ssl_context) as response:
+                data = json.loads(response.read().decode("utf-8"))
+        except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
+            raise RuntimeError(f"Summary provider request failed: {exc}") from exc
     content = data["message"]["content"] if ollama else data["choices"][0]["message"]["content"]
     return strip_model_wrapping(str(content))

@@ -41,6 +41,16 @@ struct SummaryConfigurationForm: View {
                 appleEngineCard
                     .frame(maxHeight: .infinity)
                 RecorderChoiceCard(
+                    title: "Meeting Pilot",
+                    subtitle: "Il modello di Meeting Pilot, sul Mac. Si scarica una volta, niente da installare.",
+                    assetName: nil,
+                    fallbackSymbol: "sparkles",
+                    selected: mode == "builtin"
+                ) {
+                    selectProviderMode("builtin")
+                }
+                .frame(maxHeight: .infinity)
+                RecorderChoiceCard(
                     title: "Modello locale",
                     subtitle: "oMLX, Ollama o LM Studio, se li hai installati sul Mac.",
                     assetName: nil,
@@ -74,13 +84,16 @@ struct SummaryConfigurationForm: View {
             }
             .fixedSize(horizontal: false, vertical: true)
 
-            if mode == "local" {
+            if mode == "builtin" {
+                SettingsFormPanel { builtinSettingsRows }
+            } else if mode == "local" {
                 SettingsFormPanel { localSettingsRows }
             } else if mode == "api" {
                 SettingsFormPanel { cloudSettingsRows }
             }
 
-            if mode != "apple" {
+            // The Meeting Pilot model has no server to test: each row shows whether it is ready.
+            if mode == "local" || mode == "api" {
                 HStack(spacing: 10) {
                     Button {
                         // Testing used to operate only on the transient form state.
@@ -134,6 +147,10 @@ struct SummaryConfigurationForm: View {
             scheduleAutomaticProviderSave()
         }
         .onChange(of: modelsDir) { _ in scheduleAutomaticProviderSave() }
+        // A finished download selects its model from AppModel; keep the form in step.
+        .onChange(of: model.builtinSummaryModel) { value in
+            if mode == "builtin" { summaryModel = value }
+        }
         .onChange(of: summaryModel) { _ in scheduleAutomaticProviderSave() }
         .onChange(of: apiKey) { _ in scheduleAutomaticProviderSave() }
         .onChange(of: jsonMode) { _ in scheduleAutomaticProviderSave() }
@@ -172,6 +189,22 @@ struct SummaryConfigurationForm: View {
             unavailableAction: { model.openAppleIntelligenceSettings() }
         ) {
             selectProviderMode("apple")
+        }
+    }
+
+    @ViewBuilder
+    private var builtinSettingsRows: some View {
+        Text(localized("Gira sul Mac con il motore incluso nell'app. Si avvia solo mentre scrive le note, poi libera la memoria."))
+            .font(MPFont.callout())
+            .foregroundStyle(MeetingPilotDesign.textDimColor)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.vertical, 10)
+        ForEach(BuiltinModelVariant.allCases) { variant in
+            Divider()
+            BuiltinModelRow(variant: variant, selected: summaryModel == variant.rawValue) {
+                summaryModel = variant.rawValue
+                persistSelectedProvider()
+            }
         }
     }
 
@@ -448,6 +481,9 @@ struct SummaryConfigurationForm: View {
 
         if newMode == "apple" {
             apiKey = ""
+        } else if newMode == "builtin" {
+            apiKey = ""
+            summaryModel = model.builtinSummaryModel
         } else if newMode == "local" {
             apiKey = localAPIKey
             summaryModel = localSummaryModel
@@ -501,6 +537,94 @@ struct SummaryConfigurationForm: View {
         }
         persistSelectedProvider()
         probeRuntimes()
+    }
+}
+
+/// One Meeting Pilot model: pick it once it is on the Mac, otherwise download it here.
+struct BuiltinModelRow: View {
+    @EnvironmentObject private var model: AppModel
+    let variant: BuiltinModelVariant
+    let selected: Bool
+    let onSelect: () -> Void
+    @State private var confirmingDelete = false
+
+    private var installed: Bool { model.builtinModelsInstalled.contains(variant.rawValue) }
+    private var download: BuiltinModelDownload? {
+        model.builtinModelDownload?.variant == variant ? model.builtinModelDownload : nil
+    }
+    private var downloading: Bool { download != nil && download?.failure == nil }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: selected && installed ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(selected && installed ? MeetingPilotDesign.accent : Color.adaptiveWhite(installed ? 0.35 : 0.15))
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(localized(variant.title))
+                        .font(MPFont.body(.semibold))
+                    Text(variant.sizeLabel)
+                        .font(MPFont.caption())
+                        .foregroundStyle(MeetingPilotDesign.textFaintColor)
+                }
+                Text(localized(variant.detail))
+                    .font(MPFont.callout())
+                    .foregroundStyle(MeetingPilotDesign.textDimColor)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let download, download.failure == nil {
+                    ProgressView(value: download.verifying ? 1 : download.progress)
+                        .tint(MeetingPilotDesign.accent)
+                    Text(download.verifying
+                         ? localized("Verifica del file…")
+                         : String(format: localized("Download… %d%%"), Int(download.progress * 100)))
+                        .font(MPFont.caption())
+                        .foregroundStyle(MeetingPilotDesign.textFaintColor)
+                } else if let failure = download?.failure {
+                    Text(failure)
+                        .font(MPFont.caption())
+                        .foregroundStyle(MeetingPilotDesign.warning)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text("\(variant.sourceName) · Apache 2.0")
+                        .font(MPFont.caption())
+                        .foregroundStyle(MeetingPilotDesign.textFaintColor)
+                }
+            }
+            Spacer(minLength: 8)
+            if downloading {
+                Button(localized("Annulla")) { model.cancelBuiltinModelDownload() }
+                    .buttonStyle(MPSecondaryButtonStyle(compact: true))
+                    .disabled(download?.verifying == true)
+            } else if installed {
+                Button {
+                    confirmingDelete = true
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(MPIconButtonStyle(size: 28))
+                .help(localized("Elimina il modello dal Mac"))
+            } else {
+                Button {
+                    model.downloadBuiltinModel(variant, selectWhenReady: true)
+                } label: {
+                    Label(String(format: localized("Scarica (%@)"), variant.sizeLabel), systemImage: "arrow.down.circle")
+                }
+                .buttonStyle(MPSecondaryButtonStyle(compact: true))
+                // One download at a time keeps disk and bandwidth predictable.
+                .disabled(model.builtinModelDownload != nil && model.builtinModelDownload?.failure == nil)
+            }
+        }
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if installed { onSelect() }
+        }
+        .alert(String(format: localized("Eliminare il modello %@?"), localized(variant.title)), isPresented: $confirmingDelete) {
+            Button(localized("Annulla"), role: .cancel) {}
+            Button(localized("Elimina"), role: .destructive) { model.deleteBuiltinModel(variant) }
+        } message: {
+            Text(String(format: localized("Libera %@. Potrai riscaricarlo quando vuoi."), variant.sizeLabel))
+        }
     }
 }
 

@@ -74,6 +74,41 @@ mkdir -p "$RESOURCES/FluidAudio/bin" "$RESOURCES/FluidAudio/Models"
 cp "$FLUID_AUDIO_CLI" "$RESOURCES/FluidAudio/bin/fluidaudiocli"
 cp -R "$FLUID_AUDIO_MODELS/speaker-diarization" "$RESOURCES/FluidAudio/Models/"
 
+# The Meeting Pilot model's engine: llama.cpp's server from a pinned commit, built as one
+# self-contained binary (static libraries, Metal shaders embedded, only system frameworks
+# linked). The models themselves (572 MB / 2.5 GB) are downloaded by the app on request.
+LLAMA_CPP_REF="${LLAMA_CPP_REF:-d81235049384534c167caea52b85a694f6103d14}"  # llama.cpp 0.6.0
+LLAMA_CPP_SOURCE="${LLAMA_CPP_SOURCE:-$HOME/Library/Application Support/Meeting Pilot/LlamaCppRuntime/source}"
+LLAMA_CPP_BUILD="$LLAMA_CPP_SOURCE/build-static-$TARGET_ARCH"
+LLAMA_SERVER_BIN="$LLAMA_CPP_BUILD/bin/llama-server"
+if [[ ! -d "$LLAMA_CPP_SOURCE/.git" ]]; then
+  git clone --quiet --filter=blob:none https://github.com/ggml-org/llama.cpp "$LLAMA_CPP_SOURCE"
+fi
+if [[ "$(git -C "$LLAMA_CPP_SOURCE" rev-parse HEAD)" != "$LLAMA_CPP_REF"* || ! -x "$LLAMA_SERVER_BIN" ]]; then
+  if ! command -v cmake >/dev/null; then
+    echo "cmake non trovato: serve per compilare llama.cpp (brew install cmake)." >&2
+    exit 1
+  fi
+  git -C "$LLAMA_CPP_SOURCE" fetch --quiet origin "$LLAMA_CPP_REF"
+  git -C "$LLAMA_CPP_SOURCE" checkout --quiet "$LLAMA_CPP_REF"
+  cmake -S "$LLAMA_CPP_SOURCE" -B "$LLAMA_CPP_BUILD" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_OSX_ARCHITECTURES="$TARGET_ARCH" \
+    -DCMAKE_OSX_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET" \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DGGML_METAL=ON \
+    -DGGML_METAL_EMBED_LIBRARY=ON \
+    -DGGML_CCACHE=OFF \
+    -DLLAMA_BUILD_TESTS=OFF \
+    -DLLAMA_BUILD_EXAMPLES=OFF \
+    -DLLAMA_BUILD_SERVER=ON \
+    -DLLAMA_CURL=OFF \
+    -DLLAMA_OPENSSL=OFF >/dev/null
+  cmake --build "$LLAMA_CPP_BUILD" --config Release --target llama-server -j "$(sysctl -n hw.ncpu)" >/dev/null
+fi
+mkdir -p "$RESOURCES/LlamaCpp/bin"
+cp "$LLAMA_SERVER_BIN" "$RESOURCES/LlamaCpp/bin/llama-server"
+
 UV_BIN="${MEETING_PILOT_UV_BIN:-$(command -v uv || true)}"
 if [[ -z "$UV_BIN" || ! -x "$UV_BIN" ]]; then
   echo "uv non trovato. Installalo sul Mac di build o imposta MEETING_PILOT_UV_BIN." >&2
@@ -170,7 +205,7 @@ for required in \
   fi
 done
 
-chmod +x "$MACOS/MeetingPilot" "$MACOS/AppleTranscriber" "$MACOS/AppleIntelligenceSummarizer" "$MACOS/TeamsOCR" "$MACOS/TeamsWindowID" "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI" "$RESOURCES/FluidAudio/bin/fluidaudiocli" "$TOOLS/uv"
+chmod +x "$MACOS/MeetingPilot" "$MACOS/AppleTranscriber" "$MACOS/AppleIntelligenceSummarizer" "$MACOS/TeamsOCR" "$MACOS/TeamsWindowID" "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI" "$RESOURCES/FluidAudio/bin/fluidaudiocli" "$RESOURCES/LlamaCpp/bin/llama-server" "$TOOLS/uv"
 
 if [[ "$CODESIGN_IDENTITY" == "-" ]]; then
   codesign --force --sign - "$TOOLS/uv"
@@ -180,6 +215,7 @@ if [[ "$CODESIGN_IDENTITY" == "-" ]]; then
   codesign --force --sign - "$MACOS/AppleTranscriber"
   codesign --force --sign - "$MACOS/AppleIntelligenceSummarizer"
   codesign --force --sign - "$RESOURCES/FluidAudio/bin/fluidaudiocli"
+  codesign --force --sign - "$RESOURCES/LlamaCpp/bin/llama-server"
   codesign --force --sign - "$MACOS/MeetingPilot"
   # Keep the bundle identifier stable so macOS can retain its TCC permissions
   # across local ad-hoc rebuilds. --deep also seals the nested CLI helpers.
@@ -203,6 +239,7 @@ else
   developer_sign "$MACOS/AppleTranscriber"
   developer_sign "$MACOS/AppleIntelligenceSummarizer"
   developer_sign "$RESOURCES/FluidAudio/bin/fluidaudiocli"
+  developer_sign "$RESOURCES/LlamaCpp/bin/llama-server"
   # Signing the bundle last seals the helpers without re-signing them (no --deep),
   # so the CLI keeps its own entitlements.
   developer_sign --entitlements "$APP_ENTITLEMENTS" "$APP_DIR"

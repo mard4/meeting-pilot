@@ -505,6 +505,12 @@ private struct WelcomeNotesPage: View {
                     }
                 }
                 WelcomeEngineRow(
+                    symbol: "sparkles",
+                    title: "Meeting Pilot",
+                    detail: "Il nostro modello, sul tuo Mac: privato, si scarica una volta (Leggero 572 MB o Qualità 2,5 GB).",
+                    current: model.providerMode == "builtin"
+                )
+                WelcomeEngineRow(
                     symbol: "cpu",
                     title: "Modello locale",
                     detail: "oMLX, Ollama o LM Studio sul tuo Mac: privato, serve un modello scaricato.",

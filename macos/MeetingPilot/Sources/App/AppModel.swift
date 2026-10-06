@@ -46,6 +46,13 @@ final class AppModel: ObservableObject {
     @Published var fluidAudioInstalled = false
     /// Fraction of the Parakeet download, or nil when none is running.
     @Published var parakeetDownloadProgress: Double?
+    /// The Meeting Pilot model: which variant summaries use, which are on disk, and the
+    /// running or failed download (BuiltinModel.swift).
+    @Published var builtinSummaryModel = BuiltinModelVariant.light.rawValue
+    @Published var builtinModelsInstalled: Set<String> = []
+    @Published var builtinModelDownload: BuiltinModelDownload?
+    var builtinModelDownloadTask: URLSessionDownloadTask?
+    var builtinModelDownloadObservation: NSKeyValueObservation?
     var parakeetAutomaticDownloadAttempted = false
     @Published var publicationTargets: Set<String> = []
     @Published var journalRoot = ""
@@ -168,6 +175,10 @@ final class AppModel: ObservableObject {
 
     var providerDisplayName: String {
         if providerMode == "apple" { return "Apple Intelligence · on-device" }
+        if providerMode == "builtin" {
+            let variant = BuiltinModelVariant(rawValue: providerModel) ?? .light
+            return "Meeting Pilot · \(localized(variant.title))"
+        }
         let prefix = providerMode == "api"
             ? remoteProviderDisplayName(baseURL: providerBaseURL, model: providerModel)
             : (LocalRuntime(rawValue: localRuntime) ?? .omlx).title
@@ -326,6 +337,11 @@ final class AppModel: ObservableObject {
         if env["APPLE_TRANSCRIBER_TIMEOUT_SECONDS"] == "240" {
             configRepairs["APPLE_TRANSCRIBER_TIMEOUT_SECONDS"] = "900"
         }
+        // The Meeting Pilot model's engine ships inside the app, like FluidAudio's CLI.
+        if FileManager.default.isExecutableFile(atPath: bundledLlamaServerPath())
+            && env["LLAMA_SERVER_CMD"] != bundledLlamaServerPath() {
+            configRepairs["LLAMA_SERVER_CMD"] = bundledLlamaServerPath()
+        }
         // Both engines need the bundled CLI: FluidAudio for everything, Apple for speaker diarization.
         if FileManager.default.isExecutableFile(atPath: bundledFluidAudioCommandPath())
             && env["FLUID_AUDIO_CMD"] != bundledFluidAudioCommandPath() {
@@ -377,6 +393,9 @@ final class AppModel: ObservableObject {
         summaryPrompt = env["SUMMARY_PROMPT"] ?? ""
         summaryTemplate = env["SUMMARY_TEMPLATE"].flatMap { $0.isEmpty ? nil : $0 } ?? SummaryTemplateCatalog.auto
         localModelsDir = normalizedLocalModelsDir(env["LOCAL_MODELS_DIR"] ?? env["OMLX_MODELS_DIR"])
+        builtinSummaryModel = env["BUILTIN_SUMMARY_MODEL"].flatMap(BuiltinModelVariant.init(rawValue:))?.rawValue
+            ?? BuiltinModelVariant.light.rawValue
+        refreshBuiltinModels()
         recorderMode = configuredRecorderMode
         // The macOS recorder is driven by the Teams meeting banner. The legacy
         // banner toggle was removed from Settings, so an old persisted `false`
@@ -1188,7 +1207,9 @@ final class AppModel: ObservableObject {
                 "SUMMARY_API_KEY": trimmedKey,
                 "LOCAL_SUMMARY_API_KEY": localKey,
                 "REMOTE_SUMMARY_API_KEY": remoteKey,
-                "SUMMARY_RESPONSE_FORMAT_JSON": mode == "local" || mode == "apple" ? "false" : (jsonMode ? "true" : "false"),
+                // The Meeting Pilot model always answers in JSON (builtin_model.py); the others follow the setting.
+                "SUMMARY_RESPONSE_FORMAT_JSON": mode == "builtin" ? "true" : (mode == "local" || mode == "apple" ? "false" : (jsonMode ? "true" : "false")),
+                "BUILTIN_SUMMARY_MODEL": mode == "builtin" ? trimmedModel : builtinSummaryModel,
                 "SUMMARY_PROMPT": (summaryPrompt ?? self.summaryPrompt).trimmingCharacters(in: .whitespacesAndNewlines),
                 "REMOTE_PROVIDER_KIND": remoteProviderKind ?? self.remoteProviderKind,
                 "LOCAL_SUMMARY_RUNTIME": localRuntime ?? self.localRuntime,
@@ -1199,6 +1220,7 @@ final class AppModel: ObservableObject {
         )
         localProviderModel = localModel
         remoteProviderModel = remoteModel
+        if mode == "builtin" { builtinSummaryModel = trimmedModel }
         if let localRuntime { self.localRuntime = localRuntime }
         localProviderBaseURL = savedLocalBaseURL
         remoteProviderBaseURL = savedRemoteBaseURL

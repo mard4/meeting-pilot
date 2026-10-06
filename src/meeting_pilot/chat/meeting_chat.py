@@ -17,7 +17,7 @@ import certifi
 from ..config import Config
 from ..language import NOT_FOUND_ANSWERS, config_language, label, language_name
 from ..slides.deck import TEXT_NAME, slides_dir, slides_from_texts
-from ..summarization.omlx_client import is_ollama, ollama_chat_request, strip_model_wrapping
+from ..summarization.omlx_client import is_ollama, ollama_chat_request, strip_model_wrapping, summary_endpoint
 from .knowledge_base import default_knowledge_index_path, load_knowledge_documents
 from ..tag_catalog import catalog_values
 
@@ -518,23 +518,24 @@ def _openai_compatible_chat(config: Config) -> ChatProvider:
         headers = {"Content-Type": "application/json"}
         if config.summary_api_key:
             headers["Authorization"] = f"Bearer {config.summary_api_key}"
-        ollama = is_ollama(config)
-        if ollama:
-            url, body = ollama_chat_request(config, payload["messages"], temperature=0.0, json_output=False)
-        else:
-            url, body = f"{config.summary_base_url}/chat/completions", payload
-        request = urllib.request.Request(
-            url,
-            data=json.dumps(body).encode("utf-8"),
-            headers=headers,
-            method="POST",
-        )
-        ssl_context = ssl.create_default_context(cafile=certifi.where())
-        try:
-            with urllib.request.urlopen(request, timeout=120, context=ssl_context) as response:
-                data = json.loads(response.read().decode("utf-8"))
-        except urllib.error.URLError as exc:
-            raise RuntimeError(f"Meeting chat provider request failed: {exc}") from exc
+        with summary_endpoint(config) as base_url:
+            ollama = is_ollama(config)
+            if ollama:
+                url, body = ollama_chat_request(config, payload["messages"], temperature=0.0, json_output=False)
+            else:
+                url, body = f"{base_url}/chat/completions", payload
+            request = urllib.request.Request(
+                url,
+                data=json.dumps(body).encode("utf-8"),
+                headers=headers,
+                method="POST",
+            )
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
+            try:
+                with urllib.request.urlopen(request, timeout=120, context=ssl_context) as response:
+                    data = json.loads(response.read().decode("utf-8"))
+            except urllib.error.URLError as exc:
+                raise RuntimeError(f"Meeting chat provider request failed: {exc}") from exc
         content = data["message"]["content"] if ollama else data["choices"][0]["message"]["content"]
         return strip_model_wrapping(str(content))
 

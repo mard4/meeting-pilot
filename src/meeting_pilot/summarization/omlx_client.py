@@ -6,6 +6,7 @@ import socket
 import ssl
 import urllib.error
 import urllib.request
+from contextlib import AbstractContextManager, nullcontext
 from typing import Any
 
 import certifi
@@ -13,6 +14,7 @@ import certifi
 from ..artifacts import MeetingArtifacts
 from ..config import Config
 from .apple_intelligence_client import AppleIntelligenceUnavailable, summarize_with_apple_intelligence
+from .builtin_model import is_builtin, server as builtin_server
 from ..business_glossary import summary_instructions as business_glossary_instructions
 from ..language import config_language, language_name
 from ..profiles import STUDENT, resolve_profile
@@ -115,35 +117,38 @@ def summarize_with_openai_compatible(
         ],
         "temperature": 0.2,
     }
-    if config.summary_response_format_json:
+    # The Meeting Pilot model was measured with JSON-constrained output; small models
+    # need it to fill the fields reliably.
+    if config.summary_response_format_json or is_builtin(config):
         payload["response_format"] = {"type": "json_object"}
     headers = {"Content-Type": "application/json"}
     if config.summary_api_key:
         headers["Authorization"] = f"Bearer {config.summary_api_key}"
 
     timeout_seconds = max(15, int(getattr(config, "summary_timeout_seconds", 180)))
-    ollama = is_ollama(config)
-    if ollama:
-        url, body = ollama_chat_request(config, payload["messages"], temperature=0.2, json_output=True)
-    else:
-        url, body = f"{config.summary_base_url}/chat/completions", payload
-    request = urllib.request.Request(
-        url,
-        data=json.dumps(body).encode("utf-8"),
-        headers=headers,
-        method="POST",
-    )
-    ssl_context = ssl.create_default_context(cafile=certifi.where())
-    print(
-        f"Summary request started: model={config.summary_model}, timeout={timeout_seconds}s",
-        flush=True,
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=timeout_seconds, context=ssl_context) as response:
-            data = json.loads(response.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
-        print(f"Summary request failed: {exc}", flush=True)
-        raise RuntimeError(f"Summary provider request failed: {exc}") from exc
+    with summary_endpoint(config) as base_url:
+        ollama = is_ollama(config)
+        if ollama:
+            url, body = ollama_chat_request(config, payload["messages"], temperature=0.2, json_output=True)
+        else:
+            url, body = f"{base_url}/chat/completions", payload
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(body).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        print(
+            f"Summary request started: model={config.summary_model}, timeout={timeout_seconds}s",
+            flush=True,
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=timeout_seconds, context=ssl_context) as response:
+                data = json.loads(response.read().decode("utf-8"))
+        except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
+            print(f"Summary request failed: {exc}", flush=True)
+            raise RuntimeError(f"Summary provider request failed: {exc}") from exc
     print("Summary request completed.", flush=True)
 
     content = data["message"]["content"] if ollama else data["choices"][0]["message"]["content"]
@@ -151,6 +156,13 @@ def summarize_with_openai_compatible(
         return json.loads(strip_model_wrapping(content))
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"Summary provider returned non-JSON content: {content[:500]}") from exc
+
+
+def summary_endpoint(config: Config) -> AbstractContextManager[str]:
+    """The provider's base URL; for the Meeting Pilot model, a server started for the request."""
+    if is_builtin(config):
+        return builtin_server(config)
+    return nullcontext(config.summary_base_url)
 
 
 def is_ollama(config: Config) -> bool:

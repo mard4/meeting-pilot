@@ -51,7 +51,10 @@ def process_audio(config: Config, source_audio: Path, dry_run: bool = False) -> 
         attach_slides(artifacts)
 
         if config.summary_enabled:
-            summary_name = "Apple Intelligence" if config.summary_provider_mode == "apple" else config.summary_model
+            summary_name = {
+                "apple": "Apple Intelligence",
+                "builtin": f"the Meeting Pilot model ({config.summary_model})",
+            }.get(config.summary_provider_mode, config.summary_model)
             print(f"Summarizing with {summary_name}...", flush=True)
             artifacts.omlx_summary = summarize(config, fit_for_summary(config, artifacts))
             apply_user_title(artifacts)

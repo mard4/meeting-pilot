@@ -94,6 +94,10 @@ class Config:
     notion_include_exam_hints: bool = True
     notion_include_review_questions: bool = True
     notion_include_references: bool = True
+    # The Meeting Pilot model (summary mode "builtin"): the bundled llama.cpp server and
+    # the folder the app downloads its models into. See summarization/builtin_model.py.
+    builtin_server_cmd: str = "llama-server"
+    builtin_models_dir: Path = Path("~/Library/Application Support/Meeting Pilot/Models").expanduser()
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -140,7 +144,7 @@ class Config:
                 15,
                 int(os.getenv(
                     "SUMMARY_TIMEOUT_SECONDS",
-                    "900" if os.getenv("SUMMARY_PROVIDER_MODE", "local").strip().lower() == "local" else "180",
+                    "900" if os.getenv("SUMMARY_PROVIDER_MODE", "local").strip().lower() in {"local", "builtin"} else "180",
                 )),
             ),
             apple_intelligence_summarizer_cmd=os.getenv(
@@ -180,6 +184,8 @@ class Config:
             file_stable_seconds=int(os.getenv("FILE_STABLE_SECONDS", "10")),
             output_language=resolve_output_language(),
             summary_template=os.getenv("SUMMARY_TEMPLATE", "auto").strip() or "auto",
+            builtin_server_cmd=os.getenv("LLAMA_SERVER_CMD", "llama-server"),
+            builtin_models_dir=_path_env("BUILTIN_MODELS_DIR", "~/Library/Application Support/Meeting Pilot/Models"),
             user_profile=os.getenv("USER_PROFILE", "worker").strip().lower() or "worker",
             notion_include_key_concepts=_bool_env("INCLUDE_KEY_CONCEPTS", True),
             notion_include_assignments=_bool_env("INCLUDE_ASSIGNMENTS", True),
