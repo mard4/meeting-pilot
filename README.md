@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
 ```
 
 <p align="center">
-  Local-first meeting notes for macOS. From call to notes to answers.
+  Local-first meeting and lecture notes for macOS. From call or class to notes to answers.
 </p>
 <table align="center">
   <tr>
@@ -47,9 +47,9 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
 
 <h2 align="center">Join the call. That's it.</h2>
 
-<!-- <p align="center">Record the call. Get the notes. Ask anything.</p> -->
+<p align="center">Teams calls are detected and recorded on their own. Lectures, in-person meetings and files made elsewhere take one click.</p>
 
-<td width="60%" align="center"><img src="docs/assets/readme/overview.png" alt="Overview with today's meetings, their project, topic and publish targets" width="100%" /></td>
+<p align="center"><img src="docs/assets/readme/overview.png" alt="Overview with Import and Record, the processing pipeline and today's meetings with their project, topic and publish targets" width="100%" /></p>
 
 <table align="center">
   <tr>
@@ -85,11 +85,39 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
   </tr>
   <tr>
     <td width="40%" valign="middle">
+      <h3>STUDENT, PROFESSIONAL OR BOTH</h3>
+      Lectures become study notes: key concepts, assignments and deadlines, exam hints, review questions. Meetings keep decisions, action items and risks. Doing both? The title decides.
+    </td>
+    <td width="60%" align="center"><img src="docs/assets/readme/profile.png" alt="Welcome tour asking whether you are a student, a professional or both, with the sections each kind of note gets" width="100%" /></td>
+  </tr>
+  <tr>
+    <td width="60%" align="center"><img src="docs/assets/readme/lecture-slides.png" alt="A lecture in the Journal, its transcript split slide by slide next to the slides PDF" width="100%" /></td>
+    <td width="40%" valign="middle">
+      <h3>SLIDES NEXT TO THE TRANSCRIPT</h3>
+      Add the lecture's PDF: every part of the transcript is matched to its slide, on your Mac and without a model. The summary cites them as <i>(slide 3)</i>.
+    </td>
+  </tr>
+  <tr>
+    <td width="40%" valign="middle">
+      <h3>IMPORT</h3>
+      Lecture videos, podcasts, webinars recorded elsewhere. Drop them on the window or press <kbd>⌘I</kbd>; the original stays where it is.
+    </td>
+    <td width="60%" align="center"><img src="docs/assets/readme/import.png" alt="Import sheet with a lecture video and its slides, a podcast, and an unsupported file" width="80%" /></td>
+  </tr>
+  <tr>
+    <td width="60%" align="center"><img src="docs/assets/readme/record-source.png" alt="Record prompt with the microphone, Mac audio and both options" width="100%" /></td>
+    <td width="40%" valign="middle">
+      <h3>ANY ROOM</h3>
+      Not on a call? Record the microphone for a classroom, the Mac audio for an online lecture, or both.
+    </td>
+  </tr>
+  <tr>
+    <td width="40%" valign="middle">
       <!-- <sub>JOURNAL</sub> -->
       <h3>JOURNAL</h3>
       Built-in, searchable, plain Markdown.
     </td>
-    <td width="60%" align="center"><img src="docs/assets/readme/journal.png" alt="Local Journal with searchable meeting notes" width="100%" /></td>
+    <td width="60%" align="center"><img src="docs/assets/readme/journal.png" alt="Local Journal with searchable meeting and lecture notes" width="100%" /></td>
   </tr>
 </table>
 
@@ -123,7 +151,7 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
     <th align="left">Capture</th>
     <td align="center"><img src="docs/assets/readme/icons/apple.svg" width="40" alt="" /><br /><sub>Apple On-Device</sub></td>
     <td align="center"><img src="docs/assets/readme/icons/logos/teams.png" width="40" alt="" /><br /><sub>Microsoft Teams</sub></td>
-    <td align="center"><img src="docs/assets/readme/icons/logos/fluidaudio.png" width="40" alt="" /><br /><sub>FluidAudio</sub></td>
+    <td align="center"><img src="docs/assets/readme/icons/logos/fluidaudio.png" width="40" alt="" /><br /><sub>FluidAudio · speakers</sub></td>
     <td align="center"><img src="docs/assets/readme/icons/logos/slack.png" width="40" alt="" /><br /><sub>Slack · <i>soon</i></sub></td>
   </tr>
 </table>
@@ -134,22 +162,22 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
 
 1. **[Download the `.dmg`](https://github.com/mard4/meeting-pilot/releases/latest/download/MeetingPilot.dmg)** → drag to `Applications` (or use the `curl` one-liner above).
 2. Blocked on first launch? **System Settings → Privacy & Security → Open Anyway**. Once.
-3. Approve the permissions below, as they're asked.
+3. A short welcome tour asks whether you study, work or both, then the permissions below, as they're needed.
 
-<sub>macOS 14+. Apple Intelligence summaries need macOS 26+; older Macs use a local or API model.</sub>
+<sub>macOS 14+. On macOS 26+ Apple transcribes and FluidAudio labels the speakers, and Apple Intelligence can write the summaries. Older Macs download the Parakeet speech model (~460 MB) on first use and summarize with a local or API model.</sub>
 
 <table>
   <tr>
-    <td align="center" width="50%"><img src="docs/assets/readme/connectors.png" alt="Connectors: Notion, Obsidian, Apple Notes and the local Journal" width="100%" /><br /><sub><b>Connectors</b> · where notes go, which sections they include</sub></td>
-    <td align="center" width="50%"><img src="docs/assets/readme/pipeline.png" alt="Pipeline: recorder, transcription and summary provider" width="100%" /><br /><sub><b>Pipeline</b> · recorder, transcription, summary model</sub></td>
+    <td align="center" width="50%"><img src="docs/assets/readme/publishing.png" alt="Publishing: Notion, Obsidian, Apple Notes and the local Journal, plus summary template, prompt and glossary" width="100%" /><br /><sub><b>Publishing</b> · where notes go, what they include</sub></td>
+    <td align="center" width="50%"><img src="docs/assets/readme/pipeline.png" alt="Pipeline: built-in recorder and audio source" width="100%" /><br /><sub><b>Pipeline</b> · recorder, audio source, transcription, summary model</sub></td>
   </tr>
 </table>
 
 <details>
-<summary><b>Connector details</b></summary>
+<summary><b>Publishing details</b></summary>
 
-- **Notion**: connect your workspace and pick a parent page. Meeting Pilot reuses a matching table or page if one exists; otherwise it creates one page with one table. On first publish it adds the columns it needs (`Date`, `Project`, `Tema`, `Participants`, `Duration`, `Source`, `Status`, `Model`, `Language`, `Session ID`). Existing columns are never renamed or retyped.
-- **Obsidian**: choose your vault; notes go into a `Meeting Pilot` folder named `{date} - {title}.md`.
+- **Notion**: connect your workspace and pick a parent page. Meeting Pilot reuses a matching table or page if one exists; otherwise it creates one page with one table. On first publish it adds the columns it needs (`Date`, `Project`, `Tema`, `Participants`, `Duration`, `Source`, `Status`, `Model`, `Language`, `Session ID`). Once you study, a `Type` column (Work / Study) is added too. Existing columns are never renamed or retyped. Lectures with slides get the PDF and one section per slide.
+- **Obsidian**: choose your vault; notes go into a `Meeting Pilot` folder named `{date} - {title}.md`; each part of a lecture links to its slide page.
 - **Summary model**: Apple Intelligence (default where available), a local model (oMLX, Ollama, LM Studio), or an OpenAI-compatible API key. Only the API option sends transcript text off the Mac.
 
 </details>
@@ -189,7 +217,7 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
 | 🎙️ **Audio & transcripts** | Recorded and transcribed on your Mac. Never uploaded. |
 | ✨ **Summaries** | Apple Intelligence & local models run on-device. API mode sends transcript text only to the provider you choose. |
 | 🏷️ **Meeting metadata** | From the Teams window (Accessibility), on-device OCR as fallback, plus Calendar / Outlook if enabled. |
-| 💾 **Storage** | Archived in `~/TeamsMeetings`; published only to destinations you pick. |
+| 💾 **Storage** | Archived in `~/TeamsMeetings`; published only to destinations you pick. Imported files stay where they are. |
 | 🔗 **Notion connect** | One-click OAuth goes through a stateless [Cloudflare Worker](docs/cloudflare/meeting-pilot-oauth.js) that never sees your meetings. Or paste your own token. |
 
 **macOS permissions** — asked only when a feature needs them:
