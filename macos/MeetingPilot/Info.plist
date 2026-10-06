@@ -2,56 +2,58 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleDevelopmentRegion</key>
-  <string>en</string>
-  <key>CFBundleLocalizations</key>
-  <array>
-    <string>en</string>
-    <string>it</string>
-    <string>es</string>
-    <string>fr</string>
-    <string>de</string>
-    <string>pt</string>
-    <string>nl</string>
-  </array>
-  <key>CFBundleExecutable</key>
-  <string>MeetingPilot</string>
-  <key>CFBundleIdentifier</key>
-  <string>io.github.mard4.MeetingPilot</string>
-  <key>CFBundleIconFile</key>
-  <string>AppIcon</string>
-  <key>CFBundleInfoDictionaryVersion</key>
-  <string>6.0</string>
-  <key>CFBundleName</key>
-  <string>Meeting Pilot</string>
-  <key>CFBundleDisplayName</key>
-  <string>Meeting Pilot</string>
-  <key>CFBundlePackageType</key>
-  <string>APPL</string>
-  <key>CFBundleShortVersionString</key>
-  <string>0.1.2</string>
-  <key>CFBundleVersion</key>
-  <string>3</string>
-  <key>LSMinimumSystemVersion</key>
-  <string>14.0</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Meeting Pilot</string>
+	<key>CFBundleExecutable</key>
+	<string>MeetingPilot</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>io.github.mard4.MeetingPilot</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>it</string>
+		<string>es</string>
+		<string>fr</string>
+		<string>de</string>
+		<string>pt</string>
+		<string>nl</string>
+	</array>
+	<key>CFBundleName</key>
+	<string>Meeting Pilot</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.2.0</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
 			<string>io.github.mard4.MeetingPilot.oauth</string>
 			<key>CFBundleURLSchemes</key>
-			<array><string>meetingpilot</string></array>
+			<array>
+				<string>meetingpilot</string>
+			</array>
 		</dict>
 	</array>
-  <key>NSAppleEventsUsageDescription</key>
-  <string>Meeting Pilot usa AppleScript per leggere i dettagli della riunione da Microsoft Teams e salvare i riepiloghi in Note.</string>
-  <key>NSMicrophoneUsageDescription</key>
-  <string>Meeting Pilot registra la tua voce insieme all'audio della riunione.</string>
-  <key>NSAudioCaptureUsageDescription</key>
-  <string>Meeting Pilot registra l'audio di Microsoft Teams per includere anche le voci degli altri partecipanti.</string>
-  <key>NSSpeechRecognitionUsageDescription</key>
-  <string>Meeting Pilot usa il riconoscimento vocale Apple On-Device per trascrivere localmente gli audio delle riunioni.</string>
-  <key>NSPrincipalClass</key>
-  <string>NSApplication</string>
+	<key>CFBundleVersion</key>
+	<string>4</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Meeting Pilot usa AppleScript per leggere i dettagli della riunione da Microsoft Teams e salvare i riepiloghi in Note.</string>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>Meeting Pilot registra l'audio di Microsoft Teams per includere anche le voci degli altri partecipanti.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Meeting Pilot registra la tua voce insieme all'audio della riunione.</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Meeting Pilot usa il riconoscimento vocale Apple On-Device per trascrivere localmente gli audio delle riunioni.</string>
 </dict>
 </plist>

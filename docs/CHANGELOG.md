@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-06
+
 ### Added
 - The Meeting Pilot model: a summary engine that runs on the Mac with nothing else to install. Pick Light (572 MB, Bonsai-4B) or Quality (2.5 GB, Qwen3-4B) in Pipeline › Summary and download it once; the file is checked against a fixed checksum. The llama.cpp engine ships inside the app (about 20 MB) and only runs while it writes notes or answers in the chat, then frees the memory. Macs with 8 GB of memory get a smaller context, and longer transcripts are condensed first.
 - A short welcome tour on first launch, and once after updating: who the notes are for, recording and importing, who writes the summary (with Apple Intelligence's status), where notes are published and how the chat answers from them with sources, ending with a sample of the notes you will get, a lecture's linked to its slides. Help › How Meeting Pilot Works replays it.
