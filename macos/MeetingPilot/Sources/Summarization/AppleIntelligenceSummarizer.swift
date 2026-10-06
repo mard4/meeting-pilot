@@ -12,7 +12,7 @@ enum AppleIntelligenceSummarizerError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .usage:
-            return "Usage: AppleIntelligenceSummarizer --availability | <input-json> <output-json>"
+            return "Usage: AppleIntelligenceSummarizer --availability | --chat <input-json> <output-json> | <input-json> <output-json>"
         case .invalidInput(let detail):
             return "Invalid summarizer input: \(detail)"
         case .unavailable(let detail):
@@ -93,6 +93,12 @@ enum ContextBudget {
     }
 }
 
+/// A meeting chat question: the chat's instructions and the question with its passages.
+struct ChatInput: Decodable {
+    let system: String
+    let prompt: String
+}
+
 struct SummarizerInput: Decodable {
     let transcript: String
     let existingSummary: String?
@@ -146,6 +152,13 @@ struct AppleIntelligenceSummarizer {
                 printAvailability()
                 return
             }
+            if arguments.count == 3 && arguments[0] == "--chat" {
+                guard #available(macOS 26.0, *) else {
+                    throw AppleIntelligenceSummarizerError.unavailable("requires macOS 26 or later")
+                }
+                try await answerChat(input: URL(fileURLWithPath: arguments[1]), output: URL(fileURLWithPath: arguments[2]))
+                return
+            }
             guard arguments.count == 2 else {
                 throw AppleIntelligenceSummarizerError.usage
             }
@@ -188,6 +201,22 @@ struct AppleIntelligenceSummarizer {
         }
         let data = try? JSONSerialization.data(withJSONObject: status, options: [.sortedKeys])
         print(data.flatMap { String(data: $0, encoding: .utf8) } ?? "{\"status\":\"unavailable\"}")
+    }
+
+    /// Answers a meeting chat question with the on-device model. The passages are cut
+    /// to what fits the context next to the instructions and the answer.
+    @available(macOS 26.0, *)
+    static func answerChat(input inputURL: URL, output outputURL: URL) async throws {
+        let model = SystemLanguageModel.default
+        guard model.availability == .available else {
+            throw AppleIntelligenceSummarizerError.unavailable(availabilityReason(model.availability))
+        }
+        let input = try JSONDecoder().decode(ChatInput.self, from: Data(contentsOf: inputURL))
+        let room = ContextBudget.tokens - ContextBudget.estimate(input.system) - ContextBudget.finalAnswerTokens
+        let prompt = ContextBudget.truncated(input.prompt, toTokens: max(room, 256))
+        let response = try await LanguageModelSession(model: model, instructions: input.system).respond(to: prompt)
+        let data = try JSONSerialization.data(withJSONObject: ["answer": response.content], options: [.sortedKeys])
+        try data.write(to: outputURL, options: .atomic)
     }
 
     @available(macOS 26.0, *)

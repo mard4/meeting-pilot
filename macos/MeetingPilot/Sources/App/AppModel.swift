@@ -761,9 +761,9 @@ final class AppModel: ObservableObject {
                 if output.contains("Done:") {
                     self.statusMessage = "Sintesi completata e riunione pubblicata"
                 } else {
-                    let detail = output.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let detail = cliFailureLine(output)
                     self.statusMessage = detail.isEmpty ? "Nuovo tentativo di sintesi fallito" : detail
-                    AppLog.append("Retry sintesi fallito\n\(self.statusMessage)")
+                    AppLog.append("Retry sintesi fallito\n\(output)")
                 }
                 self.refresh()
             }
@@ -800,9 +800,9 @@ final class AppModel: ObservableObject {
                 if output.contains("Done:") {
                     self.statusMessage = "Trascrizione completata e riunione pubblicata"
                 } else {
-                    let detail = output.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let detail = cliFailureLine(output)
                     self.statusMessage = detail.isEmpty ? "Nuovo tentativo di trascrizione fallito" : detail
-                    AppLog.append("Retry trascrizione fallito\n\(self.statusMessage)")
+                    AppLog.append("Retry trascrizione fallito\n\(output)")
                 }
                 self.refresh()
             }
@@ -1164,7 +1164,8 @@ final class AppModel: ObservableObject {
             DispatchQueue.main.async {
                 let message = output.contains("\"provider\"")
                     ? "Risposta salvata"
-                    : (output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Salvataggio non riuscito" : output)
+                    : (cliFailureLine(output).isEmpty ? "Salvataggio non riuscito" : cliFailureLine(output))
+                if !output.contains("\"provider\"") { AppLog.append("Salvataggio chat fallito\n\(output)") }
                 self.statusMessage = message
                 completion(message)
             }
@@ -1945,4 +1946,13 @@ func presentErrorAlert(_ title: String, detail: String) {
     alert.alertStyle = .warning
     alert.addButton(withTitle: localized("OK"))
     alert.runModal()
+}
+
+/// The CLI prints its progress and, on failure, a traceback before one readable
+/// last line; the app shows that line and keeps the rest for the log.
+func cliFailureLine(_ output: String) -> String {
+    output
+        .split(whereSeparator: \.isNewline)
+        .map { $0.trimmingCharacters(in: .whitespaces) }
+        .last(where: { !$0.isEmpty }) ?? ""
 }
