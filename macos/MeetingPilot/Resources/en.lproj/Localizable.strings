@@ -820,6 +820,17 @@
 "Arriva prima del connettore Salesforce" = "It ships before the Salesforce connector";
 "e Giulia prepara il piano di rilascio entro venerdì" = "and Giulia prepares the release plan by Friday";
 "Design review · Onboarding" = "Design review · Onboarding";
+"Veloce, riconosce chi parla. Nessun download." = "Fast, recognizes who is speaking. Nothing to download.";
+"Riconosce chi parla. Serve il modello Parakeet." = "Recognizes who is speaking. Needs the Parakeet model.";
+"Modello Parakeet: più completo quando le voci si sovrappongono." = "Parakeet model: more complete when voices overlap.";
+"Scarica Parakeet" = "Download Parakeet";
+"Download di Parakeet…" = "Downloading Parakeet…";
+"Preparazione di Parakeet…" = "Preparing Parakeet…";
+"Scarica prima il modello Parakeet" = "Download the Parakeet model first";
+"Download del modello Parakeet…" = "Downloading the Parakeet model…";
+"Modello Parakeet pronto" = "Parakeet model ready";
+"Download di Parakeet non riuscito" = "Parakeet download failed";
+"Su questa versione di macOS la trascrizione Apple non riconosce i singoli parlanti. FluidAudio invece li riconosce ed è comunque locale e privato: l'audio non lascia il Mac." = "On this version of macOS, Apple transcription can't tell speakers apart. FluidAudio can, and it is just as local and private: the audio never leaves your Mac.";
 "Il modello di Meeting Pilot, sul Mac. Si scarica una volta, niente da installare." = "Meeting Pilot's own model, on your Mac. Download it once, nothing to install.";
 "Gira sul Mac con il motore incluso nell'app. Si avvia solo mentre scrive le note, poi libera la memoria." = "Runs on your Mac with the engine built into the app. It starts only while writing notes, then frees the memory.";
 "Leggero" = "Light";

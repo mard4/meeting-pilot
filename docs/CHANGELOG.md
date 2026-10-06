@@ -19,6 +19,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Notion pages with more than 100 blocks are completed in further requests instead of being cut off.
 - Transcripts longer than one summary request (about 1 h 45 of speech) are condensed part by part before summarizing instead of being cut off, and transcription and Apple Intelligence time limits now grow with the length of the recording.
 
+### Changed
+- From macOS 26 Apple's on-device recognizer transcribes by default and FluidAudio labels the speakers, in its offline mode, which tells quickly alternating voices apart far better. The Parakeet speech model (~460 MB) is no longer bundled: the FluidAudio card downloads it on request, and older Macs fetch it on their own. The app is about 150 MB instead of 650 MB.
+
 ### Fixed
 - Recordings made outside a call no longer stop by themselves when Teams releases the microphone, and no longer take the title and participants of an earlier Teams call.
 

@@ -820,6 +820,17 @@
 "Arriva prima del connettore Salesforce" = "Er kommt vor dem Salesforce-Connector";
 "e Giulia prepara il piano di rilascio entro venerdì" = "und Giulia bereitet bis Freitag den Releaseplan vor";
 "Design review · Onboarding" = "Design-Review · Onboarding";
+"Veloce, riconosce chi parla. Nessun download." = "Schnell, erkennt, wer spricht. Kein Download.";
+"Riconosce chi parla. Serve il modello Parakeet." = "Erkennt, wer spricht. Benötigt das Parakeet-Modell.";
+"Modello Parakeet: più completo quando le voci si sovrappongono." = "Parakeet-Modell: vollständiger, wenn sich Stimmen überlagern.";
+"Scarica Parakeet" = "Parakeet laden";
+"Download di Parakeet…" = "Parakeet wird geladen…";
+"Preparazione di Parakeet…" = "Parakeet wird vorbereitet…";
+"Scarica prima il modello Parakeet" = "Lade zuerst das Parakeet-Modell";
+"Download del modello Parakeet…" = "Parakeet-Modell wird geladen…";
+"Modello Parakeet pronto" = "Parakeet-Modell bereit";
+"Download di Parakeet non riuscito" = "Download von Parakeet fehlgeschlagen";
+"Su questa versione di macOS la trascrizione Apple non riconosce i singoli parlanti. FluidAudio invece li riconosce ed è comunque locale e privato: l'audio non lascia il Mac." = "Unter dieser macOS-Version unterscheidet die Apple-Transkription keine Sprecher. FluidAudio schon, und es bleibt lokal und privat: Das Audio verlässt den Mac nicht.";
 "Il modello di Meeting Pilot, sul Mac. Si scarica una volta, niente da installare." = "Das Modell von Meeting Pilot, auf deinem Mac. Einmal herunterladen, nichts zu installieren.";
 "Gira sul Mac con il motore incluso nell'app. Si avvia solo mentre scrive le note, poi libera la memoria." = "Läuft auf deinem Mac mit der in der App enthaltenen Engine. Sie startet nur, während sie Notizen schreibt, und gibt danach den Speicher frei.";
 "Leggero" = "Leicht";
