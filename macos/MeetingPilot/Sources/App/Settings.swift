@@ -204,7 +204,7 @@ struct SettingsOverviewView: View {
             }
 
             SettingsGroup(title: "Aspetto") {
-                SettingsLine(title: "Lingua app") {
+                SettingsLine(title: "Lingua app", icon: SettingsIcon(symbol: "globe")) {
                     if isRelaunchingForLanguage {
                         // saveAppLanguage() relaunches the whole process — Bundle.main's
                         // locale is bound at launch and can't be hot-swapped — so without
@@ -234,7 +234,7 @@ struct SettingsOverviewView: View {
                     }
                 }
                 SettingsDivider()
-                SettingsLine(title: "Tema app") {
+                SettingsLine(title: "Tema app", icon: SettingsIcon(symbol: "circle.lefthalf.filled")) {
                     ThemeIconPicker(selection: Binding(
                         get: { model.appTheme },
                         set: { model.saveAppTheme($0) }
@@ -248,7 +248,11 @@ struct SettingsOverviewView: View {
                 SettingsDivider()
                 SidebarScreenSharingRow()
                 SettingsDivider()
-                SettingsLine(title: "Cartella audio", detail: "Dove arrivano le registrazioni da elaborare.") {
+                SettingsLine(
+                    title: "Cartella audio",
+                    detail: "Dove arrivano le registrazioni da elaborare.",
+                    icon: SettingsIcon(symbol: "folder.fill", badge: "waveform")
+                ) {
                     HStack(spacing: 6) {
                         TextField("Percorso cartella audio", text: $audioFolder)
                             .textFieldStyle(DarkTextFieldStyle())
@@ -301,14 +305,19 @@ struct SettingsGroup<Content: View>: View {
     }
 }
 
-/// Label (and an optional explanation) on the left, its control on the right.
+/// Label (and an optional explanation) on the left, its control on the right, with an
+/// icon in front so a row is recognised before it is read.
 struct SettingsLine<Control: View>: View {
     let title: String
     var detail: String? = nil
+    var icon: SettingsIcon? = nil
     @ViewBuilder let control: Control
 
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
+            if let icon {
+                icon
+            }
             VStack(alignment: .leading, spacing: 2) {
                 Text(localized(title))
                     .font(.system(size: 13, weight: .semibold))
@@ -324,6 +333,35 @@ struct SettingsLine<Control: View>: View {
             control
         }
         .padding(.vertical, 10)
+    }
+}
+
+/// The tinted tile in front of a settings row; `badge` adds a small second symbol in
+/// its corner where no single SF Symbol says it (a folder of audio).
+struct SettingsIcon: View {
+    let symbol: String
+    var badge: String? = nil
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 7, style: .continuous)
+            .fill(MeetingPilotDesign.accentTint)
+            .overlay(
+                Image(systemName: symbol)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(MeetingPilotDesign.accent)
+            )
+            .overlay(alignment: .bottomTrailing) {
+                if let badge {
+                    Image(systemName: badge)
+                        .font(.system(size: 8, weight: .heavy))
+                        .foregroundStyle(MeetingPilotDesign.accent)
+                        .padding(2)
+                        .background(Circle().fill(MeetingPilotDesign.surfaceColor))
+                        .offset(x: 3, y: 3)
+                }
+            }
+            .frame(width: 28, height: 28)
+            .accessibilityHidden(true)
     }
 }
 
@@ -344,7 +382,8 @@ struct ProfileSettingsRow: View {
             title: "Tipo di note",
             detail: model.userProfile == .both
                 ? "Una registrazione diventa una lezione quando il titolo lo dice, ad esempio \"Lezione\" o \"Corso di\". Durante la registrazione puoi cambiarlo nella sidebar dal vivo."
-                : "Lezioni: concetti chiave e compiti. Riunioni: decisioni e action item."
+                : "Lezioni: concetti chiave e compiti. Riunioni: decisioni e action item.",
+            icon: SettingsIcon(symbol: "person.text.rectangle.fill")
         ) {
             HStack(spacing: 6) {
                 ProfileChip(title: "Studente", symbol: "graduationcap.fill", selected: model.userProfile.isStudent) {
@@ -394,7 +433,8 @@ struct SidebarScreenSharingRow: View {
     var body: some View {
         SettingsLine(
             title: "Nascondi la barra laterale nelle condivisioni schermo",
-            detail: "Chi guarda la tua condivisione o registrazione dello schermo non vede trascrizione e note."
+            detail: "Chi guarda la tua condivisione o registrazione dello schermo non vede trascrizione e note.",
+            icon: SettingsIcon(symbol: "sidebar.right")
         ) {
             Toggle("", isOn: Binding(
                 get: { hidden },
@@ -413,7 +453,9 @@ struct AppScreenSharingRow: View {
     var body: some View {
         SettingsLine(
             title: "Nascondi Meeting Pilot nelle condivisioni schermo",
-            detail: "Tutte le finestre dell'app restano invisibili a chi guarda. Anche da Finestra o con ⇧⌘H."
+            detail: "Tutte le finestre dell'app restano invisibili a chi guarda. Anche da Finestra o con ⇧⌘H.",
+            // The closest SF Symbol to incognito.
+            icon: SettingsIcon(symbol: "sunglasses.fill")
         ) {
             Toggle("", isOn: Binding(
                 get: { hidden },
@@ -430,7 +472,7 @@ struct LaunchAtLoginCard: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        SettingsLine(title: "Avvia al login", detail: "Apri Meeting Pilot quando accedi al Mac.") {
+        SettingsLine(title: "Avvia al login", detail: "Apri Meeting Pilot quando accedi al Mac.", icon: SettingsIcon(symbol: "power")) {
             Toggle("", isOn: Binding(
                 get: { model.launchAtLogin },
                 set: { model.saveLaunchAtLogin($0) }

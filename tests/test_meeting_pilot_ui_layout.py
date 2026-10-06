@@ -62,7 +62,7 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
 
         self.assertIn("@Published var appTheme", source)
         self.assertIn('forKey: "MeetingPilotAppTheme"', source)
-        self.assertIn('SettingsLine(title: "Tema app")', settings)
+        self.assertIn('SettingsLine(title: "Tema app"', settings)
         self.assertIn("ThemeIconPicker(selection:", settings)
         self.assertIn("model.saveAppTheme($0)", settings)
         self.assertIn('themeButton(.light, symbol: "sun.max.fill", label: "Chiaro")', picker)
@@ -477,7 +477,7 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         recorder = _section(source, "struct RecorderView", "struct RecorderChoiceCard")
         settings = _section(source, "struct SettingsOverviewView", "struct LaunchAtLoginCard")
 
-        self.assertIn('SettingsLine(title: "Cartella audio"', settings)
+        self.assertIn('title: "Cartella audio"', settings)
         self.assertIn("model.saveRecorderFolder(audioFolder)", settings)
         self.assertNotIn('Text("Cartella audio")', recorder)
 
