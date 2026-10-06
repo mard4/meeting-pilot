@@ -176,32 +176,6 @@ struct SettingsRow: View {
     }
 }
 
-struct SettingsConnectionStatusRow: View {
-    let title: String
-    let status: String
-    let isConnected: Bool
-    let assetName: String
-    let fallbackSymbol: String
-    var lightIconBackground = false
-
-    var body: some View {
-        HStack(spacing: 14) {
-            BundledAssetIcon(name: assetName, fallbackSymbol: fallbackSymbol, size: 22)
-                .frame(width: 36, height: 36)
-                .background(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .fill(lightIconBackground ? Color.white : MeetingPilotDesign.hoverColor)
-                )
-            Text(localized(title))
-                .font(.system(size: 14, weight: .semibold))
-            Spacer()
-            MPBadge(text: status, tone: isConnected ? .success : .neutral)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .mpCard(padding: 14, radius: 14)
-    }
-}
-
 struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         MPPrimaryButtonStyle().makeBody(configuration: configuration)

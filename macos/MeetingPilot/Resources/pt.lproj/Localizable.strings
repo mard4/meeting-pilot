@@ -820,6 +820,8 @@
 "Arriva prima del connettore Salesforce" = "Vem antes do conector do Salesforce";
 "e Giulia prepara il piano di rilascio entro venerdì" = "e a Giulia prepara o plano de lançamento até sexta";
 "Design review · Onboarding" = "Revisão de design · Onboarding";
+"Nascondi la barra laterale nelle condivisioni schermo" = "Ocultar a barra lateral no compartilhamento de tela";
+"Chi guarda la tua condivisione o registrazione dello schermo non vede trascrizione e note." = "Quem vê o seu compartilhamento ou gravação de tela não vê a transcrição nem as notas.";
 "Veloce, riconosce chi parla. Nessun download." = "Rápido, reconhece quem está falando. Sem downloads.";
 "Riconosce chi parla. Serve il modello Parakeet." = "Reconhece quem está falando. Precisa do modelo Parakeet.";
 "Modello Parakeet: più completo quando le voci si sovrappongono." = "Modelo Parakeet: mais completo quando as vozes se sobrepõem.";
@@ -831,6 +833,17 @@
 "Modello Parakeet pronto" = "Modelo Parakeet pronto";
 "Download di Parakeet non riuscito" = "Falha ao baixar o Parakeet";
 "Su questa versione di macOS la trascrizione Apple non riconosce i singoli parlanti. FluidAudio invece li riconosce ed è comunque locale e privato: l'audio non lascia il Mac." = "Nesta versão do macOS, a transcrição da Apple não distingue os falantes. O FluidAudio distingue, e continua local e privado: o áudio não sai do Mac.";
+"Profilo, aspetto e preferenze dell'app." = "Perfil, aparência e preferências do app.";
+"Aspetto" = "Aparência";
+"Sistema" = "Sistema";
+"Tipo di note" = "Tipo de notas";
+"Lezioni: concetti chiave e compiti. Riunioni: decisioni e action item." = "Aulas: conceitos-chave e tarefas. Reuniões: decisões e itens de ação.";
+"Dove arrivano le registrazioni da elaborare." = "Onde chegam as gravações a processar.";
+"Apri Meeting Pilot quando accedi al Mac." = "Abre o Meeting Pilot ao iniciar sessão no Mac.";
+"Nascondi Meeting Pilot nelle condivisioni schermo" = "Ocultar o Meeting Pilot no compartilhamento de tela";
+"Tutte le finestre dell'app restano invisibili a chi guarda. Anche da Finestra o con ⇧⌘H." = "Todas as janelas do app ficam invisíveis para quem assiste. Também em Janela ou com ⇧⌘H.";
+"Trascrizione esterna" = "Transcrição externa";
+"Serve il modello Parakeet." = "Precisa do modelo Parakeet.";
 "Il modello di Meeting Pilot, sul Mac. Si scarica una volta, niente da installare." = "O modelo do Meeting Pilot, no teu Mac. Descarrega-se uma vez, nada para instalar.";
 "Gira sul Mac con il motore incluso nell'app. Si avvia solo mentre scrive le note, poi libera la memoria." = "Funciona no teu Mac com o motor incluído na app. Só arranca enquanto escreve as notas e depois liberta a memória.";
 "Leggero" = "Leve";

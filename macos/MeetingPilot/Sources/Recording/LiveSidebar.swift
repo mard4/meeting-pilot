@@ -130,6 +130,23 @@ private final class LiveSidebarPanel: NSPanel {
 final class LiveSidebarWindow {
     static let shared = LiveSidebarWindow()
 
+    static let hiddenFromScreenSharingKey = "MeetingPilotHideSidebarFromScreenSharing"
+
+    /// On unless the user turned it off in Settings.
+    static var hiddenFromScreenSharing: Bool {
+        UserDefaults.standard.object(forKey: hiddenFromScreenSharingKey) as? Bool ?? true
+    }
+
+    /// Applies to a sidebar already on screen too, so the change takes effect mid-meeting.
+    func setHiddenFromScreenSharing(_ hidden: Bool) {
+        UserDefaults.standard.set(hidden, forKey: Self.hiddenFromScreenSharingKey)
+        ScreenSharingPrivacy.applyToAllWindows()
+    }
+
+    static func isSidebar(_ window: NSWindow) -> Bool {
+        window is LiveSidebarPanel
+    }
+
     private var panel: NSPanel?
     private var pollTimer: Timer?
     private let store = LiveSidebarStore()
@@ -174,6 +191,9 @@ final class LiveSidebarWindow {
         // The sidebar's text is drawn for a dark surface; pin the glass to dark so it stays
         // legible when macOS itself is in light mode.
         panel.appearance = NSAppearance(named: .darkAqua)
+        // Keep the sidebar out of screen shares and recordings when the user asks for it:
+        // other participants see the meeting, not the transcript and notes floating over it.
+        ScreenSharingPrivacy.apply(to: panel)
 
         let view = LiveSidebarView(store: store, onClose: { [weak self] in self?.close() })
         panel.contentView = NSHostingView(rootView: view)
@@ -647,5 +667,44 @@ struct PromptAudioSourcePicker: View {
         .background(Capsule().fill(Color.white.opacity(0.06)))
         .fixedSize()
         .animation(.mpSnappy, value: selection)
+    }
+}
+
+/// Keeps Meeting Pilot's windows out of screen shares and recordings: the live sidebar
+/// on its own setting, or every window (main window, prompts, sidebar) when the user
+/// hides the whole app.
+enum ScreenSharingPrivacy {
+    static let appHiddenKey = "MeetingPilotHideAppFromScreenSharing"
+
+    /// Off unless the user turns it on: sharing the app itself, say in a demo, is legitimate.
+    static var appHidden: Bool {
+        UserDefaults.standard.bool(forKey: appHiddenKey)
+    }
+
+    static func setAppHidden(_ hidden: Bool) {
+        UserDefaults.standard.set(hidden, forKey: appHiddenKey)
+        applyToAllWindows()
+    }
+
+    static func apply(to window: NSWindow) {
+        let hidden = appHidden || (LiveSidebarWindow.isSidebar(window) && LiveSidebarWindow.hiddenFromScreenSharing)
+        let type: NSWindow.SharingType = hidden ? .none : .readOnly
+        if window.sharingType != type { window.sharingType = type }
+    }
+
+    static func applyToAllWindows() {
+        NSApp.windows.forEach(apply(to:))
+    }
+
+    /// Windows created later (the main window, prompts, the sidebar) get the setting as
+    /// soon as they appear.
+    static func install() {
+        let center = NotificationCenter.default
+        for name in [NSWindow.didChangeOcclusionStateNotification, NSWindow.didBecomeKeyNotification] {
+            center.addObserver(forName: name, object: nil, queue: .main) { note in
+                if let window = note.object as? NSWindow { apply(to: window) }
+            }
+        }
+        applyToAllWindows()
     }
 }

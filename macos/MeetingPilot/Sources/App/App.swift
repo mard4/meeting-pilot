@@ -36,12 +36,29 @@ struct MeetingPilotApp: App {
                 }
                 .keyboardShortcut("i", modifiers: .command)
             }
+            CommandGroup(before: .windowList) {
+                HideFromScreenSharingCommand()
+                Divider()
+            }
             CommandGroup(replacing: .help) {
                 Button(localized("Come funziona Meeting Pilot")) {
                     appDelegate.showWelcome(initialProfile: appDelegate.model.userProfile)
                 }
             }
         }
+    }
+}
+
+/// Window › Hide Meeting Pilot from Screen Sharing, a checkmark item in step with Settings.
+struct HideFromScreenSharingCommand: View {
+    @AppStorage(ScreenSharingPrivacy.appHiddenKey) private var hidden = false
+
+    var body: some View {
+        Toggle(localized("Nascondi Meeting Pilot nelle condivisioni schermo"), isOn: Binding(
+            get: { hidden },
+            set: { ScreenSharingPrivacy.setAppHidden($0) }
+        ))
+        .keyboardShortcut("h", modifiers: [.command, .shift])
     }
 }
 
@@ -121,6 +138,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         }
 #endif
         NSApp.setActivationPolicy(.regular)
+        ScreenSharingPrivacy.install()
         UNUserNotificationCenter.current().delegate = self
         NotificationBridge.configureCategories()
         NotificationBridge.requestAuthorization()
