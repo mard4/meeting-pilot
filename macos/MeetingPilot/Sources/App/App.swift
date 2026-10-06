@@ -21,10 +21,11 @@ struct MeetingPilotApp: App {
 
     var body: some Scene {
         WindowGroup("Meeting Pilot") {
+            // RootView applies the theme; reading it here would not update, as this
+            // closure doesn't observe the model.
             RootView()
                 .environmentObject(appDelegate.model)
                 .frame(minWidth: 760, minHeight: 540)
-                .preferredColorScheme(appDelegate.model.appTheme == .light ? .light : .dark)
         }
         Settings {
             EmptyView()
@@ -138,6 +139,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         }
 #endif
         NSApp.setActivationPolicy(.regular)
+        NSApp.appearance = model.appTheme.appearance
         ScreenSharingPrivacy.install()
         UNUserNotificationCenter.current().delegate = self
         NotificationBridge.configureCategories()
@@ -186,7 +188,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
 
-        let overviewView = MenuBarOverview(
+        let overviewView = AppThemed { MenuBarOverview(
             openApp: { [weak self] in
                 self?.closePopover()
                 self?.showMainWindow()
@@ -204,10 +206,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
                 self?.closePopover()
                 self?.importFiles()
             }
-        )
+        ) }
             .environmentObject(model)
             .frame(width: 320, height: 330)
-            .preferredColorScheme(model.appTheme == .light ? .light : .dark)
 
         popover.contentSize = NSSize(width: 320, height: 330)
         popover.behavior = .transient
@@ -335,9 +336,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             window.center()
             window.isReleasedWhenClosed = false
             window.contentViewController = NSHostingController(
-                rootView: DiaryNotebookView()
+                rootView: AppThemed { DiaryNotebookView() }
                     .environmentObject(model)
-                    .preferredColorScheme(model.appTheme == .light ? .light : .dark)
             )
             diaryWindow = window
         }

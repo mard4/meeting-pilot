@@ -676,6 +676,7 @@ final class AppModel: ObservableObject {
     func saveAppTheme(_ theme: MeetingPilotTheme) {
         guard theme != appTheme else { return }
         appTheme = theme
+        NSApp.appearance = theme.appearance
         UserDefaults.standard.set(theme.rawValue, forKey: "MeetingPilotAppTheme")
         statusMessage = theme == .light ? "Tema chiaro attivato" : "Tema scuro attivato"
     }
