@@ -3,7 +3,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
+import traceback
+import urllib.error
 from pathlib import Path
 
 from .config import Config
@@ -16,6 +19,7 @@ from .chat.knowledge_base import (
 )
 from .chat.meeting_chat import (
     MeetingChatFilters,
+    MeetingChatResult,
     answer_meeting_question,
     available_chat_filter_values,
     available_chat_projects,
@@ -31,10 +35,20 @@ from .media_import import import_media_file
 from .pipeline import process_audio, retry_from_transcript, retry_transcription
 from .platforms.teams.teams_scraper import capture_teams_runtime_metadata
 from .watcher import _source_key, mark_processed, watch
-from .language import config_language
+from .language import config_language, label, resolve_output_language
 
 
 def main() -> None:
+    try:
+        _main()
+    except Exception as exc:  # noqa: BLE001 - every failure ends in one readable line
+        # The app logs the whole output and shows its last line, so the traceback
+        # stays in the log and the person reads a sentence.
+        traceback.print_exc()
+        raise SystemExit(describe_error(exc, resolve_output_language(), "command_failed")) from exc
+
+
+def _main() -> None:
     env_path = _env_path()
     _load_dotenv(env_path)
     parser = argparse.ArgumentParser(prog="meeting-pilot")
@@ -262,19 +276,24 @@ def main() -> None:
             )
         if not question:
             raise SystemExit("chat requires --question or --prompt.")
-        result = answer_meeting_question(
-            config,
-            question,
-            MeetingChatFilters(
-                projects=tuple(args.project or ()),
-                themes=tuple(args.theme or ()),
-                start_date=args.start_date,
-                end_date=args.end_date,
-                sources=tuple(args.source or ()),
-                search_scope=args.scope,
-                external_sources=tuple(args.external_source or ()),
-            ),
-        )
+        try:
+            result = answer_meeting_question(
+                config,
+                question,
+                MeetingChatFilters(
+                    projects=tuple(args.project or ()),
+                    themes=tuple(args.theme or ()),
+                    start_date=args.start_date,
+                    end_date=args.end_date,
+                    sources=tuple(args.source or ()),
+                    search_scope=args.scope,
+                    external_sources=tuple(args.external_source or ()),
+                ),
+            )
+        except RuntimeError as exc:
+            # The app reads stdout and stderr together and shows the answer as is, so a
+            # failing provider gets one sentence in the JSON, not a traceback.
+            result = MeetingChatResult(answer=_chat_failure_message(config, exc))
         print(json.dumps(result_to_dict(result), ensure_ascii=False, indent=2))
         return
 
@@ -389,6 +408,20 @@ def main() -> None:
         )
         result = index_knowledge_documents(default_knowledge_index_path(config.journal_root), documents)
         print(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+def _chat_failure_message(config: Config, error: Exception) -> str:
+    return describe_error(error, config_language(config), "chat_provider_failed")
+
+
+def describe_error(error: Exception, language: str, template: str) -> str:
+    """One sentence for the app: a provider that rejects the key says so, anything else keeps its message."""
+    http_error = error if isinstance(error, urllib.error.HTTPError) else error.__cause__
+    if isinstance(http_error, urllib.error.HTTPError) and http_error.code in {401, 403}:
+        reason = label(language, "provider_unauthorized")
+    else:
+        reason = re.sub(r"^(Meeting chat|Summary) provider request failed: ", "", str(error)).rstrip(".")
+    return label(language, template).format(reason=reason)
 
 
 def _chat_catalog_payload(values: dict[str, list[str]]) -> dict[str, list[str]]:

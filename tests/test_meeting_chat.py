@@ -19,6 +19,7 @@ from meeting_pilot.chat.meeting_chat import (
     answer_meeting_question,
     available_chat_filter_values,
     available_chat_projects,
+    chat_provider,
     quick_prompt_question,
     save_meeting_chat_result,
 )
@@ -602,6 +603,50 @@ class MeetingChatTests(unittest.TestCase):
             payload = json.loads(completed.stdout)
             self.assertEqual(payload["answer"], "Non trovato nei meeting selezionati.")
             self.assertEqual(payload["citations"], [])
+
+    def test_apple_intelligence_chat_stays_on_the_mac(self) -> None:
+        config = SimpleNamespace(summary_provider_mode="apple", summary_base_url="https://api.example.com/v1")
+        with patch(
+            "meeting_pilot.chat.meeting_chat.chat_with_apple_intelligence", return_value="Risposta [1]"
+        ) as apple, patch("urllib.request.urlopen") as urlopen:
+            answer = chat_provider(config)("sistema", "domanda")
+
+        self.assertEqual(answer, "Risposta [1]")
+        apple.assert_called_once_with(config, "sistema", "domanda")
+        urlopen.assert_not_called()
+
+    def test_cli_chat_explains_a_rejected_provider_instead_of_a_traceback(self) -> None:
+        import urllib.error
+
+        from meeting_pilot import cli
+
+        rejected = urllib.error.HTTPError("https://api.example.com", 401, "Unauthorized", {}, None)
+        try:
+            raise RuntimeError(f"Meeting chat provider request failed: {rejected}") from rejected
+        except RuntimeError as error:
+            message = cli._chat_failure_message(SimpleNamespace(output_language="it"), error)
+
+        self.assertIn("chiave API", message)
+        self.assertNotIn("HTTP Error", message)
+
+    def test_cli_failures_end_with_one_readable_line(self) -> None:
+        import urllib.error
+
+        from meeting_pilot import cli
+
+        rejected = urllib.error.HTTPError("https://api.example.com", 401, "Unauthorized", {}, None)
+
+        def failing() -> None:
+            raise RuntimeError(f"Summary provider request failed: {rejected}") from rejected
+
+        with patch.object(cli, "_main", failing), patch.dict(os.environ, {"OUTPUT_LANGUAGE": "it"}), \
+                patch("sys.stderr"), self.assertRaises(SystemExit) as raised:
+            cli.main()
+
+        self.assertEqual(
+            raised.exception.code,
+            "Errore: il provider ha rifiutato la richiesta (chiave API mancante o non valida).",
+        )
 
 
 if __name__ == "__main__":

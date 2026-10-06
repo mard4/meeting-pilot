@@ -17,6 +17,7 @@ import certifi
 from ..config import Config
 from ..language import NOT_FOUND_ANSWERS, config_language, label, language_name
 from ..slides.deck import TEXT_NAME, slides_dir, slides_from_texts
+from ..summarization.apple_intelligence_client import chat_with_apple_intelligence
 from ..summarization.omlx_client import is_ollama, ollama_chat_request, strip_model_wrapping, summary_endpoint
 from .knowledge_base import default_knowledge_index_path, load_knowledge_documents
 from ..tag_catalog import catalog_values
@@ -137,7 +138,7 @@ def answer_meeting_question(
         },
         ensure_ascii=False,
     )
-    answer = (provider or _openai_compatible_chat(config))(system_prompt, user_prompt).strip()
+    answer = (provider or chat_provider(config))(system_prompt, user_prompt).strip()
     if not answer:
         answer = not_found
     if answer not in NOT_FOUND_ANSWERS and citations and not re.search(r"\[\d+\]", answer):
@@ -503,6 +504,17 @@ def _citations_for(passages: list[_Passage]) -> list[MeetingChatCitation]:
             )
         )
     return citations
+
+
+def chat_provider(config: Config) -> ChatProvider:
+    """The chat answers with the provider chosen for summaries. Apple Intelligence runs
+    on the Mac, so it must not fall through to the OpenAI-compatible endpoint, whose
+    URL and key may belong to a cloud provider set up earlier."""
+    if getattr(config, "summary_provider_mode", "") == "apple":
+        return lambda system_prompt, user_prompt: strip_model_wrapping(
+            chat_with_apple_intelligence(config, system_prompt, user_prompt)
+        )
+    return _openai_compatible_chat(config)
 
 
 def _openai_compatible_chat(config: Config) -> ChatProvider:

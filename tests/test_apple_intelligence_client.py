@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 from meeting_pilot.summarization.apple_intelligence_client import (
     AppleIntelligenceUnavailable,
+    chat_with_apple_intelligence,
     summarize_with_apple_intelligence,
 )
 from meeting_pilot.artifacts import MeetingArtifacts
@@ -131,6 +132,39 @@ fi
 
             with self.assertRaises(AppleIntelligenceUnavailable):
                 summarize_with_apple_intelligence(self.config(helper), self.make_artifacts(root))
+
+    def test_chat_answers_through_the_native_helper(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            helper = root / "AppleIntelligenceSummarizer"
+            helper.write_text(
+                """#!/bin/sh
+[ "$1" = "--chat" ] || exit 9
+cp "$2" "$(dirname "$0")/seen.json"
+printf '%s' '{"answer":"<section>Beta [1]</section>"}' > "$3"
+""",
+                encoding="utf-8",
+            )
+            helper.chmod(0o755)
+
+            answer = chat_with_apple_intelligence(self.config(helper), "istruzioni", "domanda")
+
+            self.assertEqual(answer, "<section>Beta [1]</section>")
+            seen = json.loads((root / "seen.json").read_text(encoding="utf-8"))
+            self.assertEqual(seen, {"system": "istruzioni", "prompt": "domanda"})
+
+    def test_chat_reports_why_apple_intelligence_failed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            helper = root / "AppleIntelligenceSummarizer"
+            helper.write_text(
+                "#!/bin/sh\nprintf '%s\\n' 'Apple Intelligence unavailable: Apple Intelligence is not enabled in System Settings' >&2\nexit 2\n",
+                encoding="utf-8",
+            )
+            helper.chmod(0o755)
+
+            with self.assertRaisesRegex(AppleIntelligenceUnavailable, "not enabled in System Settings"):
+                chat_with_apple_intelligence(self.config(helper), "istruzioni", "domanda")
 
 
 if __name__ == "__main__":

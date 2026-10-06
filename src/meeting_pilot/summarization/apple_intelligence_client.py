@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -101,6 +102,45 @@ def summarize_with_apple_intelligence(
     if not isinstance(data, dict):
         raise RuntimeError(f"Apple Intelligence returned an invalid summary. See {log_path}")
     return _normalize_summary(data, artifacts, profile)
+
+
+def chat_with_apple_intelligence(config: Config, system_prompt: str, user_prompt: str) -> str:
+    """Answers a meeting chat question with the on-device model through the native helper."""
+    command_path = Path(config.apple_intelligence_summarizer_cmd).expanduser()
+    if not command_path.is_file():
+        raise AppleIntelligenceUnavailable(f"Apple Intelligence helper not found: {command_path}")
+    with tempfile.TemporaryDirectory(prefix="meeting-pilot-chat-") as temporary:
+        input_path = Path(temporary) / "chat_input.json"
+        output_path = Path(temporary) / "chat_output.json"
+        input_path.write_text(
+            json.dumps({"system": system_prompt, "prompt": user_prompt}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        try:
+            result = subprocess.run(
+                [str(command_path), "--chat", str(input_path), str(output_path)],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=config.apple_intelligence_timeout_seconds,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError(
+                f"Apple Intelligence did not answer within {config.apple_intelligence_timeout_seconds} seconds"
+            ) from exc
+        except OSError as exc:
+            raise AppleIntelligenceUnavailable(f"Apple Intelligence unavailable: {exc}") from exc
+        if result.returncode != 0:
+            lines = (result.stderr or result.stdout).splitlines()
+            reason = next((line.strip() for line in reversed(lines) if line.strip()), f"exit code {result.returncode}")
+            if "Apple Intelligence unavailable" in reason:
+                raise AppleIntelligenceUnavailable(reason)
+            raise RuntimeError(f"Apple Intelligence chat failed: {reason}")
+        try:
+            data = json.loads(output_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise RuntimeError("Apple Intelligence returned an invalid chat answer") from exc
+    return str(data.get("answer") or "") if isinstance(data, dict) else ""
 
 
 def _timeout_for_transcript(base_seconds: int, transcript: str) -> int:
