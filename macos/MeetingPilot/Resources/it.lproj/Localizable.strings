@@ -800,3 +800,14 @@
 "Arriva prima del connettore Salesforce" = "Arriva prima del connettore Salesforce";
 "e Giulia prepara il piano di rilascio entro venerdì" = "e Giulia prepara il piano di rilascio entro venerdì";
 "Design review · Onboarding" = "Design review · Onboarding";
+"Veloce, riconosce chi parla. Nessun download." = "Veloce, riconosce chi parla. Nessun download.";
+"Riconosce chi parla. Serve il modello Parakeet." = "Riconosce chi parla. Serve il modello Parakeet.";
+"Modello Parakeet: più completo quando le voci si sovrappongono." = "Modello Parakeet: più completo quando le voci si sovrappongono.";
+"Scarica Parakeet" = "Scarica Parakeet";
+"Download di Parakeet…" = "Download di Parakeet…";
+"Preparazione di Parakeet…" = "Preparazione di Parakeet…";
+"Scarica prima il modello Parakeet" = "Scarica prima il modello Parakeet";
+"Download del modello Parakeet…" = "Download del modello Parakeet…";
+"Modello Parakeet pronto" = "Modello Parakeet pronto";
+"Download di Parakeet non riuscito" = "Download di Parakeet non riuscito";
+"Su questa versione di macOS la trascrizione Apple non riconosce i singoli parlanti. FluidAudio invece li riconosce ed è comunque locale e privato: l'audio non lascia il Mac." = "Su questa versione di macOS la trascrizione Apple non riconosce i singoli parlanti. FluidAudio invece li riconosce ed è comunque locale e privato: l'audio non lascia il Mac.";

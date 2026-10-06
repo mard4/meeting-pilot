@@ -131,7 +131,7 @@ struct RecorderView: View {
                         recommended: !model.usesSpeechAnalyzer,
                         unavailable: !model.fluidAudioInstalled,
                         unavailableActionTitle: model.parakeetDownloadProgress == nil
-                            ? "Scarica Parakeet (\(AppModel.parakeetDownloadSize))"
+                            ? localized("Scarica Parakeet") + " (\(AppModel.parakeetDownloadSize))"
                             : nil,
                         unavailableAction: { model.downloadParakeet(selectWhenReady: true) }
                     ) {
@@ -211,7 +211,7 @@ struct RecorderView: View {
         if let progress = model.parakeetDownloadProgress {
             // FluidAudio reports 100% when it starts compiling the downloaded models.
             return progress < 1
-                ? "Download di Parakeet… \(Int(progress * 100))%"
+                ? localized("Download di Parakeet…") + " \(Int(progress * 100))%"
                 : "Preparazione di Parakeet…"
         }
         if !model.fluidAudioInstalled {

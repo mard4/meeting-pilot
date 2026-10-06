@@ -820,3 +820,14 @@
 "Arriva prima del connettore Salesforce" = "Il passe avant le connecteur Salesforce";
 "e Giulia prepara il piano di rilascio entro venerdì" = "et Giulia prépare le plan de lancement pour vendredi";
 "Design review · Onboarding" = "Revue de design · Onboarding";
+"Veloce, riconosce chi parla. Nessun download." = "Rapide, reconnaît qui parle. Rien à télécharger.";
+"Riconosce chi parla. Serve il modello Parakeet." = "Reconnaît qui parle. Nécessite le modèle Parakeet.";
+"Modello Parakeet: più completo quando le voci si sovrappongono." = "Modèle Parakeet : plus complet quand les voix se chevauchent.";
+"Scarica Parakeet" = "Télécharger Parakeet";
+"Download di Parakeet…" = "Téléchargement de Parakeet…";
+"Preparazione di Parakeet…" = "Préparation de Parakeet…";
+"Scarica prima il modello Parakeet" = "Téléchargez d'abord le modèle Parakeet";
+"Download del modello Parakeet…" = "Téléchargement du modèle Parakeet…";
+"Modello Parakeet pronto" = "Modèle Parakeet prêt";
+"Download di Parakeet non riuscito" = "Échec du téléchargement de Parakeet";
+"Su questa versione di macOS la trascrizione Apple non riconosce i singoli parlanti. FluidAudio invece li riconosce ed è comunque locale e privato: l'audio non lascia il Mac." = "Sur cette version de macOS, la transcription Apple ne distingue pas les locuteurs. FluidAudio le fait, tout en restant local et privé : l'audio ne quitte pas le Mac.";
