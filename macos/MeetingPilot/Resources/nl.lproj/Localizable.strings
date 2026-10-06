@@ -635,9 +635,8 @@
 "intervento" = "beurt";
 "interventi" = "beurten";
 "Riunione senza titolo" = "Naamloze vergadering";
-"Io" = "Ik";
 "Altri" = "Anderen";
-"Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e risultano come \"Io\"." = "De vergaderaudio komt niet binnen: de stemmen van anderen komen alleen via de microfoon binnen en verschijnen als \"Ik\".";
+"Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e non posso dire chi parla." = "De vergaderaudio komt niet binnen: de stemmen van anderen komen alleen via de microfoon binnen, dus ik kan niet zien wie er spreekt.";
 "Abilita Registrazione audio di sistema" = "Schakel Systeemaudio-opname in";
 "Nessun riconoscimento dei parlanti" = "Geen sprekerherkenning";
 "Resta su FluidAudio" = "Blijf bij FluidAudio";

@@ -635,9 +635,8 @@
 "intervento" = "turn";
 "interventi" = "turns";
 "Riunione senza titolo" = "Untitled meeting";
-"Io" = "Me";
 "Altri" = "Others";
-"Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e risultano come \"Io\"." = "No meeting audio is coming through: the others' voices only reach the microphone and show up as \"Me\".";
+"Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e non posso dire chi parla." = "No meeting audio is coming through: the others' voices only reach the microphone, so I can't tell who is speaking.";
 "Abilita Registrazione audio di sistema" = "Enable System Audio Recording";
 "Nessun riconoscimento dei parlanti" = "No speaker recognition";
 "Resta su FluidAudio" = "Stay on FluidAudio";

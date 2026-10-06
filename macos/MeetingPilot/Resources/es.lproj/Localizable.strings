@@ -635,9 +635,8 @@
 "intervento" = "intervención";
 "interventi" = "intervenciones";
 "Riunione senza titolo" = "Reunión sin título";
-"Io" = "Yo";
 "Altri" = "Otros";
-"Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e risultano come \"Io\"." = "No llega el audio de la reunión: las voces de los demás solo llegan por el micrófono y aparecen como \"Yo\".";
+"Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e non posso dire chi parla." = "No llega el audio de la reunión: las voces de los demás solo llegan por el micrófono y no puedo saber quién habla.";
 "Abilita Registrazione audio di sistema" = "Activar Grabación de audio del sistema";
 "Nessun riconoscimento dei parlanti" = "Sin reconocimiento de hablantes";
 "Resta su FluidAudio" = "Seguir con FluidAudio";

@@ -65,4 +65,22 @@ final class TeamsHeuristicsTests: XCTestCase {
     func testDedupKeepsFirstOccurrenceOrder() {
         XCTAssertEqual(dedupPreservingOrder(["b", "a", "b", "c", "a"]), ["b", "a", "c"])
     }
+
+    func testParticipantNameComesFromTheTileLabel() {
+        XCTAssertEqual(
+            TeamsSpeakerTracker.participantName(title: "Giulia Bianchi, Altre opzioni", labels: ["Giulia Bianchi"]),
+            "Giulia Bianchi")
+        XCTAssertEqual(
+            TeamsSpeakerTracker.participantName(title: "Rossi, Mario, More options", labels: ["Rossi, Mario", "Rossi"]),
+            "Rossi, Mario")
+        XCTAssertEqual(
+            TeamsSpeakerTracker.participantName(title: "D’Amico, Anna, Altre opzioni", labels: ["D'Amico, Anna "]),
+            "D'Amico, Anna")
+    }
+
+    func testParticipantNameNeedsAMatchingLabel() {
+        XCTAssertNil(TeamsSpeakerTracker.participantName(title: "Chat, Apri", labels: ["Riunione"]))
+        XCTAssertNil(TeamsSpeakerTracker.participantName(title: "Giulia Bianchi, Altre opzioni", labels: []))
+        XCTAssertNil(TeamsSpeakerTracker.participantName(title: "Giulia Bianchi", labels: ["Giulia Bianchi"]))
+    }
 }

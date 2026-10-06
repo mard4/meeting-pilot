@@ -6,9 +6,11 @@ import Foundation
 /// pipeline can put real names on FluidAudio's anonymous speaker clusters.
 ///
 /// New Teams is a Chromium web view: each remote participant's tile is an `AXMenuItem`
-/// titled "<Name>, <context menu hint>", and while that person talks a direct child group
-/// gains the `vdi-frame-occlusion` DOM class (the coloured speaking border). The user's own
-/// preview has no such border; their voice is already identified from the microphone track.
+/// titled "<Name>, <context menu hint>", with the name (which may itself contain a comma,
+/// as in "Rossi, Mario") also shown as a text label inside it. While that person talks, a
+/// direct child group gains the `vdi-frame-occlusion` DOM class (the coloured speaking
+/// border). The user's own preview has no such border; their voice is already identified
+/// from the microphone track.
 /// Times are seconds of recorded audio (pauses excluded), written to the sidecar as
 /// `teams_speakers.json` — a contract with `speaker_names.py`. The live sidebar asks
 /// `dominantSpeaker(from:to:)` in system-uptime seconds instead, so it can name lines
@@ -25,6 +27,9 @@ final class TeamsSpeakerTracker {
     private var timer: DispatchSourceTimer?
     private var teamsPID: pid_t?
     private var tileContainers: [AXUIElement] = []
+    /// Tile title → participant name, so the labels inside a tile are read once per rescan
+    /// rather than on every poll. Cleared on rescan, as labels can appear after the tile.
+    private var tileNames: [String: String?] = [:]
     private var lastScan: TimeInterval = 0
     private var recordedBeforePause: TimeInterval = 0
     private var activeSince: TimeInterval?
@@ -118,6 +123,7 @@ final class TeamsSpeakerTracker {
 
         let uptime = ProcessInfo.processInfo.systemUptime
         if tileContainers.isEmpty || uptime - lastScan >= Self.rescanInterval {
+            tileNames = [:]
             tileContainers = findTileContainers(in: app)
             lastScan = uptime
         }
@@ -160,8 +166,8 @@ final class TeamsSpeakerTracker {
     }
 
     /// Parents of the participant tiles. A tile is confirmed by its name also appearing as a
-    /// text label inside it, which keeps other context-menu items (chat, roster) out and
-    /// doesn't depend on the Teams UI language.
+    /// text label inside it (see `tileName`), which keeps other context-menu items (chat,
+    /// roster) out and doesn't depend on the Teams UI language.
     private func findTileContainers(in app: AXUIElement) -> [AXUIElement] {
         var containers: [AXUIElement] = []
         var visited = 0
@@ -170,7 +176,7 @@ final class TeamsSpeakerTracker {
             visited += 1
             let role = string(element, kAXRoleAttribute)
             if role == kAXMenuBarRole || role == kAXMenuRole { return }
-            if role == kAXMenuItemRole, let name = tileName(element), containsText(name, in: element, depth: 0) {
+            if role == kAXMenuItemRole, tileName(element) != nil {
                 if let parent = parent(of: element), !containers.contains(where: { CFEqual($0, parent) }) {
                     containers.append(parent)
                 }
@@ -185,23 +191,37 @@ final class TeamsSpeakerTracker {
     }
 
     private func tileName(_ element: AXUIElement) -> String? {
-        guard string(element, kAXRoleAttribute) == kAXMenuItemRole else { return nil }
-        let title = string(element, kAXTitleAttribute) ?? string(element, kAXDescriptionAttribute) ?? ""
-        guard let comma = title.firstIndex(of: ",") else { return nil }
-        let name = normalized(String(title[..<comma]))
-        return name.isEmpty ? nil : name
+        guard string(element, kAXRoleAttribute) == kAXMenuItemRole,
+              let title = string(element, kAXTitleAttribute) ?? string(element, kAXDescriptionAttribute)
+        else { return nil }
+        if let cached = tileNames[title] { return cached }
+        let name = Self.participantName(title: title, labels: texts(in: element, depth: 0))
+        tileNames.updateValue(name, forKey: title)
+        return name
     }
 
-    private func containsText(_ text: String, in element: AXUIElement, depth: Int) -> Bool {
-        guard depth < 10 else { return false }
+    /// The tile label the title starts with, followed by its comma. Cutting the title at the
+    /// first comma instead turned "Rossi, Mario" into "Rossi", which then matched no label,
+    /// so such participants were never tracked. The longest label wins, so "Rossi, Mario"
+    /// beats a stray "Rossi".
+    static func participantName(title: String, labels: [String]) -> String? {
+        let title = normalizedName(title)
+        return labels
+            .map(normalizedName)
+            .filter { !$0.isEmpty && title.hasPrefix($0 + ",") }
+            .max { $0.count < $1.count }
+    }
+
+    private func texts(in element: AXUIElement, depth: Int) -> [String] {
+        guard depth < 10 else { return [] }
+        var found: [String] = []
         for child in children(of: element) {
-            if string(child, kAXRoleAttribute) == kAXStaticTextRole,
-               normalized(string(child, kAXValueAttribute) ?? "") == text {
-                return true
+            if string(child, kAXRoleAttribute) == kAXStaticTextRole, let value = string(child, kAXValueAttribute) {
+                found.append(value)
             }
-            if containsText(text, in: child, depth: depth + 1) { return true }
+            found += texts(in: child, depth: depth + 1)
         }
-        return false
+        return found
     }
 
     private func hasSpeakingBorder(_ element: AXUIElement) -> Bool {
@@ -232,7 +252,7 @@ final class TeamsSpeakerTracker {
         (value * 100).rounded() / 100
     }
 
-    private func normalized(_ value: String) -> String {
+    private static func normalizedName(_ value: String) -> String {
         value.replacingOccurrences(of: "’", with: "'").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 

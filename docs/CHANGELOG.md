@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- The live sidebar no longer shows "Me" lines during a call. The microphone also hears the others through the speakers, so their words came out twice, once under "Me" even when you weren't talking. The microphone is now transcribed only when the Mac's audio isn't arriving, and those lines carry no label.
+- Teams participants whose display name contains a comma ("Rossi, Mario") are named again, in the sidebar and in the notes; before, they were never recognised.
+- In the sidebar, a Teams line now ends when the speaking border moves to someone else, so two people talking back to back no longer share one line and one name.
+
 ## [0.2.0] - 2026-10-06
 
 ### Added

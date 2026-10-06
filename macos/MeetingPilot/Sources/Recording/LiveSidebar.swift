@@ -230,7 +230,7 @@ struct LiveSidebarView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var livePulse = false
 
-    /// No red: that's the "Io" colour.
+    /// No red: that is the accent colour.
     private static let speakerPalette: [Color] = [
         .orange, .pink, .purple, .teal, .yellow,
     ]
@@ -309,13 +309,13 @@ struct LiveSidebarView: View {
     }
 
     /// Without the system-audio permission every voice reaches us through the microphone,
-    /// so the others are labelled "Io"; say so instead of showing a wrong transcript silently.
+    /// so nobody can be named; say so instead of showing an unattributed transcript silently.
     private var silentSystemAudioBanner: some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "speaker.slash.fill")
                 .foregroundStyle(.orange)
             VStack(alignment: .leading, spacing: 6) {
-                Text(localized("Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e risultano come \"Io\"."))
+                Text(localized("Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e non posso dire chi parla."))
                     .font(.system(size: 11))
                     .foregroundStyle(.white.opacity(0.85))
                     .fixedSize(horizontal: false, vertical: true)
@@ -437,12 +437,9 @@ struct LiveSidebarView: View {
                     }
                     ForEach(store.state.transcript) { entry in
                         VStack(alignment: .leading, spacing: 2) {
-                            if entry.speaker == "me" {
-                                Text(localized("Io"))
-                                    .font(.mpEyebrow(9))
-                                    .tracking(0.6)
-                                    .foregroundStyle(MeetingPilotDesign.accentStrong)
-                            } else if let name = entry.name {
+                            // Microphone lines ("me") carry no label: they only appear while the
+                            // Mac's audio is missing, when they are everyone's voice (see the banner).
+                            if let name = entry.name {
                                 Text(name)
                                     .font(.mpEyebrow(9))
                                     .tracking(0.6)

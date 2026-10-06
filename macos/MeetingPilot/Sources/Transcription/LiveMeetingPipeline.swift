@@ -5,9 +5,9 @@ import Foundation
 
 /// Feeds the raw system-audio tap into FluidAudio's `DiarizerManager` while a meeting is
 /// still recording, so speaker turns can be surfaced before the meeting ends, and runs
-/// streaming ASR on both legs: system audio ("them") and the microphone ("me"). Lines from
-/// the system leg are named after the Teams participant who was talking while they were
-/// spoken (see `TeamsSpeakerTracker`).
+/// streaming ASR on system audio ("them"), and on the microphone ("me") only while the
+/// system audio isn't arriving. Lines from the system leg are named after the Teams
+/// participant who was talking while they were spoken (see `TeamsSpeakerTracker`).
 ///
 /// This is best-effort and additive: any failure here (missing models, conversion errors,
 /// a slow diarization pass) must never affect the primary recording path in
@@ -69,6 +69,16 @@ final class LiveMeetingPipeline: @unchecked Sendable {
     /// little after it stops, so a line's span is widened by these before matching.
     private static let speakerLeadSeconds: TimeInterval = 0.5
     private static let speakerTrailSeconds: TimeInterval = 1.0
+    /// Teams calls rarely leave a clean pause between two people, so a system-audio line
+    /// is also closed when the Teams speaking border moves to someone else; otherwise one
+    /// line held both people's words under a single name. "Who is talking now" is the
+    /// dominant border over this trailing window, checked this often. The line's own
+    /// speaker is read only after this much of its speech, past the previous speaker's
+    /// lingering border, and the line is split only after twice that, so crosstalk
+    /// doesn't shred it into scraps.
+    private static let speakerChangeWindowSeconds: TimeInterval = 1.0
+    private static let speakerChangeCheckSeconds: TimeInterval = 0.3
+    private static let speechSecondsBeforeLineSpeaker: Double = 1.2
     /// 1120 ms is FluidAudio's smallest chunk that keeps punctuation stable over long
     /// sessions (the 560 ms tier drifts, see its `downloadAndPreloadShared` docs).
     private static let asrChunkMs = 1120
@@ -253,6 +263,13 @@ final class LiveMeetingPipeline: @unchecked Sendable {
         return speakerResolver?(start - Self.speakerLeadSeconds, end + Self.speakerTrailSeconds)
     }
 
+    /// The Teams participant talking just before `uptime`, without the widening
+    /// `speakerName` applies to a whole line.
+    private func currentSpeaker(for leg: AsrLeg, at uptime: TimeInterval) -> String? {
+        guard leg.speaker == "them", let resolver = queue.sync(execute: { speakerResolver }) else { return nil }
+        return resolver(uptime - Self.speakerChangeWindowSeconds, uptime)
+    }
+
     private func openPartialIndex(for speaker: String) -> Int? {
         guard let index = transcript.lastIndex(where: { $0.speaker == speaker }),
               transcript[index].kind == "partial"
@@ -266,6 +283,9 @@ final class LiveMeetingPipeline: @unchecked Sendable {
         var pauseSeconds: Double = 0
         var heardSpeech = false
         var lastSpeechAt: TimeInterval?
+        var speechSeconds: Double = 0
+        var lineSpeaker: String?
+        var lastSpeakerCheck: TimeInterval = 0
         for await chunk in leg.stream {
             do {
                 _ = try await leg.manager.process(audioBuffer: chunk.pcm)
@@ -277,6 +297,7 @@ final class LiveMeetingPipeline: @unchecked Sendable {
                 pauseSeconds += chunk.seconds
             } else {
                 pauseSeconds = 0
+                speechSeconds += chunk.seconds
                 if !heardSpeech {
                     let start = chunk.capturedAt - chunk.seconds
                     queue.sync { leg.utteranceStartedAt = start }
@@ -284,13 +305,27 @@ final class LiveMeetingPipeline: @unchecked Sendable {
                 heardSpeech = true
                 lastSpeechAt = chunk.capturedAt
             }
+            var speakerChanged = false
+            if !chunk.isSilent, speechSeconds >= Self.speechSecondsBeforeLineSpeaker,
+               chunk.capturedAt - lastSpeakerCheck >= Self.speakerChangeCheckSeconds {
+                lastSpeakerCheck = chunk.capturedAt
+                if let current = currentSpeaker(for: leg, at: chunk.capturedAt) {
+                    if lineSpeaker == nil {
+                        lineSpeaker = current
+                    } else if current != lineSpeaker, speechSeconds >= 2 * Self.speechSecondsBeforeLineSpeaker {
+                        speakerChanged = true
+                    }
+                }
+            }
             let paused = heardSpeech && pauseSeconds >= Self.pauseSecondsToCloseLine
-            if paused || utteranceSeconds >= Self.maxUtteranceSeconds {
+            if paused || speakerChanged || utteranceSeconds >= Self.maxUtteranceSeconds {
                 await closeLine(leg, lastSpeechAt: lastSpeechAt)
                 utteranceSeconds = 0
                 pauseSeconds = 0
                 heardSpeech = false
                 lastSpeechAt = nil
+                speechSeconds = 0
+                lineSpeaker = nil
             }
         }
         await closeLine(leg, lastSpeechAt: lastSpeechAt)
@@ -334,10 +369,15 @@ final class LiveMeetingPipeline: @unchecked Sendable {
 
     /// Microphone buffers from the recorder's `AVAudioEngine` input tap, when the Mac's
     /// audio is recorded too: the microphone is then the person recording ("me").
+    /// The sidebar shows only the others, so the microphone is transcribed only while the
+    /// system-audio tap is silent: the speakers' sound reaches the microphone too, and
+    /// transcribing it otherwise put a duplicate of the others' lines under "me".
     func ingestMicrophone(_ buffer: AVAudioPCMBuffer) {
         guard let copy = Self.copy(buffer) else { return }
         queue.async { [self] in
             guard !finalized else { return }
+            if !microphoneHeardSpeech, Self.rms(copy) >= Self.microphoneSilenceRMS { microphoneHeardSpeech = true }
+            guard systemAudioSilent else { return }
             let leg: AsrLeg
             if let existing = microphoneAsr {
                 leg = existing
@@ -346,7 +386,6 @@ final class LiveMeetingPipeline: @unchecked Sendable {
                 microphoneAsr = leg
                 startAsr(leg)
             }
-            if !microphoneHeardSpeech, Self.rms(copy) >= Self.microphoneSilenceRMS { microphoneHeardSpeech = true }
             feedAsr(copy, into: leg)
         }
     }
@@ -397,6 +436,8 @@ final class LiveMeetingPipeline: @unchecked Sendable {
             systemHeardSignal = true
             if systemAudioSilent {
                 systemAudioSilent = false
+                // The microphone stops being transcribed, so its open line would never close.
+                if let partial = openPartialIndex(for: "me") { transcript.remove(at: partial) }
                 writeLiveState()
             }
         } else if !systemHeardSignal, !systemAudioSilent, microphoneHeardSpeech,

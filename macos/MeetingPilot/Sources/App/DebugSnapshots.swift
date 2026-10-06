@@ -83,10 +83,10 @@ enum DebugSnapshots {
                     LiveSidebarSegment(speakerId: "S1", startSeconds: 118, endSeconds: 160, qualityScore: 0.9),
                 ],
                 transcript: [
-                    LiveSidebarTranscriptEntry(text: "Goal today: leave this call with a Q4 roadmap we actually believe in.", kind: "final", atSeconds: 4, speaker: "me", name: nil),
+                    LiveSidebarTranscriptEntry(text: "Goal today: leave this call with a Q4 roadmap we actually believe in.", kind: "final", atSeconds: 4, speaker: "them", name: "Luca Ferri"),
                     LiveSidebarTranscriptEntry(text: "Churn interviews were clear: eleven of eighteen accounts lost work offline.", kind: "final", atSeconds: 48, speaker: "them", name: "Giulia Bianchi"),
                     LiveSidebarTranscriptEntry(text: "That matches support tickets. Sync errors are up twenty percent since August.", kind: "final", atSeconds: 77, speaker: "them", name: "Marco Rossi"),
-                    LiveSidebarTranscriptEntry(text: "So offline mode moves ahead of the Salesforce connector.", kind: "final", atSeconds: 121, speaker: "me", name: nil),
+                    LiveSidebarTranscriptEntry(text: "So offline mode moves ahead of the Salesforce connector.", kind: "final", atSeconds: 121, speaker: "them", name: "Luca Ferri"),
                     LiveSidebarTranscriptEntry(text: "I can live with that if we tell Northwind early", kind: "partial", atSeconds: 150, speaker: "them", name: "Giulia Bianchi"),
                 ]
             )

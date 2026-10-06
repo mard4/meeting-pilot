@@ -615,9 +615,8 @@
 "intervento" = "intervento";
 "interventi" = "interventi";
 "Riunione senza titolo" = "Riunione senza titolo";
-"Io" = "Io";
 "Altri" = "Altri";
-"Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e risultano come \"Io\"." = "Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e risultano come \"Io\".";
+"Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e non posso dire chi parla." = "Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e non posso dire chi parla.";
 "Abilita Registrazione audio di sistema" = "Abilita Registrazione audio di sistema";
 "Nessun riconoscimento dei parlanti" = "Nessun riconoscimento dei parlanti";
 "Resta su FluidAudio" = "Resta su FluidAudio";

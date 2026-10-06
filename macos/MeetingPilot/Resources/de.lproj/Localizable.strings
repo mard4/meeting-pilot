@@ -635,9 +635,8 @@
 "intervento" = "Wortbeitrag";
 "interventi" = "Wortbeiträge";
 "Riunione senza titolo" = "Meeting ohne Titel";
-"Io" = "Ich";
 "Altri" = "Andere";
-"Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e risultano come \"Io\"." = "Das Meeting-Audio kommt nicht an: Die Stimmen der anderen gelangen nur über das Mikrofon und erscheinen als \"Ich\".";
+"Non ricevo l'audio della riunione: le voci degli altri arrivano solo dal microfono e non posso dire chi parla." = "Das Meeting-Audio kommt nicht an: Die Stimmen der anderen gelangen nur über das Mikrofon, daher kann ich nicht sagen, wer spricht.";
 "Abilita Registrazione audio di sistema" = "Systemaudioaufnahme aktivieren";
 "Nessun riconoscimento dei parlanti" = "Keine Sprechererkennung";
 "Resta su FluidAudio" = "Bei FluidAudio bleiben";
