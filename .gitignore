@@ -24,3 +24,5 @@ docs/superpowers/
 
 marketing/
 .vite/
+# Local datasets for evaluation and training (e.g. AMI annotations); too large for the repo.
+Datasets/
