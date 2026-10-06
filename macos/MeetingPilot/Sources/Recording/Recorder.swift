@@ -96,15 +96,21 @@ struct RecorderView: View {
                 HStack(alignment: .top, spacing: 8) {
                     RecorderChoiceCard(
                         title: "Apple On‑Device",
-                        subtitle: "Veloce, senza riconoscimento dei parlanti.",
+                        subtitle: model.usesSpeechAnalyzer
+                            ? "Veloce, riconosce chi parla. Nessun download."
+                            : "Veloce, senza riconoscimento dei parlanti.",
                         assetName: nil,
                         fallbackSymbol: "apple.logo",
                         selected: transcriptionProvider == "apple",
-                        recommended: false
+                        recommended: model.usesSpeechAnalyzer
                     ) {
-                        // Switching away from FluidAudio loses speaker diarization, so confirm first.
+                        // Before macOS 26 Apple's recognizer cannot label speakers, so confirm first.
                         if transcriptionProvider != "apple" {
-                            confirmingAppleTranscription = true
+                            if model.usesSpeechAnalyzer {
+                                selectTranscriptionProvider("apple")
+                            } else {
+                                confirmingAppleTranscription = true
+                            }
                         }
                     }
                     .frame(maxHeight: .infinity)
@@ -114,15 +120,20 @@ struct RecorderView: View {
                             selectTranscriptionProvider("apple")
                         }
                     } message: {
-                        Text("Con Apple On‑Device la trascrizione non riconosce i singoli parlanti. FluidAudio invece li riconosce ed è comunque locale e privato: l'audio non lascia il Mac.")
+                        Text("Su questa versione di macOS la trascrizione Apple non riconosce i singoli parlanti. FluidAudio invece li riconosce ed è comunque locale e privato: l'audio non lascia il Mac.")
                     }
                     RecorderChoiceCard(
                         title: "FluidAudio",
-                        subtitle: "Riconosce chi parla.",
+                        subtitle: fluidAudioSubtitle,
                         assetName: "fluidaudio.png",
                         fallbackSymbol: "waveform.path.ecg",
                         selected: transcriptionProvider == "fluid",
-                        recommended: true
+                        recommended: !model.usesSpeechAnalyzer,
+                        unavailable: !model.fluidAudioInstalled,
+                        unavailableActionTitle: model.parakeetDownloadProgress == nil
+                            ? "Scarica Parakeet (\(AppModel.parakeetDownloadSize))"
+                            : nil,
+                        unavailableAction: { model.downloadParakeet(selectWhenReady: true) }
                     ) {
                         selectTranscriptionProvider("fluid")
                     }
@@ -190,6 +201,25 @@ struct RecorderView: View {
             openTarget = model.recorderOpenTarget
             transcriptionProvider = model.transcriptionProvider
         }
+        // A finished Parakeet download switches the engine from the model, not from this view.
+        .onChange(of: model.transcriptionProvider) { value in
+            transcriptionProvider = value
+        }
+    }
+
+    private var fluidAudioSubtitle: String {
+        if let progress = model.parakeetDownloadProgress {
+            // FluidAudio reports 100% when it starts compiling the downloaded models.
+            return progress < 1
+                ? "Download di Parakeet… \(Int(progress * 100))%"
+                : "Preparazione di Parakeet…"
+        }
+        if !model.fluidAudioInstalled {
+            return "Riconosce chi parla. Serve il modello Parakeet."
+        }
+        return model.usesSpeechAnalyzer
+            ? "Modello Parakeet: più completo quando le voci si sovrappongono."
+            : "Riconosce chi parla."
     }
 
     private func selectRecorderMode(_ newMode: String) {
@@ -223,7 +253,7 @@ struct RecorderView: View {
         guard transcriptionProvider != newProvider else { return }
         transcriptionProvider = newProvider
         if newProvider == "fluid" && !model.fluidAudioInstalled {
-            model.statusMessage = "FluidAudio non è disponibile in questa installazione"
+            model.statusMessage = "Scarica prima il modello Parakeet"
             return
         }
         model.saveRecorderSettings(

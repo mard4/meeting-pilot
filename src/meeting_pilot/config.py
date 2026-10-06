@@ -44,6 +44,7 @@ class Config:
     apple_transcriber_cmd: str
     apple_transcriber_timeout_seconds: int
     fluid_audio_cmd: str
+    apple_diarization: bool
     summary_enabled: bool
     summary_provider_mode: str
     summary_runtime: str
@@ -121,6 +122,8 @@ class Config:
             ),
             apple_transcriber_timeout_seconds=int(os.getenv("APPLE_TRANSCRIBER_TIMEOUT_SECONDS", "900")),
             fluid_audio_cmd=os.getenv("FLUID_AUDIO_CMD", "fluidaudiocli"),
+            # Apple's recognizer has no speakers of its own; FluidAudio's diarization adds them.
+            apple_diarization=_bool_env("APPLE_DIARIZATION", True),
             summary_enabled=_bool_env("SUMMARY_ENABLED", _bool_env("OMLX_ENABLED", True)),
             summary_provider_mode=os.getenv("SUMMARY_PROVIDER_MODE", "local").strip().lower(),
             summary_runtime=os.getenv("SUMMARY_RUNTIME", "").strip().lower(),

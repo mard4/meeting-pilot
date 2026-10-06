@@ -9,6 +9,11 @@ from ..config import Config
 from ..language import config_language, label
 from ..platforms.teams.speaker_names import name_speakers_from_teams
 
+# The CLI defaults to streaming diarization, built for live audio in 10-second chunks,
+# which merges voices that alternate quickly: on the AMI test meeting IS1009a it found
+# the right 4 speakers offline (24% DER) but confused them streaming (59% DER).
+DIARIZATION_OPTIONS = ["--mode", "offline"]
+
 
 def run_fluid_audio(config: Config, audio_file: Path) -> None:
     """Run FluidAudio ASR and diarization, then join words to speaker segments."""
@@ -32,6 +37,7 @@ def run_fluid_audio(config: Config, audio_file: Path) -> None:
         str(audio_file),
         "--output",
         str(diarization_file),
+        *DIARIZATION_OPTIONS,
     ]
     log_file = audio_file.parent / "fluidaudio_command.log"
     output_file = audio_file.parent / "fluidaudio_transcript.txt"
@@ -158,7 +164,7 @@ def _run_fluid_audio_on_tracks(config: Config, audio_file: Path) -> bool:
 
     succeeded = (
         run([config.fluid_audio_cmd, "transcribe", str(them_track), "--output-json", str(them_asr_file)])
-        and run([config.fluid_audio_cmd, "process", str(them_track), "--output", str(diarization_file)])
+        and run([config.fluid_audio_cmd, "process", str(them_track), "--output", str(diarization_file), *DIARIZATION_OPTIONS])
         and run([config.fluid_audio_cmd, "transcribe", str(me_track), "--output-json", str(me_asr_file)])
     )
     (session / "fluidaudio_command.log").write_text("\n\n".join(log), encoding="utf-8")
@@ -258,6 +264,30 @@ def _two_track_transcript(
     if not raw_speaker_ids and them_words:
         speakers.append({"id": "them", "label": "Speaker 1"})
     return transcript, grouped, speakers
+
+
+def diarize(config: Config, audio_file: Path, output_file: Path) -> tuple[dict, str]:
+    """Speaker turns only, for transcripts written by another recognizer: the
+    payload is empty when FluidAudio is missing or fails, with its log either way."""
+    command = [config.fluid_audio_cmd, "process", str(audio_file), "--output", str(output_file), *DIARIZATION_OPTIONS]
+    environment = os.environ.copy()
+    fluid_bin = str(Path(config.fluid_audio_cmd).expanduser().parent)
+    environment["PATH"] = fluid_bin + os.pathsep + environment.get("PATH", "")
+    try:
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+            text=True,
+            env=environment,
+        )
+    except (FileNotFoundError, PermissionError):
+        return {}, "$ " + " ".join(command) + "\n\nFluidAudio executable not found"
+    log = "$ " + " ".join(command) + "\n\n" + (result.stdout or "")
+    if result.returncode != 0:
+        return {}, log
+    return _read_json_file(output_file), log
 
 
 def _labelled_transcript_text(segments: list[dict[str, object]]) -> str:

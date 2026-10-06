@@ -548,7 +548,10 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         self.assertIn('title: "Apple On‑Device"', recorder)
         self.assertIn('title: "FluidAudio"', recorder)
         self.assertNotIn('title: "Millet / Whisper"', recorder)
-        self.assertIn('subtitle: "Riconosce chi parla."', recorder)
+        self.assertIn("subtitle: fluidAudioSubtitle", recorder)
+        # Parakeet is no longer bundled: the FluidAudio card offers to download it.
+        self.assertIn("model.downloadParakeet(selectWhenReady: true)", recorder)
+        self.assertIn("recommended: model.usesSpeechAnalyzer", recorder)
 
     def test_transcribex_download_uses_the_optional_component_panel(self):
         source = SOURCE.read_text()
@@ -596,7 +599,7 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         watcher = _section(app_model, "func startWatcher()", "func stopWatcher()")
 
         self.assertIn('case "fluid":', watcher)
-        self.assertIn("fluidAudioCommandAvailable(in: env)", watcher)
+        self.assertIn("fluidTranscriptionAvailable(in: env)", watcher)
 
     def test_sidebar_uses_system_icons_and_communications_has_teams_slack_tabs(self):
         source = SOURCE.read_text()
@@ -669,7 +672,8 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
 
         self.assertIn("#available(macOS 26.0, *)", transcriber)
         self.assertIn("SpeechAnalyzer(", transcriber)
-        self.assertIn("SpeechTranscriber(locale: locale, preset: .transcription)", transcriber)
+        self.assertIn("SpeechTranscriber(", transcriber)
+        self.assertIn("attributeOptions: [.audioTimeRange]", transcriber)
         self.assertIn("AssetInventory.assetInstallationRequest", transcriber)
         self.assertIn("recognizeWithLegacySpeech", transcriber)
         self.assertIn("usesSpeechAnalyzer", source)

@@ -53,13 +53,18 @@ if compgen -G "$APP_SRC/assets/*" > /dev/null; then
   cp -R "$APP_SRC/assets/"* "$RESOURCES/"
 fi
 
-# FluidAudio is shipped ready to use: its CLI plus the Parakeet v3 ASR and
-# speaker-diarization Core ML models live in the app resources.
+# FluidAudio's CLI and its speaker-diarization Core ML models live in the app
+# resources. The Parakeet v3 speech model (~460 MB) is not bundled: from macOS 26
+# Apple's recognizer transcribes, and the app downloads Parakeet on request.
 FLUID_AUDIO_SOURCE="${FLUID_AUDIO_SOURCE:-$HOME/Library/Application Support/Meeting Pilot/FluidAudioRuntime/source}"
 FLUID_AUDIO_MODELS="${FLUID_AUDIO_MODELS:-$HOME/Library/Application Support/FluidAudio/Models}"
 FLUID_AUDIO_CLI="$FLUID_AUDIO_SOURCE/.build/release/fluidaudiocli"
-if [[ ! -d "$FLUID_AUDIO_SOURCE" || ! -d "$FLUID_AUDIO_MODELS/parakeet-tdt-0.6b-v3" || ! -d "$FLUID_AUDIO_MODELS/speaker-diarization" ]]; then
-  echo "FluidAudio e i modelli Parakeet v3 / diarizzazione sono richiesti per creare il bundle." >&2
+# Offline diarization (VBx), which the pipeline uses for recordings, needs the
+# Segmentation/Embedding models next to the streaming ones; FluidAudio downloads them
+# the first time `fluidaudiocli process --mode offline` runs.
+if [[ ! -d "$FLUID_AUDIO_SOURCE" || ! -d "$FLUID_AUDIO_MODELS/speaker-diarization/Segmentation.mlmodelc" || ! -d "$FLUID_AUDIO_MODELS/speaker-diarization/Embedding.mlmodelc" ]]; then
+  echo "FluidAudio e i modelli di diarizzazione (anche offline) sono richiesti per creare il bundle." >&2
+  echo "Scaricali una volta con: fluidaudiocli process <audio> --mode offline" >&2
   exit 1
 fi
 if [[ ! -x "$FLUID_AUDIO_CLI" ]]; then
@@ -67,7 +72,6 @@ if [[ ! -x "$FLUID_AUDIO_CLI" ]]; then
 fi
 mkdir -p "$RESOURCES/FluidAudio/bin" "$RESOURCES/FluidAudio/Models"
 cp "$FLUID_AUDIO_CLI" "$RESOURCES/FluidAudio/bin/fluidaudiocli"
-cp -R "$FLUID_AUDIO_MODELS/parakeet-tdt-0.6b-v3" "$RESOURCES/FluidAudio/Models/"
 cp -R "$FLUID_AUDIO_MODELS/speaker-diarization" "$RESOURCES/FluidAudio/Models/"
 
 UV_BIN="${MEETING_PILOT_UV_BIN:-$(command -v uv || true)}"

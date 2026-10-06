@@ -1,9 +1,17 @@
 import Foundation
 import Speech
 import AVFoundation
+import CoreMedia
 
 private final class AsyncResultBox<Value>: @unchecked Sendable {
     var value: Result<Value, Error>?
+}
+
+/// Same shape as FluidAudio's `wordTimings`, so the pipeline can match words to its speaker turns.
+struct TimedWord: Encodable, Sendable {
+    let word: String
+    let startTime: Double
+    let endTime: Double
 }
 
 enum AppleTranscriberError: LocalizedError {
@@ -60,8 +68,9 @@ struct AppleTranscriber {
             : []
 
         let transcript: String
+        var words: [TimedWord] = []
         if #available(macOS 26.0, *) {
-            transcript = try waitForResult {
+            (transcript, words) = try waitForResult {
                 try await recognizeWithSpeechAnalyzer(input, localeID: localeID)
             }
         } else {
@@ -73,11 +82,16 @@ struct AppleTranscriber {
 
         try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
         try transcript.write(to: output, atomically: true, encoding: .utf8)
+        if !words.isEmpty {
+            // "<output>.words.json", next to the transcript.
+            let wordsURL = output.deletingPathExtension().appendingPathExtension("words.json")
+            try JSONEncoder().encode(["wordTimings": words]).write(to: wordsURL, options: .atomic)
+        }
         print(output.path)
     }
 
     @available(macOS 26.0, *)
-    private static func recognizeWithSpeechAnalyzer(_ input: URL, localeID: String) async throws -> String {
+    private static func recognizeWithSpeechAnalyzer(_ input: URL, localeID: String) async throws -> (String, [TimedWord]) {
         guard SpeechTranscriber.isAvailable else {
             throw AppleTranscriberError.onDeviceUnavailable
         }
@@ -85,7 +99,13 @@ struct AppleTranscriber {
             throw AppleTranscriberError.localeUnavailable
         }
 
-        let transcriber = SpeechTranscriber(locale: locale, preset: .transcription)
+        // The `.transcription` preset plus each run's audio time range, which places words in speaker turns.
+        let transcriber = SpeechTranscriber(
+            locale: locale,
+            transcriptionOptions: [],
+            reportingOptions: [],
+            attributeOptions: [.audioTimeRange]
+        )
         if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
             fputs("Downloading Apple speech assets for \(locale.identifier)…\n", stderr)
             try await request.downloadAndInstall()
@@ -98,14 +118,42 @@ struct AppleTranscriber {
             finishAfterFile: true
         )
         var transcript = ""
+        var words: [TimedWord] = []
         for try await result in transcriber.results {
             let text = String(result.text.characters).trimmingCharacters(in: .whitespacesAndNewlines)
             if !text.isEmpty {
                 transcript = mergeTranscript(transcript, with: text)
             }
+            // Results come in audio order; one starting before the last word is a repeat.
+            let resultWords = timedWords(in: result.text)
+            if let first = resultWords.first, let last = words.last, first.startTime < last.startTime {
+                continue
+            }
+            words += resultWords
         }
         _ = analyzer
-        return transcript
+        return (transcript, words)
+    }
+
+    /// A run can hold several words under one time range; their time is split evenly.
+    @available(macOS 26.0, *)
+    private static func timedWords(in text: AttributedString) -> [TimedWord] {
+        var words: [TimedWord] = []
+        for run in text.runs {
+            guard let range = run.audioTimeRange, range.start.isNumeric, range.duration.isNumeric else { continue }
+            let tokens = String(text[run.range].characters).split(whereSeparator: \.isWhitespace)
+            guard !tokens.isEmpty else { continue }
+            let start = range.start.seconds
+            let step = range.duration.seconds / Double(tokens.count)
+            for (index, token) in tokens.enumerated() {
+                words.append(TimedWord(
+                    word: String(token),
+                    startTime: start + step * Double(index),
+                    endTime: start + step * Double(index + 1)
+                ))
+            }
+        }
+        return words
     }
 
     @available(macOS 26.0, *)

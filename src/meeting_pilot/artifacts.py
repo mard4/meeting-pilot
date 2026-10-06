@@ -32,8 +32,13 @@ class MeetingArtifacts:
 def collect_artifacts(session_dir: Path, audio_file: Path) -> MeetingArtifacts:
     frontmatter = _read_first_json(session_dir.glob("*.frontmatter.json")) or {}
     # FluidAudio emits both raw ASR and diarization files. The combined result
-    # is the one publishers need because it contains the labelled speakers.
-    millet_json = _read_json(session_dir / "fluidaudio_transcript.json") or _read_first_json(session_dir.glob("*.json"))
+    # is the one publishers need because it contains the labelled speakers; Apple
+    # transcripts carry the same segments when FluidAudio diarized them.
+    millet_json = (
+        _read_json(session_dir / "fluidaudio_transcript.json")
+        or _read_json(session_dir / "apple_on_device_transcript.json")
+        or _read_first_json(session_dir.glob("*.json"))
+    )
     summary_markdown = _read_first_text(session_dir.glob("*.summary.md"))
     transcript_text = apply_glossary_corrections(_read_transcript_text(session_dir))
     title = str(frontmatter.get("title") or session_dir.name)

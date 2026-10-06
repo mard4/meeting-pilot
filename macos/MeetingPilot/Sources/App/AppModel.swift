@@ -44,6 +44,9 @@ final class AppModel: ObservableObject {
     @Published var appLanguage = "it"
     @Published var appTheme: MeetingPilotTheme = .dark
     @Published var fluidAudioInstalled = false
+    /// Fraction of the Parakeet download, or nil when none is running.
+    @Published var parakeetDownloadProgress: Double?
+    var parakeetAutomaticDownloadAttempted = false
     @Published var publicationTargets: Set<String> = []
     @Published var journalRoot = ""
     @Published var obsidianVaultPath = ""
@@ -323,12 +326,22 @@ final class AppModel: ObservableObject {
         if env["APPLE_TRANSCRIBER_TIMEOUT_SECONDS"] == "240" {
             configRepairs["APPLE_TRANSCRIBER_TIMEOUT_SECONDS"] = "900"
         }
-        if env["TRANSCRIPTION_PROVIDER"] != "apple" && !fluidAudioCommandAvailable(in: env) {
+        // Both engines need the bundled CLI: FluidAudio for everything, Apple for speaker diarization.
+        if FileManager.default.isExecutableFile(atPath: bundledFluidAudioCommandPath())
+            && env["FLUID_AUDIO_CMD"] != bundledFluidAudioCommandPath() {
+            configRepairs["FLUID_AUDIO_CMD"] = bundledFluidAudioCommandPath()
+        }
+        // From macOS 26 Apple's recognizer plus FluidAudio's diarization is the default, so the
+        // Parakeet model is no longer bundled; it is switched to once, and Parakeet stays a choice.
+        if usesSpeechAnalyzer && env["APPLE_TRANSCRIPTION_DEFAULT_APPLIED"] != "true" {
             configRepairs["TRANSCRIPTION_PROVIDER"] = "apple"
             configRepairs["APPLE_TRANSCRIBER_CMD"] = appleTranscriberCommandPath()
-        } else if env["TRANSCRIPTION_PROVIDER"] != "apple" {
+            configRepairs["APPLE_TRANSCRIPTION_DEFAULT_APPLIED"] = "true"
+        } else if env["TRANSCRIPTION_PROVIDER"] != "apple" && !fluidTranscriptionAvailable(in: env) {
+            configRepairs["TRANSCRIPTION_PROVIDER"] = "apple"
+            configRepairs["APPLE_TRANSCRIBER_CMD"] = appleTranscriberCommandPath()
+        } else if env["TRANSCRIPTION_PROVIDER"] != "apple" && env["TRANSCRIPTION_PROVIDER"] != "fluid" {
             configRepairs["TRANSCRIPTION_PROVIDER"] = "fluid"
-            configRepairs["FLUID_AUDIO_CMD"] = bundledFluidAudioCommandPath()
         }
         if !configRepairs.isEmpty {
             EnvFile.update(at: envURL, values: configRepairs)
@@ -375,7 +388,14 @@ final class AppModel: ObservableObject {
         recordingAudioSource = env["RECORDING_AUDIO_SOURCE"].flatMap(RecordingAudioSource.init(rawValue:)) ?? .both
         transcriptionProvider = env["TRANSCRIPTION_PROVIDER"] == "apple" ? "apple" : "fluid"
         teamsOCREnabled = (env["TEAMS_OCR_ENABLED"] ?? "false").lowercased() == "true"
-        fluidAudioInstalled = fluidAudioCommandAvailable(in: env)
+        fluidAudioInstalled = fluidTranscriptionAvailable(in: env)
+        // Before macOS 26 Apple's recognizer has no word timings, so it cannot label speakers:
+        // Parakeet is fetched on its own and becomes the engine once it is ready.
+        if !usesSpeechAnalyzer && !parakeetModelsInstalled && parakeetDownloadProgress == nil
+            && !parakeetAutomaticDownloadAttempted {
+            parakeetAutomaticDownloadAttempted = true
+            downloadParakeet(selectWhenReady: true)
+        }
         requestAppleSpeechAuthorizationIfNeeded()
         notion.load(from: env)
         publicationTargets = parsePublicationTargets(env)
@@ -553,7 +573,7 @@ final class AppModel: ObservableObject {
         let selectedProviderAvailable: Bool
         switch transcriptionProvider {
         case "fluid":
-            selectedProviderAvailable = fluidAudioCommandAvailable(in: env)
+            selectedProviderAvailable = fluidTranscriptionAvailable(in: env)
         default:
             selectedProviderAvailable = true
         }
@@ -665,11 +685,20 @@ final class AppModel: ObservableObject {
             .appendingPathComponent("Library/Application Support/FluidAudio/Models", isDirectory: true)
         do {
             try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+            // Parakeet is only bundled by older builds; newer ones download it on request.
+            // Copied file by file so an existing folder gains models added by a later
+            // build, such as the offline diarization ones.
             for model in ["parakeet-tdt-0.6b-v3", "speaker-diarization"] {
                 let source = bundledModels.appendingPathComponent(model, isDirectory: true)
                 let target = destination.appendingPathComponent(model, isDirectory: true)
-                if !FileManager.default.fileExists(atPath: target.path) {
-                    try FileManager.default.copyItem(at: source, to: target)
+                guard FileManager.default.fileExists(atPath: source.path) else { continue }
+                try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+                for item in try FileManager.default.contentsOfDirectory(atPath: source.path)
+                where !FileManager.default.fileExists(atPath: target.appendingPathComponent(item).path) {
+                    try FileManager.default.copyItem(
+                        at: source.appendingPathComponent(item),
+                        to: target.appendingPathComponent(item)
+                    )
                 }
             }
             EnvFile.remove(at: envURL, keys: ["MILLET_CMD", "MILLET_EXTRA_ARGS", "HF_HOME"])
@@ -678,6 +707,11 @@ final class AppModel: ObservableObject {
             AppLog.append("Preparazione FluidAudio inclusa non riuscita: \(error.localizedDescription)")
             statusMessage = "Non riesco a preparare i modelli FluidAudio: \(error.localizedDescription)"
         }
+    }
+
+    /// FluidAudio transcribes only with its CLI and the downloaded Parakeet model.
+    func fluidTranscriptionAvailable(in env: [String: String]) -> Bool {
+        fluidAudioCommandAvailable(in: env) && parakeetModelsInstalled
     }
 
     private func fluidAudioCommandAvailable(in env: [String: String]) -> Bool {
@@ -1391,8 +1425,8 @@ final class AppModel: ObservableObject {
     }
 
     func saveRecorderSettings(mode: String, folder: String, promptEnabled: Bool, promptDelaySeconds: Int, openTarget: String, transcriptionProvider: String) {
-        if transcriptionProvider == "fluid" && !fluidAudioCommandAvailable(in: EnvFile.load(from: envURL)) {
-            statusMessage = "FluidAudio non è disponibile in questa installazione"
+        if transcriptionProvider == "fluid" && !fluidTranscriptionAvailable(in: EnvFile.load(from: envURL)) {
+            statusMessage = "Scarica prima il modello Parakeet"
             return
         }
         let trimmedFolder = folder.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
