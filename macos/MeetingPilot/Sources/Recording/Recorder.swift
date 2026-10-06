@@ -25,14 +25,11 @@ struct RecorderView: View {
                 AccessibilityWarningCard()
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Registrazione")
-                    .font(.system(size: 15, weight: .semibold))
-
-                HStack(alignment: .top, spacing: 8) {
+            PipelineGroup(Text("Registrazione")) {
+                ChoiceStack {
                     RecorderChoiceCard(
                         title: "Recorder integrato",
-                        subtitle: "Microfono e audio del Mac, senza altre app.",
+                        subtitle: "",
                         assetName: nil,
                         fallbackSymbol: "apple.logo",
                         selected: mode == "macos_prompt",
@@ -42,18 +39,13 @@ struct RecorderView: View {
                     }
                     RecorderChoiceCard(
                         title: "Recorder esterno",
-                        subtitle: "Avanzato · usa TranscribeX, app di terze parti.",
+                        subtitle: "",
                         assetName: "transcribeX.png",
                         fallbackSymbol: "waveform",
                         selected: mode == "transcribex"
                     ) {
                         selectRecorderMode("transcribex")
                     }
-                }
-                .fixedSize(horizontal: false, vertical: true)
-
-                if mode == "macos_prompt" {
-                    AudioSourceSection()
                 }
 
                 if mode == "transcribex" {
@@ -84,87 +76,6 @@ struct RecorderView: View {
                     .background(MeetingPilotDesign.accent.opacity(0.10))
                     .clipShape(RoundedRectangle(cornerRadius: 9))
                 }
-            }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Trascrizione")
-                    .font(.system(size: 15, weight: .semibold))
-
-                HStack(alignment: .top, spacing: 8) {
-                    RecorderChoiceCard(
-                        title: "Apple On‑Device",
-                        subtitle: model.usesSpeechAnalyzer
-                            ? "Veloce, riconosce chi parla. Nessun download."
-                            : "Veloce, senza riconoscimento dei parlanti.",
-                        assetName: nil,
-                        fallbackSymbol: "apple.logo",
-                        selected: transcriptionProvider == "apple",
-                        recommended: model.usesSpeechAnalyzer
-                    ) {
-                        // Before macOS 26 Apple's recognizer cannot label speakers, so confirm first.
-                        if transcriptionProvider != "apple" {
-                            if model.usesSpeechAnalyzer {
-                                selectTranscriptionProvider("apple")
-                            } else {
-                                confirmingAppleTranscription = true
-                            }
-                        }
-                    }
-                    .frame(maxHeight: .infinity)
-                    .alert("Nessun riconoscimento dei parlanti", isPresented: $confirmingAppleTranscription) {
-                        Button("Resta su FluidAudio", role: .cancel) {}
-                        Button("Usa Apple") {
-                            selectTranscriptionProvider("apple")
-                        }
-                    } message: {
-                        Text("Su questa versione di macOS la trascrizione Apple non riconosce i singoli parlanti. FluidAudio invece li riconosce ed è comunque locale e privato: l'audio non lascia il Mac.")
-                    }
-                    RecorderChoiceCard(
-                        title: "FluidAudio",
-                        subtitle: fluidAudioSubtitle,
-                        assetName: "fluidaudio.png",
-                        fallbackSymbol: "waveform.path.ecg",
-                        selected: transcriptionProvider == "fluid",
-                        recommended: !model.usesSpeechAnalyzer,
-                        unavailable: !model.fluidAudioInstalled,
-                        unavailableActionTitle: model.parakeetDownloadProgress == nil
-                            ? localized("Scarica Parakeet") + " (\(AppModel.parakeetDownloadSize))"
-                            : nil,
-                        unavailableAction: { model.downloadParakeet(selectWhenReady: true) }
-                    ) {
-                        selectTranscriptionProvider("fluid")
-                    }
-                    .frame(maxHeight: .infinity)
-                }
-                .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Sintesi (AI)")
-                    .font(.system(size: 15, weight: .semibold))
-                SummaryConfigurationForm()
-            }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Teams")
-                    .font(.system(size: 15, weight: .semibold))
-                TeamsConfigurationSection()
-            }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
-
-            if mode != "macos_prompt" {
-            VStack(alignment: .leading, spacing: 12) {
                 if mode == "custom" {
                     VStack(alignment: .leading, spacing: 8) {
                         EditableField(
@@ -188,13 +99,67 @@ struct RecorderView: View {
                         placeholder: "/Applications/App.app, cartella audio o URL"
                     )
                 }
+            }
 
+            if mode == "macos_prompt" {
+                AudioSourceSection()
             }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
+
+            PipelineGroup(Text("Trascrizione")) {
+                ChoiceStack {
+                    RecorderChoiceCard(
+                        title: "Apple On‑Device",
+                        subtitle: "",
+                        assetName: nil,
+                        fallbackSymbol: "apple.logo",
+                        selected: transcriptionProvider == "apple",
+                        recommended: model.usesSpeechAnalyzer
+                    ) {
+                        // Before macOS 26 Apple's recognizer cannot label speakers, so confirm first.
+                        if transcriptionProvider != "apple" {
+                            if model.usesSpeechAnalyzer {
+                                selectTranscriptionProvider("apple")
+                            } else {
+                                confirmingAppleTranscription = true
+                            }
+                        }
+                    }
+                    .alert("Nessun riconoscimento dei parlanti", isPresented: $confirmingAppleTranscription) {
+                        Button("Resta su FluidAudio", role: .cancel) {}
+                        Button("Usa Apple") {
+                            selectTranscriptionProvider("apple")
+                        }
+                    } message: {
+                        Text("Su questa versione di macOS la trascrizione Apple non riconosce i singoli parlanti. FluidAudio invece li riconosce ed è comunque locale e privato: l'audio non lascia il Mac.")
+                    }
+                    RecorderChoiceCard(
+                        title: "Trascrizione esterna",
+                        subtitle: fluidAudioSubtitle,
+                        assetName: "fluidaudio.png",
+                        fallbackSymbol: "waveform.path.ecg",
+                        selected: transcriptionProvider == "fluid",
+                        recommended: !model.usesSpeechAnalyzer,
+                        unavailable: !model.fluidAudioInstalled,
+                        unavailableActionTitle: model.parakeetDownloadProgress == nil
+                            ? localized("Scarica Parakeet") + " (\(AppModel.parakeetDownloadSize))"
+                            : nil,
+                        unavailableAction: { model.downloadParakeet(selectWhenReady: true) }
+                    ) {
+                        selectTranscriptionProvider("fluid")
+                    }
+                }
             }
+
+            PipelineGroup(Text("Sintesi (AI)")) {
+                SummaryConfigurationForm()
+            }
+
+            PipelineGroup(Text("Comunicazione")) {
+                TeamsConfigurationSection()
+            }
+
         }
+        .environment(\.choiceLayout, .row)
         .onAppear {
             mode = model.recorderMode
             folder = model.recorderFolder
@@ -214,12 +179,8 @@ struct RecorderView: View {
                 ? localized("Download di Parakeet…") + " \(Int(progress * 100))%"
                 : "Preparazione di Parakeet…"
         }
-        if !model.fluidAudioInstalled {
-            return "Riconosce chi parla. Serve il modello Parakeet."
-        }
-        return model.usesSpeechAnalyzer
-            ? "Modello Parakeet: più completo quando le voci si sovrappongono."
-            : "Riconosce chi parla."
+        // Only a state that needs action gets a line; the choice itself speaks for itself.
+        return model.fluidAudioInstalled ? "" : "Serve il modello Parakeet."
     }
 
     private func selectRecorderMode(_ newMode: String) {
@@ -272,9 +233,8 @@ struct AudioSourceSection: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            MPSectionTitle("Sorgente audio")
-            HStack(alignment: .top, spacing: 8) {
+        PipelineGroup(Text("Sorgente audio")) {
+            ChoiceStack {
                 ForEach(RecordingAudioSource.allCases) { source in
                     RecorderChoiceCard(
                         title: source.title,
@@ -287,7 +247,6 @@ struct AudioSourceSection: View {
                     }
                 }
             }
-            .fixedSize(horizontal: false, vertical: true)
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Image(systemName: "phone.fill")
                 Text(localized("Le call rilevate, come Teams, registrano sempre microfono e audio del Mac."))
@@ -295,8 +254,67 @@ struct AudioSourceSection: View {
             }
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(MeetingPilotDesign.textDimColor)
+            .padding(.leading, 2)
         }
-        .padding(.top, 4)
+    }
+}
+
+/// A titled card holding one step of the pipeline, as wide as the Settings groups.
+struct PipelineGroup<Content: View>: View {
+    let title: Text
+    @ViewBuilder let content: Content
+    @Environment(\.colorScheme) private var colorScheme
+
+    init(_ title: Text, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            title
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(MeetingPilotDesign.tertiaryText(for: colorScheme))
+                .padding(.leading, 4)
+            VStack(alignment: .leading, spacing: 10) {
+                content
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
+        }
+        .frame(maxWidth: 680, alignment: .leading)
+    }
+}
+
+/// Choice cards side by side (welcome tour), or a list of compact rows (Pipeline).
+enum ChoiceLayout {
+    case card, row
+}
+
+private struct ChoiceLayoutKey: EnvironmentKey {
+    static let defaultValue = ChoiceLayout.card
+}
+
+extension EnvironmentValues {
+    var choiceLayout: ChoiceLayout {
+        get { self[ChoiceLayoutKey.self] }
+        set { self[ChoiceLayoutKey.self] = newValue }
+    }
+}
+
+struct ChoiceStack<Content: View>: View {
+    @ViewBuilder let content: Content
+    @Environment(\.choiceLayout) private var layout
+
+    var body: some View {
+        if layout == .row {
+            VStack(alignment: .leading, spacing: 6) { content }
+        } else {
+            HStack(alignment: .top, spacing: 8) { content }
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 
@@ -312,14 +330,87 @@ struct RecorderChoiceCard: View {
     var unavailableActionTitle: String? = nil
     var unavailableAction: () -> Void = {}
     let action: () -> Void
+    @Environment(\.choiceLayout) private var layout
 
     var body: some View {
         if unavailable {
-            card
+            content
         } else {
-            Button(action: action) { card }
+            Button(action: action) { content }
                 .buttonStyle(.plain)
         }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if layout == .row { row } else { card }
+    }
+
+    private var row: some View {
+        HStack(alignment: .center, spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(selected ? MeetingPilotDesign.accent.opacity(0.30) : Color.adaptiveWhite(0.08))
+                BundledAssetIcon(name: assetName, fallbackSymbol: fallbackSymbol, size: 16)
+            }
+            .frame(width: 30, height: 30)
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(localized(title))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.adaptiveWhite())
+                    if recommended && !unavailable {
+                        Text("CONSIGLIATO")
+                            .font(.system(size: 8, weight: .heavy))
+                            .foregroundStyle(MeetingPilotDesign.accent)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(MeetingPilotDesign.accent.opacity(0.15))
+                            .clipShape(Capsule())
+                    }
+                }
+                if !subtitle.isEmpty {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        if unavailable {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                        }
+                        Text(localized(subtitle))
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(unavailable ? MeetingPilotDesign.warning : MeetingPilotDesign.textDimColor)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            if unavailable {
+                if let unavailableActionTitle {
+                    Button(localized(unavailableActionTitle), action: unavailableAction)
+                        .buttonStyle(MPSecondaryButtonStyle(compact: true))
+                }
+            } else {
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(selected ? MeetingPilotDesign.accent : Color.adaptiveWhite(0.25))
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(selected ? MeetingPilotDesign.accent.opacity(0.12) : Color.adaptiveWhite(0.03))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .strokeBorder(selected ? MeetingPilotDesign.accent.opacity(0.6) : Color.adaptiveWhite(0.08), lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private var card: some View {

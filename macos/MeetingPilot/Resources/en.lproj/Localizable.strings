@@ -820,6 +820,8 @@
 "Arriva prima del connettore Salesforce" = "It ships before the Salesforce connector";
 "e Giulia prepara il piano di rilascio entro venerdì" = "and Giulia prepares the release plan by Friday";
 "Design review · Onboarding" = "Design review · Onboarding";
+"Nascondi la barra laterale nelle condivisioni schermo" = "Hide the sidebar from screen sharing";
+"Chi guarda la tua condivisione o registrazione dello schermo non vede trascrizione e note." = "People watching your screen share or recording won't see the transcript and notes.";
 "Veloce, riconosce chi parla. Nessun download." = "Fast, recognizes who is speaking. Nothing to download.";
 "Riconosce chi parla. Serve il modello Parakeet." = "Recognizes who is speaking. Needs the Parakeet model.";
 "Modello Parakeet: più completo quando le voci si sovrappongono." = "Parakeet model: more complete when voices overlap.";
@@ -831,3 +833,14 @@
 "Modello Parakeet pronto" = "Parakeet model ready";
 "Download di Parakeet non riuscito" = "Parakeet download failed";
 "Su questa versione di macOS la trascrizione Apple non riconosce i singoli parlanti. FluidAudio invece li riconosce ed è comunque locale e privato: l'audio non lascia il Mac." = "On this version of macOS, Apple transcription can't tell speakers apart. FluidAudio can, and it is just as local and private: the audio never leaves your Mac.";
+"Profilo, aspetto e preferenze dell'app." = "Profile, appearance and app preferences.";
+"Aspetto" = "Appearance";
+"Sistema" = "System";
+"Tipo di note" = "Kind of notes";
+"Lezioni: concetti chiave e compiti. Riunioni: decisioni e action item." = "Lectures: key concepts and assignments. Meetings: decisions and action items.";
+"Dove arrivano le registrazioni da elaborare." = "Where recordings wait to be processed.";
+"Apri Meeting Pilot quando accedi al Mac." = "Open Meeting Pilot when you log in to your Mac.";
+"Nascondi Meeting Pilot nelle condivisioni schermo" = "Hide Meeting Pilot from screen sharing";
+"Tutte le finestre dell'app restano invisibili a chi guarda. Anche da Finestra o con ⇧⌘H." = "Every app window stays invisible to viewers. Also from the Window menu or with ⇧⌘H.";
+"Trascrizione esterna" = "External transcription";
+"Serve il modello Parakeet." = "Needs the Parakeet model.";

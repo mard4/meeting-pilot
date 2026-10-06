@@ -820,6 +820,8 @@
 "Arriva prima del connettore Salesforce" = "Il passe avant le connecteur Salesforce";
 "e Giulia prepara il piano di rilascio entro venerdì" = "et Giulia prépare le plan de lancement pour vendredi";
 "Design review · Onboarding" = "Revue de design · Onboarding";
+"Nascondi la barra laterale nelle condivisioni schermo" = "Masquer la barre latérale lors du partage d'écran";
+"Chi guarda la tua condivisione o registrazione dello schermo non vede trascrizione e note." = "Les personnes qui regardent ton partage ou ton enregistrement d'écran ne voient ni la transcription ni les notes.";
 "Veloce, riconosce chi parla. Nessun download." = "Rapide, reconnaît qui parle. Rien à télécharger.";
 "Riconosce chi parla. Serve il modello Parakeet." = "Reconnaît qui parle. Nécessite le modèle Parakeet.";
 "Modello Parakeet: più completo quando le voci si sovrappongono." = "Modèle Parakeet : plus complet quand les voix se chevauchent.";
@@ -831,3 +833,14 @@
 "Modello Parakeet pronto" = "Modèle Parakeet prêt";
 "Download di Parakeet non riuscito" = "Échec du téléchargement de Parakeet";
 "Su questa versione di macOS la trascrizione Apple non riconosce i singoli parlanti. FluidAudio invece li riconosce ed è comunque locale e privato: l'audio non lascia il Mac." = "Sur cette version de macOS, la transcription Apple ne distingue pas les locuteurs. FluidAudio le fait, tout en restant local et privé : l'audio ne quitte pas le Mac.";
+"Profilo, aspetto e preferenze dell'app." = "Profil, apparence et préférences de l'app.";
+"Aspetto" = "Apparence";
+"Sistema" = "Système";
+"Tipo di note" = "Type de notes";
+"Lezioni: concetti chiave e compiti. Riunioni: decisioni e action item." = "Cours : concepts clés et devoirs. Réunions : décisions et actions.";
+"Dove arrivano le registrazioni da elaborare." = "Où arrivent les enregistrements à traiter.";
+"Apri Meeting Pilot quando accedi al Mac." = "Ouvre Meeting Pilot à l'ouverture de session du Mac.";
+"Nascondi Meeting Pilot nelle condivisioni schermo" = "Masquer Meeting Pilot lors du partage d'écran";
+"Tutte le finestre dell'app restano invisibili a chi guarda. Anche da Finestra o con ⇧⌘H." = "Aucune fenêtre de l'app n'est visible pour les spectateurs. Aussi via Fenêtre ou ⇧⌘H.";
+"Trascrizione esterna" = "Transcription externe";
+"Serve il modello Parakeet." = "Nécessite le modèle Parakeet.";

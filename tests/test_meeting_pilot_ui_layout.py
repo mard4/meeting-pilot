@@ -62,7 +62,7 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
 
         self.assertIn("@Published var appTheme", source)
         self.assertIn('forKey: "MeetingPilotAppTheme"', source)
-        self.assertIn('Text(localized("Tema app"))', settings)
+        self.assertIn('SettingsLine(title: "Tema app")', settings)
         self.assertIn("ThemeIconPicker(selection:", settings)
         self.assertIn("model.saveAppTheme($0)", settings)
         self.assertIn('themeButton(.light, symbol: "sun.max.fill", label: "Chiaro")', picker)
@@ -477,7 +477,7 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         recorder = _section(source, "struct RecorderView", "struct RecorderChoiceCard")
         settings = _section(source, "struct SettingsOverviewView", "struct LaunchAtLoginCard")
 
-        self.assertIn('Text("Cartella audio")', settings)
+        self.assertIn('SettingsLine(title: "Cartella audio"', settings)
         self.assertIn("model.saveRecorderFolder(audioFolder)", settings)
         self.assertNotIn('Text("Cartella audio")', recorder)
 
@@ -513,16 +513,14 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         self.assertIn('Label("Scegli vault", systemImage: "folder.badge.plus")', obsidian)
         self.assertNotIn("Vault Obsidian", settings)
 
-    def test_settings_overview_links_to_unified_destinations_and_uses_connection_badges(self):
+    def test_settings_overview_does_not_repeat_pipeline_publishing_or_permissions(self):
         source = SOURCE.read_text()
-        overview = _section(source, "struct SettingsOverviewView", "struct LaunchAtLoginCard")
+        overview = _section(source, "struct SettingsOverviewView", "struct SettingsGroup")
 
-        self.assertIn('Text("Destinazioni")', overview)
-        self.assertIn("model.selectedSection = .journal", overview)
-        self.assertIn("SettingsConnectionStatusRow", overview)
-        self.assertIn('status: model.notion.occurrencesDatabaseId.isEmpty ? "Non collegato" : "Collegato"', overview)
-        self.assertIn('status: model.obsidianVaultPath.isEmpty ? "Non collegato" : "Collegato"', overview)
-        self.assertNotIn("PublicationTargetChip(", overview)
+        for repeated in ('Text("Destinazioni")', "SettingsConnectionStatusRow", 'label: "Recorder"',
+                         'label: "Provider"', 'label: "Trascrizione"', 'title: "Permessi macOS"'):
+            self.assertNotIn(repeated, overview)
+        self.assertIn('SettingsGroup(title: "Aspetto")', overview)
 
     def test_launch_at_login_setting_is_in_general_settings(self):
         source = SOURCE.read_text()
@@ -546,7 +544,7 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         recorder = _section(source, "struct RecorderView", "struct RecorderChoiceCard")
 
         self.assertIn('title: "Apple On‑Device"', recorder)
-        self.assertIn('title: "FluidAudio"', recorder)
+        self.assertIn('title: "Trascrizione esterna"', recorder)
         self.assertNotIn('title: "Millet / Whisper"', recorder)
         self.assertIn("subtitle: fluidAudioSubtitle", recorder)
         # Parakeet is no longer bundled: the FluidAudio card offers to download it.
@@ -601,25 +599,36 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         self.assertIn('case "fluid":', watcher)
         self.assertIn("fluidTranscriptionAvailable(in: env)", watcher)
 
-    def test_sidebar_uses_system_icons_and_communications_has_teams_slack_tabs(self):
+    def test_sidebar_uses_system_icons_and_teams_has_no_placeholder_tabs(self):
         source = SOURCE.read_text()
         sidebar = _section(source, "struct Sidebar", "private struct SidebarStatusFooter")
         communications = _section(source, "struct TeamsConfigurationSection", "struct PermissionsView")
 
         self.assertEqual(sidebar.count("BundledAssetIcon"), 0)
         self.assertIn("Image(systemName: symbol)", sidebar)
-        self.assertIn('case slack = "Slack"', source)
-        self.assertIn("CommunicationNavigation", communications)
-        self.assertIn("destination == .teams", source)
+        # Slack was a "coming soon" tab with nothing behind it.
+        self.assertNotIn("CommunicationNavigation", communications)
+        self.assertIn('Button("Recupera da Teams")', communications)
 
-    def test_communication_tabs_use_their_bundled_assets(self):
+    def test_pipeline_lists_choices_as_compact_rows_in_narrow_groups(self):
         source = SOURCE.read_text()
-        navigation = _section(source, "struct CommunicationNavigation", "struct TeamsScraperView")
+        recorder = _section(source, "struct RecorderView", "struct RecorderChoiceCard")
+        summary = _section(source, "struct SummaryConfigurationForm", "private var appleEngineCard")
 
-        self.assertIn("var assetName: String", source)
-        self.assertIn('"microsoft_teams_logo.png"', source)
-        self.assertIn('"Slack-Logo.webp"', source)
-        self.assertIn("BundledAssetIcon(name: destination.assetName", navigation)
+        self.assertIn(".environment(\\.choiceLayout, .row)", recorder)
+        for step in ("Registrazione", "Trascrizione", "Sintesi (AI)", "Comunicazione"):
+            self.assertIn(f'PipelineGroup(Text("{step}"))', recorder)
+        self.assertIn("ChoiceStack {", summary)
+        self.assertIn("frame(maxWidth: 680", source)
+
+    def test_app_and_sidebar_can_be_hidden_from_screen_sharing(self):
+        source = SOURCE.read_text()
+        privacy = _section(source, "enum ScreenSharingPrivacy", "static func install()")
+
+        self.assertIn("appHidden || (LiveSidebarWindow.isSidebar(window) && LiveSidebarWindow.hiddenFromScreenSharing)", privacy)
+        self.assertIn("ScreenSharingPrivacy.install()", source)
+        self.assertIn("HideFromScreenSharingCommand()", source)
+        self.assertIn("AppScreenSharingRow()", _section(source, "struct SettingsOverviewView", "struct SettingsGroup"))
 
     def test_communication_keeps_debug_tools_collapsed_and_explains_pending_participants(self):
         source = SOURCE.read_text()
@@ -783,7 +792,7 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         source = SOURCE.read_text()
         recorder = _section(source, "struct RecorderView", "struct RecorderChoiceCard")
 
-        self.assertIn('title: "FluidAudio"', recorder)
+        self.assertIn('title: "Trascrizione esterna"', recorder)
         self.assertIn('selectTranscriptionProvider("fluid")', recorder)
         self.assertNotIn('model.installFluidAudioRuntime()', recorder)
         self.assertIn('prepareBundledFluidAudio()', source)

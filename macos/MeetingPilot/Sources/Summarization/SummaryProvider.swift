@@ -37,9 +37,8 @@ struct SummaryConfigurationForm: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 8) {
+            ChoiceStack {
                 appleEngineCard
-                    .frame(maxHeight: .infinity)
                 RecorderChoiceCard(
                     title: "Modello locale",
                     subtitle: "oMLX, Ollama o LM Studio, se li hai installati sul Mac.",
@@ -49,7 +48,6 @@ struct SummaryConfigurationForm: View {
                 ) {
                     selectProviderMode("local")
                 }
-                .frame(maxHeight: .infinity)
                 RecorderChoiceCard(
                     title: "Cloud",
                     subtitle: "OpenAI, Gemini, Claude o compatibile. Il transcript viene inviato al provider.",
@@ -62,7 +60,6 @@ struct SummaryConfigurationForm: View {
                         confirmingCloudProvider = true
                     }
                 }
-                .frame(maxHeight: .infinity)
                 .alert("Il transcript verrà inviato al cloud", isPresented: $confirmingCloudProvider) {
                     Button("Annulla", role: .cancel) {}
                     Button("Usa Cloud") {
@@ -72,7 +69,6 @@ struct SummaryConfigurationForm: View {
                     Text("Con un provider cloud, il transcript di ogni riunione viene inviato al servizio scelto (OpenAI, Gemini, Claude o compatibile) per generare la sintesi. Con Apple Intelligence o un modello locale resta tutto sul Mac.")
                 }
             }
-            .fixedSize(horizontal: false, vertical: true)
 
             if mode == "local" {
                 SettingsFormPanel { localSettingsRows }

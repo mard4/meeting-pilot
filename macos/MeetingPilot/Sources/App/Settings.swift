@@ -61,9 +61,7 @@ struct SettingsView: View {
             Group {
                 switch pane {
                 case .overview:
-                    SettingsOverviewView(
-                        openPermissions: { pane = .permissions }
-                    )
+                    SettingsOverviewView()
                 case .permissions:
                     PermissionsView()
                 case .logs:
@@ -177,13 +175,13 @@ struct ThemeIconPicker: View {
 
 struct SettingsOverviewView: View {
     @EnvironmentObject private var model: AppModel
-    @Environment(\.colorScheme) private var colorScheme
-    let openPermissions: () -> Void
     @State private var audioFolder = ""
     @State private var isRelaunchingForLanguage = false
 
+    // Recorder, transcription, summary and destinations live in Pipeline and
+    // Publishing, and permissions in their own tab: General keeps only the app itself.
     var body: some View {
-        ContentPane(title: "Impostazioni", subtitle: "Lingua, aspetto, permessi e stato dei servizi.") {
+        ContentPane(title: "Impostazioni", subtitle: "Profilo, aspetto e preferenze dell'app.") {
             if model.projectAccessSuspended {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Accesso cartella progetto richiesto")
@@ -201,154 +199,76 @@ struct SettingsOverviewView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
 
-            VStack(spacing: 10) {
-                SettingsShortcutRow(
-                    icon: "lock.shield",
-                    title: "Permessi macOS",
-                    value: String(format: localized("%ld di %ld"), model.permissionsReady, model.permissionRows.count),
-                    accent: model.permissionsReady == model.permissionRows.count ? MeetingPilotDesign.success : MeetingPilotDesign.warning,
-                    action: openPermissions
-                )
+            SettingsGroup(title: "Profilo") {
+                ProfileSettingsRow()
             }
 
-            ProfileSettingsCard()
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(localized("Lingua app"))
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(MeetingPilotDesign.tertiaryText(for: colorScheme))
-                if isRelaunchingForLanguage {
-                    // saveAppLanguage() relaunches the whole process — Bundle.main's
-                    // locale is bound at launch and can't be hot-swapped — so without
-                    // this, picking a language just makes the app silently vanish for
-                    // ~250ms, which reads as a crash, not a language change.
-                    HStack(spacing: 8) {
-                        ProgressView().controlSize(.small)
-                        Text(localized("Riavvio in corso..."))
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(MeetingPilotDesign.secondaryText(for: colorScheme))
-                    }
-                    .frame(height: 24)
-                } else {
-                    Picker("Lingua app", selection: Binding(
-                        get: { model.appLanguage },
-                        set: { selected in
-                            isRelaunchingForLanguage = true
-                            model.saveAppLanguage(selected)
-                        }
-                    )) {
-                        ForEach(AppLanguage.allCases) { language in
-                            Text(verbatim: language.nativeName).tag(language.rawValue)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .fixedSize()
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(localized("Tema app"))
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(MeetingPilotDesign.tertiaryText(for: colorScheme))
-                ThemeIconPicker(selection: Binding(
-                    get: { model.appTheme },
-                    set: { model.saveAppTheme($0) }
-                ))
-            }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
-
-            VStack(spacing: 10) {
-                SettingsRow(
-                    label: "Recorder",
-                    value: model.recorderDisplayName,
-                    detail: compactPath(model.inboxLabel)
-                )
-                SettingsRow(label: "Provider", value: model.providerDisplayName)
-                Button {
-                    model.selectedSection = .journal
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "arrow.up.right.square")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(MeetingPilotDesign.accent)
-                            .frame(width: 28, height: 28)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Destinazioni")
-                                .font(.system(size: 14, weight: .bold))
-                            Text("Gestisci Diario, Notion, Obsidian e Apple Notes")
-                                .font(.system(size: 11, weight: .medium))
+            SettingsGroup(title: "Aspetto") {
+                SettingsLine(title: "Lingua app") {
+                    if isRelaunchingForLanguage {
+                        // saveAppLanguage() relaunches the whole process — Bundle.main's
+                        // locale is bound at launch and can't be hot-swapped — so without
+                        // this, picking a language just makes the app silently vanish for
+                        // ~250ms, which reads as a crash, not a language change.
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small)
+                            Text(localized("Riavvio in corso..."))
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(MeetingPilotDesign.textDimColor)
                         }
-                        Spacer()
-                        Text("Gestisci")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(MeetingPilotDesign.textDimColor)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(MeetingPilotDesign.textFaintColor)
-                    }
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
-                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                .help("Apri le destinazioni di pubblicazione")
-                SettingsConnectionStatusRow(
-                    title: "Notion",
-                    status: model.notion.occurrencesDatabaseId.isEmpty ? "Non collegato" : "Collegato",
-                    isConnected: !model.notion.occurrencesDatabaseId.isEmpty,
-                    assetName: "Notion_app_logo.png",
-                    fallbackSymbol: "doc.text",
-                    lightIconBackground: true
-                )
-                SettingsConnectionStatusRow(
-                    title: "Obsidian",
-                    status: model.obsidianVaultPath.isEmpty ? "Non collegato" : "Collegato",
-                    isConnected: !model.obsidianVaultPath.isEmpty,
-                    assetName: "2023_Obsidian_logo.svg",
-                    fallbackSymbol: "book.closed.fill"
-                )
-                SettingsRow(
-                    label: "Trascrizione",
-                    value: model.transcriptionDisplayName,
-                    assetName: "recorder_logo.png",
-                    fallbackSymbol: "mic.fill",
-                    iconSize: 21,
-                    iconTemplateRendering: true
-                )
-            }
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Cartella audio")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(MeetingPilotDesign.textFaintColor)
-                HStack {
-                    TextField("Percorso cartella audio", text: $audioFolder)
-                        .textFieldStyle(DarkTextFieldStyle())
-                    Button {
-                        if let selected = model.chooseRecorderFolder() {
-                            audioFolder = selected
+                    } else {
+                        Picker("Lingua app", selection: Binding(
+                            get: { model.appLanguage },
+                            set: { selected in
+                                isRelaunchingForLanguage = true
+                                model.saveAppLanguage(selected)
+                            }
+                        )) {
+                            ForEach(AppLanguage.allCases) { language in
+                                Text(verbatim: language.nativeName).tag(language.rawValue)
+                            }
                         }
-                    } label: {
-                        Image(systemName: "folder")
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .fixedSize()
                     }
-                    .buttonStyle(CompactButtonStyle())
-                    .help("Scegli cartella audio")
+                }
+                SettingsDivider()
+                SettingsLine(title: "Tema app") {
+                    ThemeIconPicker(selection: Binding(
+                        get: { model.appTheme },
+                        set: { model.saveAppTheme($0) }
+                    ))
+                    .frame(width: 200)
                 }
             }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
 
-            LaunchAtLoginCard()
+            SettingsGroup(title: "Registrazione") {
+                AppScreenSharingRow()
+                SettingsDivider()
+                SidebarScreenSharingRow()
+                SettingsDivider()
+                SettingsLine(title: "Cartella audio", detail: "Dove arrivano le registrazioni da elaborare.") {
+                    HStack(spacing: 6) {
+                        TextField("Percorso cartella audio", text: $audioFolder)
+                            .textFieldStyle(DarkTextFieldStyle())
+                            .frame(width: 240)
+                        Button {
+                            if let selected = model.chooseRecorderFolder() {
+                                audioFolder = selected
+                            }
+                        } label: {
+                            Image(systemName: "folder")
+                        }
+                        .buttonStyle(CompactButtonStyle())
+                        .help("Scegli cartella audio")
+                    }
+                }
+            }
+
+            SettingsGroup(title: "Sistema") {
+                LaunchAtLoginCard()
+            }
         }
         .onAppear {
             audioFolder = model.recorderFolder
@@ -357,37 +277,152 @@ struct SettingsOverviewView: View {
     }
 }
 
-/// Student, worker or both (USER_PROFILE); one of the two always stays selected.
-struct ProfileSettingsCard: View {
-    @EnvironmentObject private var model: AppModel
+/// A titled card of rows, as narrow as its controls need rather than the whole window.
+struct SettingsGroup<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(localized("Profilo"))
-                .font(.system(size: 13, weight: .bold))
+        VStack(alignment: .leading, spacing: 6) {
+            Text(localized(title))
+                .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(MeetingPilotDesign.tertiaryText(for: colorScheme))
-            ProfileRoleCards(
-                student: Binding(
-                    get: { model.userProfile.isStudent },
-                    set: { model.saveUserProfile(UserProfile(student: $0, worker: model.userProfile.isWorker)) }
-                ),
-                worker: Binding(
-                    get: { model.userProfile.isWorker },
-                    set: { model.saveUserProfile(UserProfile(student: model.userProfile.isStudent, worker: $0)) }
-                )
-            )
-            if model.userProfile == .both {
-                Text(localized("Una registrazione diventa una lezione quando il titolo lo dice, ad esempio \"Lezione\" o \"Corso di\". Durante la registrazione puoi cambiarlo nella sidebar dal vivo."))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(MeetingPilotDesign.textDimColor)
-                    .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 4)
+            VStack(alignment: .leading, spacing: 0) {
+                content
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 4)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
+        }
+        .frame(maxWidth: 680, alignment: .leading)
+    }
+}
+
+/// Label (and an optional explanation) on the left, its control on the right.
+struct SettingsLine<Control: View>: View {
+    let title: String
+    var detail: String? = nil
+    @ViewBuilder let control: Control
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(localized(title))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(MeetingPilotDesign.textColor)
+                if let detail {
+                    Text(localized(detail))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(MeetingPilotDesign.textDimColor)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 12)
+            control
+        }
+        .padding(.vertical, 10)
+    }
+}
+
+struct SettingsDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(MeetingPilotDesign.lineColor)
+            .frame(height: 1)
+    }
+}
+
+/// Student, worker or both (USER_PROFILE); one of the two always stays selected.
+struct ProfileSettingsRow: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        SettingsLine(
+            title: "Tipo di note",
+            detail: model.userProfile == .both
+                ? "Una registrazione diventa una lezione quando il titolo lo dice, ad esempio \"Lezione\" o \"Corso di\". Durante la registrazione puoi cambiarlo nella sidebar dal vivo."
+                : "Lezioni: concetti chiave e compiti. Riunioni: decisioni e action item."
+        ) {
+            HStack(spacing: 6) {
+                ProfileChip(title: "Studente", symbol: "graduationcap.fill", selected: model.userProfile.isStudent) {
+                    let profile = model.userProfile
+                    guard !(profile.isStudent && !profile.isWorker) else { return }
+                    model.saveUserProfile(UserProfile(student: !profile.isStudent, worker: profile.isWorker))
+                }
+                ProfileChip(title: "Lavoratore", symbol: "briefcase.fill", selected: model.userProfile.isWorker) {
+                    let profile = model.userProfile
+                    guard !(profile.isWorker && !profile.isStudent) else { return }
+                    model.saveUserProfile(UserProfile(student: profile.isStudent, worker: !profile.isWorker))
+                }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
+    }
+}
+
+private struct ProfileChip: View {
+    let title: String
+    let symbol: String
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: selected ? "checkmark" : symbol)
+                    .font(.system(size: 11, weight: .bold))
+                Text(localized(title))
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundStyle(selected ? MeetingPilotDesign.accent : MeetingPilotDesign.textDimColor)
+            .padding(.horizontal, 12)
+            .frame(height: 30)
+            .background(Capsule().fill(selected ? MeetingPilotDesign.accentTint : MeetingPilotDesign.hoverColor))
+            .overlay(Capsule().strokeBorder(selected ? MeetingPilotDesign.accent.opacity(0.45) : MeetingPilotDesign.lineColor, lineWidth: 1))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
+    }
+}
+
+struct SidebarScreenSharingRow: View {
+    @AppStorage(LiveSidebarWindow.hiddenFromScreenSharingKey) private var hidden = true
+
+    var body: some View {
+        SettingsLine(
+            title: "Nascondi la barra laterale nelle condivisioni schermo",
+            detail: "Chi guarda la tua condivisione o registrazione dello schermo non vede trascrizione e note."
+        ) {
+            Toggle("", isOn: Binding(
+                get: { hidden },
+                set: { LiveSidebarWindow.shared.setHiddenFromScreenSharing($0) }
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .tint(MeetingPilotDesign.accent)
+        }
+    }
+}
+
+struct AppScreenSharingRow: View {
+    @AppStorage(ScreenSharingPrivacy.appHiddenKey) private var hidden = false
+
+    var body: some View {
+        SettingsLine(
+            title: "Nascondi Meeting Pilot nelle condivisioni schermo",
+            detail: "Tutte le finestre dell'app restano invisibili a chi guarda. Anche da Finestra o con ⇧⌘H."
+        ) {
+            Toggle("", isOn: Binding(
+                get: { hidden },
+                set: { ScreenSharingPrivacy.setAppHidden($0) }
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .tint(MeetingPilotDesign.accent)
+        }
     }
 }
 
@@ -395,98 +430,14 @@ struct LaunchAtLoginCard: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "power")
-                    .foregroundStyle(MeetingPilotDesign.accent)
-                Text("Avvia al login")
-                    .font(.system(size: 14, weight: .bold))
-                Spacer()
-                Image(systemName: model.launchAtLogin ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(model.launchAtLogin ? MeetingPilotDesign.success : Color.adaptiveWhite(0.35))
-            }
-            LoginLaunchChoice(
-                title: "Avvia Meeting Pilot automaticamente all'accesso del Mac",
-                selected: model.launchAtLogin
-            ) {
-                model.saveLaunchAtLogin(true)
-            }
-            LoginLaunchChoice(
-                title: "Non avviare Meeting Pilot automaticamente all'accesso del Mac",
-                selected: !model.launchAtLogin
-            ) {
-                model.saveLaunchAtLogin(false)
-            }
-            if !model.statusMessage.isEmpty {
-                Text(localized(model.statusMessage))
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(MeetingPilotDesign.textDimColor)
-            }
+        SettingsLine(title: "Avvia al login", detail: "Apri Meeting Pilot quando accedi al Mac.") {
+            Toggle("", isOn: Binding(
+                get: { model.launchAtLogin },
+                set: { model.saveLaunchAtLogin($0) }
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .tint(MeetingPilotDesign.accent)
         }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
-    }
-}
-
-struct LoginLaunchChoice: View {
-    let title: String
-    let selected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(alignment: .top, spacing: 9) {
-                Image(systemName: selected ? "largecircle.fill.circle" : "circle")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(selected ? MeetingPilotDesign.accent : Color.adaptiveWhite(0.32))
-                Text(localized(title))
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(MeetingPilotDesign.textColor)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
-            }
-            .padding(.vertical, 3)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-struct SettingsShortcutRow: View {
-    let icon: String
-    let title: String
-    let value: String
-    let accent: Color
-    let action: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 15, weight: .bold))
-                    .frame(width: 22)
-                    .foregroundStyle(accent)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(localized(title))
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(MeetingPilotDesign.primaryText(for: colorScheme))
-                    Text(localized(value))
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(accent)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.68)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(MeetingPilotDesign.tertiaryText(for: colorScheme))
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
     }
 }

@@ -11,50 +11,9 @@ import SwiftUI
 import UserNotifications
 
 
-enum CommunicationDestination: String, CaseIterable, Identifiable {
-    case teams = "Teams"
-    case slack = "Slack"
-
-    var id: String { rawValue }
-    var assetName: String {
-        self == .teams ? "microsoft_teams_logo.png" : "Slack-Logo.webp"
-    }
-
-    var fallbackSymbol: String { self == .teams ? "person.3" : "number" }
-}
-
-struct CommunicationNavigation: View {
-    @Binding var selected: CommunicationDestination
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ForEach(CommunicationDestination.allCases) { destination in
-                Button {
-                    selected = destination
-                } label: {
-                    HStack(spacing: 6) {
-                        BundledAssetIcon(name: destination.assetName, fallbackSymbol: destination.fallbackSymbol, size: 20)
-                            .frame(width: 20, height: 20)
-                        Text(destination.rawValue)
-                    }
-                    .font(.system(size: 12, weight: .semibold))
-                    .padding(.horizontal, 10)
-                    .frame(height: 32)
-                    .background(selected == destination ? MeetingPilotDesign.accent.opacity(0.36) : Color.adaptiveWhite(0.06))
-                    .foregroundStyle(selected == destination ? .white : Color.adaptiveWhite(0.72))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                .buttonStyle(.plain)
-            }
-            Spacer()
-        }
-    }
-}
-
 struct TeamsConfigurationSection: View {
     @EnvironmentObject private var model: AppModel
     @State private var detectionDebug = "Premi Debug rilevazione durante una call Teams."
-    @State private var destination: CommunicationDestination = .teams
     @State private var showAdvancedTools = false
 
     private var hasMeetingDetails: Bool {
@@ -68,73 +27,70 @@ struct TeamsConfigurationSection: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            CommunicationNavigation(selected: $destination)
-            if destination == .teams {
-                HStack(alignment: .center, spacing: 14) {
-                    Image(systemName: hasMeetingDetails ? "checkmark.circle.fill" : "arrow.triangle.2.circlepath")
-                        .font(.system(size: 25, weight: .semibold))
-                        .foregroundStyle(hasMeetingDetails ? MeetingPilotDesign.success : MeetingPilotDesign.accent)
-                        .frame(width: 38, height: 38)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(localized(hasMeetingDetails ? "Call Teams rilevata" : "In attesa di una call Teams"))
-                            .font(.system(size: 15, weight: .semibold))
-                        Text(hasMeetingDetails ? model.recording.runtimeTitle : localized("Apri o avvia una riunione Teams per recuperare automaticamente i dettagli."))
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(MeetingPilotDesign.textDimColor)
-                            .lineLimit(2)
-                        Text(participantsText)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(MeetingPilotDesign.textFaintColor)
-                            .lineLimit(2)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 12) {
+                // The Teams logo, with the call state as a small badge on its corner.
+                BundledAssetIcon(name: "microsoft_teams_logo.png", fallbackSymbol: "person.3.fill", size: 26)
+                    .frame(width: 30, height: 30)
+                    .overlay(alignment: .bottomTrailing) {
+                        Image(systemName: hasMeetingDetails ? "checkmark.circle.fill" : "arrow.triangle.2.circlepath.circle.fill")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white, hasMeetingDetails ? MeetingPilotDesign.success : MeetingPilotDesign.accent)
+                            .background(Circle().fill(MeetingPilotDesign.surfaceColor).padding(-1.5))
+                            .offset(x: 4, y: 4)
                     }
-                    Spacer(minLength: 8)
-                }
-                .padding(16)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
 
-                HStack {
-                    Button("Recupera da Teams") { model.runTeamsScrape() }
-                        .buttonStyle(PrimaryButtonStyle())
-                    Text(localized(model.statusMessage))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(localized(hasMeetingDetails ? "Call Teams rilevata" : "In attesa di una call Teams"))
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(hasMeetingDetails ? model.recording.runtimeTitle : localized("Apri o avvia una riunione Teams per recuperare automaticamente i dettagli."))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(MeetingPilotDesign.textDimColor)
+                        .lineLimit(2)
+                    Text(participantsText)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(MeetingPilotDesign.textFaintColor)
+                        .lineLimit(2)
                 }
-                DisclosureGroup("Strumenti avanzati", isExpanded: $showAdvancedTools) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        SettingsRow(label: "Stato ultimo recupero", value: model.recording.runtimeStatus)
-                        SettingsRow(label: "Oggetto", value: model.recording.runtimeTitle)
-                        SettingsRow(label: "Partecipanti", value: participantsText)
-                        HStack {
-                            Button("Ispeziona Teams") {
-                                detectionDebug = "Leggo gli elementi Accessibilità di Teams…"
-                                model.inspectTeamsAccessibility { snapshot in
-                                    detectionDebug = snapshot
-                                }
-                            }
-                            .buttonStyle(CompactButtonStyle())
-                            .help("Mostra gli elementi Accessibilità esposti da Teams durante la call")
-                            Spacer()
-                        }
-                        Text(localized(detectionDebug))
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundStyle(MeetingPilotDesign.textDimColor)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(10)
-                            .background(Color.black.opacity(0.28))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-                    .padding(.top, 10)
-                }
-                .font(.system(size: 13, weight: .semibold))
-                .padding(12)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
-            } else {
-                SettingsRow(label: "Slack", value: "In arrivo")
+                Spacer(minLength: 8)
+                Button("Recupera da Teams") { model.runTeamsScrape() }
+                    .buttonStyle(MPSecondaryButtonStyle(compact: true))
             }
+            .padding(.horizontal, 2)
+
+            Rectangle()
+                .fill(MeetingPilotDesign.lineColor)
+                .frame(height: 1)
+
+            DisclosureGroup("Strumenti avanzati", isExpanded: $showAdvancedTools) {
+                VStack(alignment: .leading, spacing: 10) {
+                    SettingsRow(label: "Stato ultimo recupero", value: model.recording.runtimeStatus)
+                    SettingsRow(label: "Oggetto", value: model.recording.runtimeTitle)
+                    SettingsRow(label: "Partecipanti", value: participantsText)
+                    HStack {
+                        Button("Ispeziona Teams") {
+                            detectionDebug = "Leggo gli elementi Accessibilità di Teams…"
+                            model.inspectTeamsAccessibility { snapshot in
+                                detectionDebug = snapshot
+                            }
+                        }
+                        .buttonStyle(CompactButtonStyle())
+                        .help("Mostra gli elementi Accessibilità esposti da Teams durante la call")
+                        Spacer()
+                    }
+                    Text(localized(detectionDebug))
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundStyle(MeetingPilotDesign.textDimColor)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(10)
+                        .background(Color.black.opacity(0.28))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .padding(.top, 10)
+            }
+            .font(.system(size: 12, weight: .semibold))
+            .padding(.horizontal, 2)
         }
     }
 }
