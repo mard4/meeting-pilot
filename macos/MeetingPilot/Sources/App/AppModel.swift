@@ -116,6 +116,7 @@ final class AppModel: ObservableObject {
     let recording: RecordingController
     let notion: NotionConnection
     let importer: MediaImporter
+    let updater = AppUpdater()
     private var childChangeSubscriptions: [AnyCancellable] = []
     private var timer: Timer?
     private var accessibilityPermissionTimer: Timer?
@@ -254,6 +255,7 @@ final class AppModel: ObservableObject {
             recording.objectWillChange.eraseToAnyPublisher(),
             notion.objectWillChange.eraseToAnyPublisher(),
             importer.objectWillChange.eraseToAnyPublisher(),
+            updater.objectWillChange.eraseToAnyPublisher(),
         ]
         childChangeSubscriptions = children.map { publisher in
             publisher.sink { [weak self] in self?.objectWillChange.send() }
@@ -636,6 +638,25 @@ final class AppModel: ObservableObject {
             AppLog.append("Impossibile registrare avvio al login: \(error.localizedDescription)")
         case .disabled, .notInApplications:
             break
+        }
+    }
+
+    /// Replacing the app stops the watcher and quits, so it waits until nothing is being
+    /// recorded or processed.
+    var canInstallUpdateNow: Bool {
+        !recording.nativeRecordingActive && processingSessions.isEmpty
+    }
+
+    func installUpdate() {
+        guard canInstallUpdateNow else {
+            statusMessage = "Aggiorna quando registrazione ed elaborazione sono finite"
+            return
+        }
+        updater.install { [weak self] in
+            guard let self else { return NSApp.terminate(nil) }
+            // The watcher runs the CLI from inside the bundle being replaced; the new app
+            // starts it again at launch.
+            self.watcher.stop { NSApp.terminate(nil) }
         }
     }
 

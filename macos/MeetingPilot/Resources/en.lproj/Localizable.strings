@@ -878,3 +878,28 @@
 "Non sono riuscito ad aggiungere le slide" = "Couldn't add the slides";
 "Slide non aggiunte" = "Slides Not Added";
 "Allega il PDF delle slide: corregge la trascrizione e riscrive il riassunto" = "Attach the slides PDF: corrects the transcript and rewrites the summary";
+
+/* In-app updates */
+"Aggiornamenti" = "Updates";
+"Versione" = "Version";
+"Controlla automaticamente" = "Check automatically";
+"Cerca una nuova versione all'avvio e ogni 6 ore, e ti avvisa quando c'è." = "Looks for a new version at launch and every 6 hours, and tells you when there is one.";
+"Stai usando Meeting Pilot %@." = "You're using Meeting Pilot %@.";
+"Controllo gli aggiornamenti..." = "Checking for updates...";
+"Meeting Pilot %@ è la versione più recente." = "Meeting Pilot %@ is the latest version.";
+"Disponibile la versione %@. Potrai aggiornare quando registrazione ed elaborazione sono finite." = "Version %@ is available. You can update once recording and processing are done.";
+"Disponibile la versione %@ (hai la %@). L'app si riavvia da sola." = "Version %@ is available (you have %@). The app restarts on its own.";
+"Disponibile la versione %@. Sposta l'app in Applicazioni per aggiornarla da qui, oppure scaricala dalla pagina delle release." = "Version %@ is available. Move the app to Applications to update it from here, or download it from the releases page.";
+"Scarico e installo la versione %@..." = "Downloading and installing version %@...";
+"Novità" = "What's New";
+"Aggiorna e riavvia" = "Update and Restart";
+"Controlla ora" = "Check Now";
+"Aggiorna a Meeting Pilot %@" = "Update to Meeting Pilot %@";
+"Controlla aggiornamenti" = "Check for Updates";
+"Aggiornamento disponibile" = "Update Available";
+"Meeting Pilot %@ è pronto. Aggiorna da Impostazioni o dal menu." = "Meeting Pilot %@ is ready. Update from Settings or the menu.";
+"Non riesco a controllare gli aggiornamenti. Controlla la connessione." = "Couldn't check for updates. Check your connection.";
+"Download dell'aggiornamento non riuscito. Riprova più tardi." = "Couldn't download the update. Try again later.";
+"L'aggiornamento scaricato non è valido. Scaricalo dalla pagina delle release." = "The downloaded update isn't valid. Download it from the releases page.";
+"Non riesco a installare l'aggiornamento. Scaricalo dalla pagina delle release." = "Couldn't install the update. Download it from the releases page.";
+"Aggiorna quando registrazione ed elaborazione sono finite" = "Update once recording and processing are done";
