@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Slides can be added to a meeting already processed, live recordings included: Add Slides in the Diary, or right-click it in the recent meetings. Names and technical words the transcript misheard are corrected from the slides ("Cubernetes", "Kuber netes" become Kubernetes, while plurals and ordinary words are left alone), the summary is written again following the slides, and the notes in the Diary, Obsidian, Notion and Apple Notes are replaced: the old ones go to the Trash, so hand edits can be recovered. `meeting-pilot attach-slides --session-dir DIR [--slides PDF]` does the same from the command line.
+
 ### Changed
 - Opening the DMG shows a single window with the app on the left, an arrow and the Applications folder on the right, so installing is one drag. The post-installation guide text file is no longer in the DMG.
 

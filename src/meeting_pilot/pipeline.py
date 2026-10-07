@@ -17,11 +17,16 @@ from .transcription.apple import run_apple_transcriber
 from .transcription.fluid_audio import run_fluid_audio
 from .transcription.session import create_session, recorded_outside_a_call, validate_audio_file
 from .publishing.notion_publisher import publish_to_notion
+from .publishing.republish import withdraw_previous_notes
 from .slides import attach_slides, cite_slides
+from .slides.corrections import find_corrections, save_corrections
+from .slides.deck import PDF_NAME, load_slides, slides_dir
 from .summarization.long_transcripts import fit_for_summary
 from .summarization.omlx_client import summarize
 from .platforms.teams.teams_scraper import read_saved_teams_runtime_metadata
 from .tag_catalog import catalog_values
+
+AUDIO_SUFFIXES = {".wav", ".m4a", ".mp3", ".aac", ".flac", ".ogg", ".opus", ".mp4"}
 
 
 def process_audio(config: Config, source_audio: Path, dry_run: bool = False) -> Path:
@@ -195,6 +200,84 @@ def retry_transcription(config: Config, session_dir: Path, dry_run: bool = False
     return destination
 
 
+def attach_slides_later(
+    config: Config, session_dir: Path, slides: Path | None = None, dry_run: bool = False
+) -> Path:
+    """Adds slides to a meeting already processed: corrects the transcript's spellings
+    from them, writes the summary again following them and replaces the published notes.
+    The app leaves the PDF and its text in the session first; `slides` copies one in."""
+    session_dir = session_dir.expanduser().resolve()
+    if not session_dir.is_dir():
+        raise ValueError(f"Session folder not found: {session_dir}")
+    if slides is not None:
+        _copy_slides(slides.expanduser(), session_dir)
+    deck = load_slides(session_dir)
+    if not deck:
+        raise ValueError("The session has no slides.")
+
+    audio_file = next(
+        (path for path in sorted(session_dir.iterdir()) if path.suffix.lower() in AUDIO_SUFFIXES),
+        session_dir / "audio.m4a",
+    )
+    save_corrections(session_dir, {})
+    artifacts = collect_artifacts(session_dir, audio_file)
+    if not artifacts.transcript_text.strip():
+        raise ValueError("No existing transcript found; slides need one to follow.")
+    corrections = find_corrections(artifacts.transcript_text, deck)
+    if corrections:
+        save_corrections(session_dir, corrections)
+        artifacts = collect_artifacts(session_dir, audio_file)
+        fixed = ", ".join(f"{heard} → {term}" for heard, term in corrections.items())
+        print(f"Transcript: {len(corrections)} spellings corrected from the slides ({fixed}).", flush=True)
+    else:
+        print("Transcript: no spellings to correct from the slides.", flush=True)
+    artifacts.meeting_metadata = _saved_metadata(session_dir)
+    use_file_name_as_title(artifacts)
+    attach_slides(artifacts)
+
+    existing_summary = session_dir / "omlx_summary.json"
+    if config.summary_enabled:
+        print("Summarizing again with the slides...", flush=True)
+        artifacts.omlx_summary = summarize(config, fit_for_summary(config, artifacts))
+        apply_user_title(artifacts)
+        cite_slides(artifacts, config_language(config))
+        write_omlx_summary(session_dir, artifacts.omlx_summary)
+        print("Summary saved.", flush=True)
+    elif existing_summary.exists():
+        try:
+            artifacts.omlx_summary = json.loads(existing_summary.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            artifacts.omlx_summary = None
+
+    _apply_meeting_tag(artifacts, config=config)
+
+    if dry_run:
+        print("Dry-run enabled, skipping publish step.")
+    else:
+        _prepare_audio_link(config, artifacts, session_dir)
+        withdraw_previous_notes(config, session_dir, _effective_targets(config))
+        _publish_artifacts(config, artifacts)
+    print(f"Done: {session_dir}")
+    return session_dir
+
+
+def _copy_slides(pdf: Path, session_dir: Path) -> None:
+    if not pdf.is_file():
+        raise ValueError(f"Slides not found: {pdf}")
+    folder = slides_dir(session_dir)
+    shutil.rmtree(folder, ignore_errors=True)
+    folder.mkdir(parents=True)
+    shutil.copy2(pdf, folder / PDF_NAME)
+
+
+def _saved_metadata(session_dir: Path) -> dict:
+    try:
+        metadata = json.loads((session_dir / "meeting_metadata.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return metadata if isinstance(metadata, dict) else {}
+
+
 def _initial_metadata(config: Config, source_audio: Path) -> dict:
     """What is known about a recording before transcribing it."""
     imported = imported_media(source_audio)
@@ -336,6 +419,18 @@ def _tag_from_title(value: object) -> str:
     if text.casefold() in {"", "teams", "di prova", "microfono attivo in teams"}:
         return ""
     return text[:80]
+
+
+def _effective_targets(config: Config) -> tuple[str, ...]:
+    """Where `_publish_artifacts` will publish, fallback included."""
+    targets = _publish_targets(config)
+    if targets or getattr(config, "publish_targets_explicit", False):
+        return targets
+    if config.notion_token and config.notion_database_id:
+        return ("notion",)
+    if config.obsidian_vault_path:
+        return ("obsidian",)
+    return ("journal",)
 
 
 def _publish_targets(config: Config) -> tuple[str, ...]:

@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .business_glossary import apply_corrections as apply_glossary_corrections
+from .business_glossary import GlossaryEntry, apply_corrections as apply_glossary_corrections
 
 
 @dataclass
@@ -41,6 +41,10 @@ def collect_artifacts(session_dir: Path, audio_file: Path) -> MeetingArtifacts:
     )
     summary_markdown = _read_first_text(session_dir.glob("*.summary.md"))
     transcript_text = apply_glossary_corrections(_read_transcript_text(session_dir))
+    slide_glossary = _slide_corrections(session_dir)
+    if slide_glossary:
+        transcript_text = apply_glossary_corrections(transcript_text, slide_glossary)
+        _correct_segments(millet_json, slide_glossary)
     title = str(frontmatter.get("title") or session_dir.name)
 
     return MeetingArtifacts(
@@ -53,6 +57,23 @@ def collect_artifacts(session_dir: Path, audio_file: Path) -> MeetingArtifacts:
         millet_json=millet_json,
         user_notes=_read_first_text([session_dir / "sidecar" / "notes.md"]).strip(),
     )
+
+
+def _slide_corrections(session_dir: Path) -> tuple[GlossaryEntry, ...]:
+    """Mishearings the session's slides correct (see `slides/corrections.py`)."""
+    from .slides.corrections import load_corrections
+
+    by_term: dict[str, list[str]] = {}
+    for heard, term in load_corrections(session_dir).items():
+        by_term.setdefault(term, []).append(heard)
+    return tuple(GlossaryEntry(term=term, variants=tuple(heard)) for term, heard in by_term.items())
+
+
+def _correct_segments(millet_json: Any, glossary: tuple[GlossaryEntry, ...]) -> None:
+    segments = millet_json.get("segments") if isinstance(millet_json, dict) else None
+    for segment in segments if isinstance(segments, list) else []:
+        if isinstance(segment, dict) and isinstance(segment.get("text"), str):
+            segment["text"] = apply_glossary_corrections(segment["text"], glossary)
 
 
 def write_omlx_summary(session_dir: Path, summary: dict[str, Any]) -> Path:

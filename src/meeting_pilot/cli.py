@@ -32,7 +32,7 @@ from .publishing.notion_projects import assign_meeting_project
 from .tag_catalog import add_catalog_value, bootstrap_catalog_from_notion, catalog_values, discard_unconfirmed_initial_imports, import_catalog_from_notion, import_catalog_from_sources
 from .publishing.notion_setup import NotionSetupError, provision_notion_workspace
 from .media_import import import_media_file
-from .pipeline import process_audio, retry_from_transcript, retry_transcription
+from .pipeline import attach_slides_later, process_audio, retry_from_transcript, retry_transcription
 from .platforms.teams.teams_scraper import capture_teams_runtime_metadata
 from .watcher import _source_key, mark_processed, watch
 from .language import config_language, label, resolve_output_language
@@ -73,6 +73,14 @@ def _main() -> None:
     retry_summary = subparsers.add_parser("retry-summary", help="Retry summary and publishing from an existing transcript.")
     retry_summary.add_argument("--session-dir", type=Path, required=True)
     retry_summary.add_argument("--dry-run", action="store_true", help="Skip Notion publishing.")
+
+    attach_parser = subparsers.add_parser(
+        "attach-slides",
+        help="Add slides to a processed meeting: correct the transcript, summarize again and republish.",
+    )
+    attach_parser.add_argument("--session-dir", type=Path, required=True)
+    attach_parser.add_argument("--slides", type=Path, help="PDF of the slides shown; the app copies it in beforehand.")
+    attach_parser.add_argument("--dry-run", action="store_true", help="Skip publishing.")
 
     retry_transcript = subparsers.add_parser("retry-transcription", help="Retry transcription and continue the pipeline from saved audio.")
     retry_transcript.add_argument("--session-dir", type=Path, required=True)
@@ -206,6 +214,10 @@ def _main() -> None:
 
     if args.command == "retry-summary":
         retry_from_transcript(config, args.session_dir, dry_run=args.dry_run)
+        return
+
+    if args.command == "attach-slides":
+        attach_slides_later(config, args.session_dir, slides=args.slides, dry_run=args.dry_run)
         return
 
     if args.command == "retry-transcription":
