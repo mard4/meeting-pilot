@@ -472,7 +472,16 @@ struct LaunchAtLoginCard: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        SettingsLine(title: "Avvia al login", detail: "Apri Meeting Pilot quando accedi al Mac.", icon: SettingsIcon(symbol: "power")) {
+        SettingsLine(
+            title: "Avvia al login",
+            detail: model.launchAtLoginNeedsApproval
+                ? "Disattivato in Impostazioni di Sistema > Generale > Elementi login."
+                : "Apri Meeting Pilot quando accedi al Mac.",
+            icon: SettingsIcon(symbol: "power")
+        ) {
+            if model.launchAtLoginNeedsApproval {
+                Button(localized("Apri Impostazioni")) { LaunchAtLogin.openSystemSettings() }
+            }
             Toggle("", isOn: Binding(
                 get: { model.launchAtLogin },
                 set: { model.saveLaunchAtLogin($0) }

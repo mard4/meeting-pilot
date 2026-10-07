@@ -865,3 +865,5 @@
 "Download annullato" = "Download cancelled";
 "Download non riuscito" = "Download failed";
 "Il nostro modello, sul tuo Mac: privato, si scarica una volta (Leggero 572 MB o Qualità 2,5 GB)." = "Our own model, on your Mac: private, downloaded once (Light 572 MB or Quality 2.5 GB).";
+"Attiva Meeting Pilot in Impostazioni di Sistema > Generale > Elementi login" = "Turn on Meeting Pilot in System Settings > General > Login Items";
+"Disattivato in Impostazioni di Sistema > Generale > Elementi login." = "Turned off in System Settings > General > Login Items.";
