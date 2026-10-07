@@ -9,7 +9,18 @@ CONTENTS="$APP_DIR/Contents"
 MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
 TOOLS="$RESOURCES/Tools"
-CODESIGN_IDENTITY="${CODESIGN_IDENTITY:--}"
+# Release builds sign with a certificate of their own ("Meeting Pilot Signing", made once in
+# Keychain Access, see DISTRIBUZIONE.md) when it is in the keychain: unlike ad hoc signatures,
+# which change with every build, it keeps the app's privacy permissions and login item valid
+# across updates. Without it the build falls back to an ad hoc signature.
+SELF_SIGNED_IDENTITY="${MEETING_PILOT_SIGNING_CERT:-Meeting Pilot Signing}"
+if [[ -z "${CODESIGN_IDENTITY:-}" ]]; then
+  if security find-certificate -c "$SELF_SIGNED_IDENTITY" >/dev/null 2>&1; then
+    CODESIGN_IDENTITY="$SELF_SIGNED_IDENTITY"
+  else
+    CODESIGN_IDENTITY="-"
+  fi
+fi
 TARGET_ARCH="${MEETING_PILOT_TARGET_ARCH:-$(uname -m)}"
 DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-14.0}"
 SWIFT_TARGET="${TARGET_ARCH}-apple-macos${DEPLOYMENT_TARGET}"
@@ -207,20 +218,31 @@ done
 
 chmod +x "$MACOS/MeetingPilot" "$MACOS/AppleTranscriber" "$MACOS/AppleIntelligenceSummarizer" "$MACOS/TeamsOCR" "$MACOS/TeamsWindowID" "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI" "$RESOURCES/FluidAudio/bin/fluidaudiocli" "$RESOURCES/LlamaCpp/bin/llama-server" "$TOOLS/uv"
 
-if [[ "$CODESIGN_IDENTITY" == "-" ]]; then
-  codesign --force --sign - "$TOOLS/uv"
-  codesign --force --deep --sign - "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI"
-  codesign --force --sign - "$MACOS/TeamsOCR"
-  codesign --force --sign - "$MACOS/TeamsWindowID"
-  codesign --force --sign - "$MACOS/AppleTranscriber"
-  codesign --force --sign - "$MACOS/AppleIntelligenceSummarizer"
-  codesign --force --sign - "$RESOURCES/FluidAudio/bin/fluidaudiocli"
-  codesign --force --sign - "$RESOURCES/LlamaCpp/bin/llama-server"
-  codesign --force --sign - "$MACOS/MeetingPilot"
-  # Keep the bundle identifier stable so macOS can retain its TCC permissions
-  # across local ad-hoc rebuilds. --deep also seals the nested CLI helpers.
-  codesign --force --deep --sign - --identifier "$BUNDLE_ID" \
-    -r="designated => identifier \"$BUNDLE_ID\"" "$APP_DIR"
+if [[ "$CODESIGN_IDENTITY" != "Developer ID Application:"* ]]; then
+  # Ad hoc ("-") or a self-signed certificate: no hardened runtime, as without a Team ID
+  # library validation would refuse PyInstaller's libraries.
+  local_sign() {
+    codesign --force --sign "$CODESIGN_IDENTITY" "$@"
+  }
+  local_sign "$TOOLS/uv"
+  local_sign --deep "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI"
+  local_sign "$MACOS/TeamsOCR"
+  local_sign "$MACOS/TeamsWindowID"
+  local_sign "$MACOS/AppleTranscriber"
+  local_sign "$MACOS/AppleIntelligenceSummarizer"
+  local_sign "$RESOURCES/FluidAudio/bin/fluidaudiocli"
+  local_sign "$RESOURCES/LlamaCpp/bin/llama-server"
+  local_sign "$MACOS/MeetingPilot"
+  if [[ "$CODESIGN_IDENTITY" == "-" ]]; then
+    # Keep the bundle identifier stable so macOS can retain its TCC permissions
+    # across local ad-hoc rebuilds. --deep also seals the nested CLI helpers.
+    codesign --force --deep --sign - --identifier "$BUNDLE_ID" \
+      -r="designated => identifier \"$BUNDLE_ID\"" "$APP_DIR"
+  else
+    # The default designated requirement names the certificate, which stays the same
+    # from one release to the next.
+    local_sign --deep --identifier "$BUNDLE_ID" "$APP_DIR"
+  fi
 else
   # Notarization rejects any unsigned or non-hardened Mach-O, and --deep does not
   # reach the loose .so/.dylib files PyInstaller drops next to the CLI.

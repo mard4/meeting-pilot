@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- Release builds are signed with the "Meeting Pilot Signing" certificate when it is in the keychain, instead of an ad hoc signature that changes with every build, so microphone, screen recording, accessibility and automation permissions and launch at login stay valid after an update. Without the certificate builds stay ad hoc; DISTRIBUZIONE.md explains how to create it once.
+
 ## [0.2.1] - 2026-10-07
 
 ### Added

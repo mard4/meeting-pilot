@@ -16,6 +16,17 @@ def test_ad_hoc_build_embeds_a_stable_tcc_requirement() -> None:
     assert '-r="designated => identifier \\"$BUNDLE_ID\\""' in script
 
 
+def test_build_prefers_the_stable_self_signed_certificate() -> None:
+    script = (APP_SRC / "Scripts/build_app.sh").read_text()
+    dmg = (APP_SRC / "Scripts/make_dmg.sh").read_text()
+
+    assert 'SELF_SIGNED_IDENTITY="${MEETING_PILOT_SIGNING_CERT:-Meeting Pilot Signing}"' in script
+    assert 'security find-certificate -c "$SELF_SIGNED_IDENTITY"' in script
+    assert 'local_sign --deep --identifier "$BUNDLE_ID" "$APP_DIR"' in script
+    # Apple's timestamp service only signs for Developer ID certificates.
+    assert 'if [[ "$CODESIGN_IDENTITY" == "Developer ID Application:"* ]]; then\n  codesign --force --timestamp' in dmg
+
+
 def test_bundle_id_is_consistent_everywhere() -> None:
     bundle_id = plistlib.loads((APP_SRC / "Info.plist").read_bytes())["CFBundleIdentifier"]
     swift = (APP_SRC / "Sources/App/ConfigLocators.swift").read_text()
