@@ -18,8 +18,19 @@ enum SlideDeckError: LocalizedError {
 /// along the transcript (see `slides/deck.py`).
 enum SlideDeck {
     static func write(_ pdf: URL, intoSidecarOf audioURL: URL) throws {
+        try write(pdf, into: MeetingSidecar.slidesDirectory(for: audioURL))
+    }
+
+    /// Slides added to a meeting already processed, replacing any it had; the pipeline's
+    /// `attach-slides` then takes them from the session's `sidecar/slides`.
+    static func write(_ pdf: URL, intoSession sessionURL: URL) throws {
+        let folder = sessionURL.appendingPathComponent("sidecar/slides", isDirectory: true)
+        try? FileManager.default.removeItem(at: folder)
+        try write(pdf, into: folder)
+    }
+
+    private static func write(_ pdf: URL, into folder: URL) throws {
         let texts = try pageTexts(of: pdf)
-        let folder = MeetingSidecar.slidesDirectory(for: audioURL)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try FileManager.default.copyItem(at: pdf, to: folder.appendingPathComponent("slides.pdf"))
         let payload: [String: Any] = [

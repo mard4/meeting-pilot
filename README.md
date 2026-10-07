@@ -94,7 +94,7 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
     <td width="60%" align="center"><img src="docs/assets/readme/lecture-slides.png" alt="A lecture in the Journal, its transcript split slide by slide next to the slides PDF" width="100%" /></td>
     <td width="40%" valign="middle">
       <h3>SLIDES NEXT TO THE TRANSCRIPT</h3>
-      Add the lecture's PDF: every part of the transcript is matched to its slide, on your Mac and without a model. The summary cites them as <i>(slide 3)</i>.
+      Add the lecture's PDF: every part of the transcript is matched to its slide, on your Mac and without a model. The summary cites them as <i>(slide 3)</i>. Got the PDF after the lecture? Add it to any recording later: names and terms the transcript misheard are corrected from the slides, and the summary and notes are rewritten.
     </td>
   </tr>
   <tr>

@@ -425,6 +425,7 @@ struct PublicationTargetsView: View {
 /// Reading view for a Diary page: the YAML front matter becomes a header with
 /// badges instead of raw `key: "value"` lines.
 struct JournalNoteReader: View {
+    @EnvironmentObject private var model: AppModel
     let document: JournalDocument
     let text: String
     /// The slide shown beside a page that has slides, chosen in either pane.
@@ -529,6 +530,17 @@ struct JournalNoteReader: View {
                     }
                     .buttonStyle(MPSecondaryButtonStyle(compact: true))
                     .help("Apri le slide in Anteprima")
+                }
+                if let sessionID = note.value("session_id"), let session = model.processedSession(named: sessionID) {
+                    let hasSlides = journalSlidesURL(for: note, document: document) != nil
+                    Button {
+                        model.chooseSlides(forSessionAt: session)
+                    } label: {
+                        Label(localized(hasSlides ? "Cambia slide" : "Aggiungi slide"), systemImage: "doc.badge.plus")
+                    }
+                    .buttonStyle(MPSecondaryButtonStyle(compact: true))
+                    .disabled(model.slidesInProgress.contains(session.path))
+                    .help("Allega il PDF delle slide: corregge la trascrizione e riscrive il riassunto")
                 }
                 if let originalPath = note.value("original_path"), FileManager.default.fileExists(atPath: originalPath) {
                     Button {

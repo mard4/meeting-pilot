@@ -867,3 +867,14 @@
 "Il nostro modello, sul tuo Mac: privato, si scarica una volta (Leggero 572 MB o Qualità 2,5 GB)." = "Ons eigen model, op je Mac: privé, één keer gedownload (Licht 572 MB of Kwaliteit 2,5 GB).";
 "Attiva Meeting Pilot in Impostazioni di Sistema > Generale > Elementi login" = "Zet Meeting Pilot aan in Systeeminstellingen > Algemeen > Inlogonderdelen";
 "Disattivato in Impostazioni di Sistema > Generale > Elementi login." = "Uitgeschakeld in Systeeminstellingen > Algemeen > Inlogonderdelen.";
+
+/* Slides added to a processed meeting */
+"Aggiungi slide" = "Dia's toevoegen";
+"Aggiungi slide…" = "Dia's toevoegen…";
+"Cambia slide" = "Dia's wijzigen";
+"Scegli il PDF delle slide: Meeting Pilot corregge la trascrizione, riscrive il riassunto seguendole e aggiorna le note." = "Kies de pdf met dia's: Meeting Pilot corrigeert het transcript, herschrijft de samenvatting volgens de dia's en werkt de notities bij.";
+"Aggiungo le slide e riscrivo le note..." = "Dia's toevoegen en notities herschrijven...";
+"Slide aggiunte: trascrizione, riassunto e note aggiornati" = "Dia's toegevoegd: transcript, samenvatting en notities bijgewerkt";
+"Non sono riuscito ad aggiungere le slide" = "Kon de dia's niet toevoegen";
+"Slide non aggiunte" = "Dia's niet toegevoegd";
+"Allega il PDF delle slide: corregge la trascrizione e riscrive il riassunto" = "Voeg de pdf met dia's toe: corrigeert het transcript en herschrijft de samenvatting";

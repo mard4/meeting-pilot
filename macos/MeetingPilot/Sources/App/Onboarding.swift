@@ -338,6 +338,13 @@ private struct MeetingRow: View {
         )
         .onHover { hovering = $0 }
         .animation(.mpSmooth, value: hovering)
+        .opacity(model.slidesInProgress.contains(meeting.id) ? 0.5 : 1)
+        .contextMenu {
+            Button(localized("Aggiungi slide…")) {
+                model.chooseSlides(forSessionAt: URL(fileURLWithPath: meeting.id))
+            }
+            .disabled(model.slidesInProgress.contains(meeting.id))
+        }
     }
 }
 

@@ -867,3 +867,14 @@
 "Il nostro modello, sul tuo Mac: privato, si scarica una volta (Leggero 572 MB o Qualità 2,5 GB)." = "O nosso modelo, no teu Mac: privado, descarrega-se uma vez (Leve 572 MB ou Qualidade 2,5 GB).";
 "Attiva Meeting Pilot in Impostazioni di Sistema > Generale > Elementi login" = "Ative o Meeting Pilot em Ajustes do Sistema > Geral > Itens de Início";
 "Disattivato in Impostazioni di Sistema > Generale > Elementi login." = "Desativado em Ajustes do Sistema > Geral > Itens de Início.";
+
+/* Slides added to a processed meeting */
+"Aggiungi slide" = "Adicionar slides";
+"Aggiungi slide…" = "Adicionar slides…";
+"Cambia slide" = "Alterar slides";
+"Scegli il PDF delle slide: Meeting Pilot corregge la trascrizione, riscrive il riassunto seguendole e aggiorna le note." = "Escolhe o PDF dos slides: o Meeting Pilot corrige a transcrição, reescreve o resumo seguindo-os e atualiza as notas.";
+"Aggiungo le slide e riscrivo le note..." = "A adicionar os slides e a reescrever as notas...";
+"Slide aggiunte: trascrizione, riassunto e note aggiornati" = "Slides adicionados: transcrição, resumo e notas atualizados";
+"Non sono riuscito ad aggiungere le slide" = "Não foi possível adicionar os slides";
+"Slide non aggiunte" = "Slides não adicionados";
+"Allega il PDF delle slide: corregge la trascrizione e riscrive il riassunto" = "Anexa o PDF dos slides: corrige a transcrição e reescreve o resumo";

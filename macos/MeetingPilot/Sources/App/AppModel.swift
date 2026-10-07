@@ -94,6 +94,8 @@ final class AppModel: ObservableObject {
     @Published var processingSessions: [ProcessingSession] = []
     @Published var retryableFailedSession = ""
     @Published var retryInProgress = false
+    /// Sessions whose slides added later are being processed.
+    @Published var slidesInProgress: Set<String> = []
     @Published var retryableTranscriptionSession = ""
     @Published var chatProjects: [String] = []
     @Published var chatThemes: [String] = []
@@ -1806,6 +1808,58 @@ final class AppModel: ObservableObject {
 
     func openProject() {
         NSWorkspace.shared.open(projectRoot)
+    }
+
+    /// The processed session a Diary note belongs to, when it is still on this Mac.
+    func processedSession(named sessionID: String) -> URL? {
+        let env = EnvFile.load(from: envURL)
+        let done = expandPath(env["MEETINGS_ROOT"] ?? "~/TeamsMeetings")
+            .appendingPathComponent("done", isDirectory: true)
+        let session = done.appendingPathComponent(sessionID, isDirectory: true)
+        return FileManager.default.fileExists(atPath: session.path) ? session : nil
+    }
+
+    func chooseSlides(forSessionAt session: URL) {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.pdf]
+        panel.prompt = localized("Aggiungi")
+        panel.message = localized("Scegli il PDF delle slide: Meeting Pilot corregge la trascrizione, riscrive il riassunto seguendole e aggiorna le note.")
+        guard panel.runModal() == .OK, let pdf = panel.url else { return }
+        attachSlides(pdf, toSessionAt: session)
+    }
+
+    /// Adds slides to a meeting already processed: the pipeline corrects the transcript
+    /// with their terms, writes the summary again following them and replaces the notes.
+    func attachSlides(_ pdf: URL, toSessionAt session: URL) {
+        guard !slidesInProgress.contains(session.path) else { return }
+        slidesInProgress.insert(session.path)
+        statusMessage = localized("Aggiungo le slide e riscrivo le note...")
+        DispatchQueue.global(qos: .userInitiated).async {
+            let scoped = pdf.startAccessingSecurityScopedResource()
+            defer { if scoped { pdf.stopAccessingSecurityScopedResource() } }
+            var output = ""
+            do {
+                try SlideDeck.write(pdf, intoSession: session)
+                output = self.cli.run(["attach-slides", "--session-dir", session.path])
+            } catch {
+                output = error.localizedDescription
+            }
+            DispatchQueue.main.async {
+                self.slidesInProgress.remove(session.path)
+                if output.contains("Done:") {
+                    self.statusMessage = localized("Slide aggiunte: trascrizione, riassunto e note aggiornati")
+                } else {
+                    let detail = cliFailureLine(output)
+                    self.statusMessage = detail.isEmpty ? localized("Non sono riuscito ad aggiungere le slide") : detail
+                    AppLog.append("Slide aggiunte dopo non riuscite\n\(output)")
+                    presentErrorAlert(localized("Slide non aggiunte"), detail: self.statusMessage)
+                }
+                self.refresh()
+            }
+        }
     }
 
     func assignProject(to meeting: MeetingItem) {
