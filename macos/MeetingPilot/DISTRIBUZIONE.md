@@ -49,6 +49,13 @@ preserva firma e permessi di esecuzione in modo affidabile. Lo script
 `make_dmg.sh` verifica la firma del bundle prima di creare l'immagine e copia la
 app con `ditto`.
 
+Aprendo il DMG compare una finestra con l'icona dell'app a sinistra, una freccia
+e il collegamento ad Applications a destra. Lo sfondo e' in
+`assets/dmg_background.tiff` (rigeneralo con `Scripts/dmg_background.swift` a
+scala 1 e 2, poi `tiffutil -cathidpicheck`). La disposizione viene applicata da
+Finder via AppleScript: la prima volta macOS chiede il permesso Automazione per
+Finder al Terminale; se manca, il DMG viene creato lo stesso ma senza layout.
+
 Il PKG installa direttamente `Meeting Pilot.app` in `/Applications`, quindi e'
 utile se vuoi evitare che l'app venga avviata dal volume montato del DMG.
 
