@@ -8,10 +8,12 @@ prima dell'avvio, quindi non puo' comparire nessun popup in Privacy e sicurezza.
 
 Quando Codex prepara o modifica una release macOS di Meeting Pilot deve sempre:
 
-1. firmare ad-hoc l'intero bundle prima di distribuirlo, anche senza Developer
-   ID;
+1. firmare l'intero bundle prima di distribuirlo, anche senza Developer ID:
+   con il certificato `Meeting Pilot Signing` se e' nel portachiavi (vedi
+   "Certificato di firma stabile"), altrimenti ad-hoc;
 2. verificare il bundle con `codesign --verify --deep --strict`;
-3. controllare che `codesign -dv --verbose=4` mostri `Signature=adhoc`;
+3. controllare che `codesign -dv --verbose=4` mostri `Authority=Meeting Pilot
+   Signing` (o `Signature=adhoc` senza certificato);
 4. creare e distribuire un DMG, non uno zip;
 5. verificare che il DMG contenga una app firmata e con permessi di esecuzione
    preservati;
@@ -92,6 +94,41 @@ open "/Applications/Meeting Pilot.app"
 ```
 
 Questo resta un workaround di test, non la procedura per utenti finali.
+
+## Certificato di firma stabile (consigliato per le release)
+
+Con la firma ad-hoc la firma dell'app cambia a ogni build. macOS lega i
+permessi Privacy (microfono, registrazione schermo e audio, Accessibilita',
+Automazione) e l'elemento di login alla firma, quindi dopo un aggiornamento puo'
+chiederli di nuovo o mostrarli attivi senza che funzionino.
+
+Firmando ogni release con lo stesso certificato, anche autofirmato e gratuito,
+i permessi restano validi da una versione all'altra. Il primo avvio richiede
+comunque "Apri comunque" (senza Developer ID Gatekeeper non conosce il
+certificato), ma gli aggiornamenti fatti dal pulsante nell'app non lo chiedono.
+
+Da fare una volta sola, sul Mac che compila le release:
+
+1. Apri Accesso Portachiavi > menu Accesso Portachiavi > Assistente Certificato
+   > Crea un certificato.
+2. Nome: `Meeting Pilot Signing`. Tipo di identita': Radice autofirmata. Tipo di
+   certificato: Firma del codice. Crea.
+3. Nel portachiavi "login" apri il certificato, sezione Fiducia, e imposta
+   "Quando si usa questo certificato" su "Fidati sempre".
+4. Esporta certificato e chiave (.p12, con password) e conservali in un posto
+   sicuro: se li perdi, la release successiva fa richiedere i permessi una volta.
+
+Da li' in poi `build_app.sh` trova il certificato da solo e lo usa al posto della
+firma ad-hoc (`MEETING_PILOT_SIGNING_CERT` cambia il nome cercato;
+`CODESIGN_IDENTITY=-` forza la firma ad-hoc). Verifica:
+
+```bash
+codesign -dr - "macos/MeetingPilot/build-current/Meeting Pilot.app"
+```
+
+deve mostrare `certificate leaf = H"..."`. Il passaggio dalla firma ad-hoc al
+certificato cambia la firma un'ultima volta: alla prima release firmata cosi' gli
+utenti riconcedono i permessi, poi non piu'.
 
 ## Distribuzione a utenti finali
 

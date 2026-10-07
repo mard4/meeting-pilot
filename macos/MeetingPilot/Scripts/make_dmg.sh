@@ -12,7 +12,7 @@ VOLUME_NAME="Meeting Pilot"
 CODESIGN_IDENTITY="${CODESIGN_IDENTITY:-}"
 NOTARY_KEYCHAIN_PROFILE="${NOTARY_KEYCHAIN_PROFILE:-}"
 
-if [[ -n "$NOTARY_KEYCHAIN_PROFILE" && ( -z "$CODESIGN_IDENTITY" || "$CODESIGN_IDENTITY" == "-" ) ]]; then
+if [[ -n "$NOTARY_KEYCHAIN_PROFILE" && "$CODESIGN_IDENTITY" != "Developer ID Application:"* ]]; then
   echo "La notarizzazione richiede CODESIGN_IDENTITY=\"Developer ID Application: ...\"." >&2
   exit 1
 fi
@@ -80,7 +80,9 @@ hdiutil detach "$MOUNT_DIR" -quiet || hdiutil detach "$MOUNT_DIR" -force -quiet
 hdiutil convert "$RW_DMG" -format UDZO -imagekey zlib-level=9 -ov -o "$DMG_PATH"
 rm -f "$RW_DMG"
 
-if [[ -n "$CODESIGN_IDENTITY" && "$CODESIGN_IDENTITY" != "-" ]]; then
+# Apple's timestamp service only accepts its own certificates, and a self-signed DMG
+# signature would add nothing: the app inside carries the signature that matters.
+if [[ "$CODESIGN_IDENTITY" == "Developer ID Application:"* ]]; then
   codesign --force --timestamp --sign "$CODESIGN_IDENTITY" "$DMG_PATH"
 fi
 
