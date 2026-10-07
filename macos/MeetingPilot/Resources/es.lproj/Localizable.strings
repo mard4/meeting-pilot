@@ -878,3 +878,28 @@
 "Non sono riuscito ad aggiungere le slide" = "No se pudieron añadir las diapositivas";
 "Slide non aggiunte" = "Diapositivas no añadidas";
 "Allega il PDF delle slide: corregge la trascrizione e riscrive il riassunto" = "Adjunta el PDF de las diapositivas: corrige la transcripción y reescribe el resumen";
+
+/* In-app updates */
+"Aggiornamenti" = "Actualizaciones";
+"Versione" = "Versión";
+"Controlla automaticamente" = "Buscar automáticamente";
+"Cerca una nuova versione all'avvio e ogni 6 ore, e ti avvisa quando c'è." = "Busca una nueva versión al abrir la app y cada 6 horas, y te avisa cuando la hay.";
+"Stai usando Meeting Pilot %@." = "Estás usando Meeting Pilot %@.";
+"Controllo gli aggiornamenti..." = "Buscando actualizaciones...";
+"Meeting Pilot %@ è la versione più recente." = "Meeting Pilot %@ es la versión más reciente.";
+"Disponibile la versione %@. Potrai aggiornare quando registrazione ed elaborazione sono finite." = "La versión %@ está disponible. Podrás actualizar cuando terminen la grabación y el procesamiento.";
+"Disponibile la versione %@ (hai la %@). L'app si riavvia da sola." = "La versión %@ está disponible (tienes la %@). La app se reinicia sola.";
+"Disponibile la versione %@. Sposta l'app in Applicazioni per aggiornarla da qui, oppure scaricala dalla pagina delle release." = "La versión %@ está disponible. Mueve la app a Aplicaciones para actualizarla desde aquí, o descárgala de la página de versiones.";
+"Scarico e installo la versione %@..." = "Descargando e instalando la versión %@...";
+"Novità" = "Novedades";
+"Aggiorna e riavvia" = "Actualizar y reiniciar";
+"Controlla ora" = "Buscar ahora";
+"Aggiorna a Meeting Pilot %@" = "Actualizar a Meeting Pilot %@";
+"Controlla aggiornamenti" = "Buscar actualizaciones";
+"Aggiornamento disponibile" = "Actualización disponible";
+"Meeting Pilot %@ è pronto. Aggiorna da Impostazioni o dal menu." = "Meeting Pilot %@ está listo. Actualiza desde Ajustes o desde el menú.";
+"Non riesco a controllare gli aggiornamenti. Controlla la connessione." = "No se pudieron buscar actualizaciones. Revisa la conexión.";
+"Download dell'aggiornamento non riuscito. Riprova più tardi." = "No se pudo descargar la actualización. Inténtalo más tarde.";
+"L'aggiornamento scaricato non è valido. Scaricalo dalla pagina delle release." = "La actualización descargada no es válida. Descárgala de la página de versiones.";
+"Non riesco a installare l'aggiornamento. Scaricalo dalla pagina delle release." = "No se pudo instalar la actualización. Descárgala de la página de versiones.";
+"Aggiorna quando registrazione ed elaborazione sono finite" = "Actualiza cuando terminen la grabación y el procesamiento";

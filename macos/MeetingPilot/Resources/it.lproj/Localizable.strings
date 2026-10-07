@@ -858,3 +858,28 @@
 "Non sono riuscito ad aggiungere le slide" = "Non sono riuscito ad aggiungere le slide";
 "Slide non aggiunte" = "Slide non aggiunte";
 "Allega il PDF delle slide: corregge la trascrizione e riscrive il riassunto" = "Allega il PDF delle slide: corregge la trascrizione e riscrive il riassunto";
+
+/* In-app updates */
+"Aggiornamenti" = "Aggiornamenti";
+"Versione" = "Versione";
+"Controlla automaticamente" = "Controlla automaticamente";
+"Cerca una nuova versione all'avvio e ogni 6 ore, e ti avvisa quando c'è." = "Cerca una nuova versione all'avvio e ogni 6 ore, e ti avvisa quando c'è.";
+"Stai usando Meeting Pilot %@." = "Stai usando Meeting Pilot %@.";
+"Controllo gli aggiornamenti..." = "Controllo gli aggiornamenti...";
+"Meeting Pilot %@ è la versione più recente." = "Meeting Pilot %@ è la versione più recente.";
+"Disponibile la versione %@. Potrai aggiornare quando registrazione ed elaborazione sono finite." = "Disponibile la versione %@. Potrai aggiornare quando registrazione ed elaborazione sono finite.";
+"Disponibile la versione %@ (hai la %@). L'app si riavvia da sola." = "Disponibile la versione %@ (hai la %@). L'app si riavvia da sola.";
+"Disponibile la versione %@. Sposta l'app in Applicazioni per aggiornarla da qui, oppure scaricala dalla pagina delle release." = "Disponibile la versione %@. Sposta l'app in Applicazioni per aggiornarla da qui, oppure scaricala dalla pagina delle release.";
+"Scarico e installo la versione %@..." = "Scarico e installo la versione %@...";
+"Novità" = "Novità";
+"Aggiorna e riavvia" = "Aggiorna e riavvia";
+"Controlla ora" = "Controlla ora";
+"Aggiorna a Meeting Pilot %@" = "Aggiorna a Meeting Pilot %@";
+"Controlla aggiornamenti" = "Controlla aggiornamenti";
+"Aggiornamento disponibile" = "Aggiornamento disponibile";
+"Meeting Pilot %@ è pronto. Aggiorna da Impostazioni o dal menu." = "Meeting Pilot %@ è pronto. Aggiorna da Impostazioni o dal menu.";
+"Non riesco a controllare gli aggiornamenti. Controlla la connessione." = "Non riesco a controllare gli aggiornamenti. Controlla la connessione.";
+"Download dell'aggiornamento non riuscito. Riprova più tardi." = "Download dell'aggiornamento non riuscito. Riprova più tardi.";
+"L'aggiornamento scaricato non è valido. Scaricalo dalla pagina delle release." = "L'aggiornamento scaricato non è valido. Scaricalo dalla pagina delle release.";
+"Non riesco a installare l'aggiornamento. Scaricalo dalla pagina delle release." = "Non riesco a installare l'aggiornamento. Scaricalo dalla pagina delle release.";
+"Aggiorna quando registrazione ed elaborazione sono finite" = "Aggiorna quando registrazione ed elaborazione sono finite";

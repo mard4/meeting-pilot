@@ -273,6 +273,12 @@ struct SettingsOverviewView: View {
             SettingsGroup(title: "Sistema") {
                 LaunchAtLoginCard()
             }
+
+            SettingsGroup(title: "Aggiornamenti") {
+                UpdateRow()
+                SettingsDivider()
+                AutomaticUpdateChecksRow()
+            }
         }
         .onAppear {
             audioFolder = model.recorderFolder
@@ -485,6 +491,81 @@ struct LaunchAtLoginCard: View {
             Toggle("", isOn: Binding(
                 get: { model.launchAtLogin },
                 set: { model.saveLaunchAtLogin($0) }
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .tint(MeetingPilotDesign.accent)
+        }
+    }
+}
+
+/// Current version, the newest release when there is one, and the button that installs it.
+struct UpdateRow: View {
+    @EnvironmentObject private var model: AppModel
+
+    private var current: String { AppUpdater.currentVersion.description }
+
+    private var detail: String {
+        switch model.updater.state {
+        case .idle:
+            return String(format: localized("Stai usando Meeting Pilot %@."), current)
+        case .checking:
+            return localized("Controllo gli aggiornamenti...")
+        case .upToDate:
+            return String(format: localized("Meeting Pilot %@ è la versione più recente."), current)
+        case .available(let release):
+            if !model.canInstallUpdateNow {
+                return String(format: localized("Disponibile la versione %@. Potrai aggiornare quando registrazione ed elaborazione sono finite."), release.version.description)
+            }
+            return AppUpdater.canInstallInPlace
+                ? String(format: localized("Disponibile la versione %@ (hai la %@). L'app si riavvia da sola."), release.version.description, current)
+                : String(format: localized("Disponibile la versione %@. Sposta l'app in Applicazioni per aggiornarla da qui, oppure scaricala dalla pagina delle release."), release.version.description)
+        case .downloading(let release):
+            return String(format: localized("Scarico e installo la versione %@..."), release.version.description)
+        case .failed(let message):
+            return message
+        }
+    }
+
+    var body: some View {
+        SettingsLine(
+            title: "Versione",
+            detail: detail,
+            icon: SettingsIcon(symbol: "arrow.down.circle.fill")
+        ) {
+            HStack(spacing: 6) {
+                switch model.updater.state {
+                case .checking, .downloading:
+                    ProgressView().controlSize(.small)
+                case .available(let release):
+                    Button(localized("Novità")) { NSWorkspace.shared.open(release.pageURL) }
+                        .buttonStyle(CompactButtonStyle())
+                    Button(localized(AppUpdater.canInstallInPlace ? "Aggiorna e riavvia" : "Scarica")) {
+                        model.installUpdate()
+                    }
+                    .buttonStyle(MPPrimaryButtonStyle(compact: true))
+                    .disabled(!model.canInstallUpdateNow)
+                default:
+                    Button(localized("Controlla ora")) { model.updater.check(userInitiated: true) }
+                        .buttonStyle(CompactButtonStyle())
+                }
+            }
+        }
+    }
+}
+
+struct AutomaticUpdateChecksRow: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        SettingsLine(
+            title: "Controlla automaticamente",
+            detail: "Cerca una nuova versione all'avvio e ogni 6 ore, e ti avvisa quando c'è.",
+            icon: SettingsIcon(symbol: "clock.arrow.circlepath")
+        ) {
+            Toggle("", isOn: Binding(
+                get: { model.updater.automaticChecks },
+                set: { model.updater.automaticChecks = $0 }
             ))
             .labelsHidden()
             .toggleStyle(.switch)

@@ -166,6 +166,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 #endif
         if !demoChat {
             model.recording.startMeetingDetectionMonitor()
+            model.updater.startAutomaticChecks()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
                 self?.model.startInstalledServicesAutomatically()
             }
@@ -292,6 +293,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         stopRecordingItem.isEnabled = model.recording.nativeRecordingActive
         menu.addItem(stopRecordingItem)
         menu.addItem(NSMenuItem.separator())
+        if let release = model.updater.availableRelease {
+            let updateItem = NSMenuItem(
+                title: String(format: localized("Aggiorna a Meeting Pilot %@"), release.version.description),
+                action: #selector(installUpdateFromMenu),
+                keyEquivalent: ""
+            )
+            updateItem.isEnabled = model.canInstallUpdateNow
+            menu.addItem(updateItem)
+        } else {
+            menu.addItem(NSMenuItem(title: localized("Controlla aggiornamenti"), action: #selector(checkForUpdatesFromMenu), keyEquivalent: ""))
+        }
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: localized("Esci"), action: #selector(quit), keyEquivalent: "q"))
         menu.items.forEach { $0.target = self }
         statusItem?.menu = menu
@@ -359,6 +372,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     @objc private func toggleNativeRecordingPause() {
         model.recording.toggleNativeRecordingPause()
+    }
+
+    @objc private func installUpdateFromMenu() {
+        model.installUpdate()
+    }
+
+    /// The answer shows in Settings, next to the button that installs it.
+    @objc private func checkForUpdatesFromMenu() {
+        model.updater.check(userInitiated: true)
+        model.selectedSection = .settings
+        showMainWindow()
     }
 
     @objc private func quit() {

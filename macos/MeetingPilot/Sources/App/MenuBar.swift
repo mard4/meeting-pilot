@@ -74,6 +74,17 @@ struct MenuBarOverview: View {
                     }
                 }
                 Spacer()
+                if let release = model.updater.availableRelease {
+                    Button {
+                        model.installUpdate()
+                    } label: {
+                        Image(systemName: "arrow.down.circle.fill")
+                            .foregroundStyle(MeetingPilotDesign.accent)
+                    }
+                    .buttonStyle(MPIconButtonStyle(size: 30))
+                    .disabled(!model.canInstallUpdateNow)
+                    .help(String(format: localized("Aggiorna a Meeting Pilot %@"), release.version.description))
+                }
                 Button(action: openImport) {
                     Image(systemName: "square.and.arrow.down")
                 }

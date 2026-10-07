@@ -878,3 +878,28 @@
 "Non sono riuscito ad aggiungere le slide" = "Die Folien konnten nicht hinzugefügt werden";
 "Slide non aggiunte" = "Folien nicht hinzugefügt";
 "Allega il PDF delle slide: corregge la trascrizione e riscrive il riassunto" = "Folien-PDF anhängen: korrigiert das Transkript und schreibt die Zusammenfassung neu";
+
+/* In-app updates */
+"Aggiornamenti" = "Updates";
+"Versione" = "Version";
+"Controlla automaticamente" = "Automatisch suchen";
+"Cerca una nuova versione all'avvio e ogni 6 ore, e ti avvisa quando c'è." = "Sucht beim Start und alle 6 Stunden nach einer neuen Version und meldet sich, wenn es eine gibt.";
+"Stai usando Meeting Pilot %@." = "Du verwendest Meeting Pilot %@.";
+"Controllo gli aggiornamenti..." = "Suche nach Updates...";
+"Meeting Pilot %@ è la versione più recente." = "Meeting Pilot %@ ist die neueste Version.";
+"Disponibile la versione %@. Potrai aggiornare quando registrazione ed elaborazione sono finite." = "Version %@ ist verfügbar. Du kannst aktualisieren, sobald Aufnahme und Verarbeitung fertig sind.";
+"Disponibile la versione %@ (hai la %@). L'app si riavvia da sola." = "Version %@ ist verfügbar (du hast %@). Die App startet von selbst neu.";
+"Disponibile la versione %@. Sposta l'app in Applicazioni per aggiornarla da qui, oppure scaricala dalla pagina delle release." = "Version %@ ist verfügbar. Verschiebe die App in den Ordner Programme, um sie hier zu aktualisieren, oder lade sie von der Release-Seite.";
+"Scarico e installo la versione %@..." = "Version %@ wird geladen und installiert...";
+"Novità" = "Neuerungen";
+"Aggiorna e riavvia" = "Aktualisieren und neu starten";
+"Controlla ora" = "Jetzt suchen";
+"Aggiorna a Meeting Pilot %@" = "Auf Meeting Pilot %@ aktualisieren";
+"Controlla aggiornamenti" = "Nach Updates suchen";
+"Aggiornamento disponibile" = "Update verfügbar";
+"Meeting Pilot %@ è pronto. Aggiorna da Impostazioni o dal menu." = "Meeting Pilot %@ ist bereit. Aktualisiere in den Einstellungen oder im Menü.";
+"Non riesco a controllare gli aggiornamenti. Controlla la connessione." = "Suche nach Updates fehlgeschlagen. Prüfe die Verbindung.";
+"Download dell'aggiornamento non riuscito. Riprova più tardi." = "Das Update konnte nicht geladen werden. Versuche es später erneut.";
+"L'aggiornamento scaricato non è valido. Scaricalo dalla pagina delle release." = "Das geladene Update ist ungültig. Lade es von der Release-Seite.";
+"Non riesco a installare l'aggiornamento. Scaricalo dalla pagina delle release." = "Das Update konnte nicht installiert werden. Lade es von der Release-Seite.";
+"Aggiorna quando registrazione ed elaborazione sono finite" = "Aktualisiere, sobald Aufnahme und Verarbeitung fertig sind";
