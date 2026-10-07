@@ -75,6 +75,7 @@ final class AppModel: ObservableObject {
     @Published var permissionRows: [PermissionRow] = []
     @Published var accessibilityGranted = AXIsProcessTrusted()
     @Published var launchAtLogin = true
+    @Published var launchAtLoginNeedsApproval = false
     @Published var inboxLabel = "~/TeamsMeetings/inbox_audio"
     @Published var meetingsRoot = ""
     @Published var recentMeetings: [MeetingItem] = []
@@ -419,6 +420,7 @@ final class AppModel: ObservableObject {
         notion.load(from: env)
         publicationTargets = parsePublicationTargets(env)
         launchAtLogin = envBool(env, "LAUNCH_AT_LOGIN", true)
+        launchAtLoginNeedsApproval = launchAtLogin && LaunchAtLogin.needsApproval
         journalRoot = expandPath(env["JOURNAL_ROOT"] ?? "~/Library/Application Support/Meeting Pilot/Diary").path
         obsidianVaultPath = env["OBSIDIAN_VAULT_PATH"] ?? ""
         obsidianFolder = env["OBSIDIAN_FOLDER"] ?? "Meeting Pilot"
@@ -621,34 +623,36 @@ final class AppModel: ObservableObject {
             }
         }
 
-        guard envBool(env, "LAUNCH_AT_LOGIN", true),
-              Bundle.main.bundleURL.path.contains("/Applications/") else { return }
-        let service = SMAppService.mainApp
-        guard service.status == .notRegistered else { return }
-        do {
-            try service.register()
-            AppLog.append("Avvio al login registrato")
-        } catch {
+        guard envBool(env, "LAUNCH_AT_LOGIN", true) else { return }
+        switch LaunchAtLogin.apply(true) {
+        case .enabled:
+            launchAtLoginNeedsApproval = false
+        case .needsApproval:
+            launchAtLoginNeedsApproval = true
+            AppLog.append("Avvio al login disattivato in Impostazioni di Sistema > Generale > Elementi login")
+        case .failed(let error):
             AppLog.append("Impossibile registrare avvio al login: \(error.localizedDescription)")
+        case .disabled, .notInApplications:
+            break
         }
     }
 
     func saveLaunchAtLogin(_ enabled: Bool) {
         EnvFile.update(at: envURL, values: ["LAUNCH_AT_LOGIN": enabled ? "true" : "false"])
         launchAtLogin = enabled
-        guard Bundle.main.bundleURL.path.contains("/Applications/") else {
+        launchAtLoginNeedsApproval = false
+        switch LaunchAtLogin.apply(enabled) {
+        case .enabled:
+            statusMessage = "Avvio al login abilitato"
+        case .disabled:
+            statusMessage = "Avvio al login disabilitato"
+        case .needsApproval:
+            launchAtLoginNeedsApproval = true
+            statusMessage = "Attiva Meeting Pilot in Impostazioni di Sistema > Generale > Elementi login"
+            LaunchAtLogin.openSystemSettings()
+        case .notInApplications:
             statusMessage = "Installa Meeting Pilot in Applicazioni per gestire l'avvio al login"
-            return
-        }
-        let service = SMAppService.mainApp
-        do {
-            if enabled, service.status == .notRegistered {
-                try service.register()
-            } else if !enabled, service.status != .notRegistered {
-                try service.unregister()
-            }
-            statusMessage = enabled ? "Avvio al login abilitato" : "Avvio al login disabilitato"
-        } catch {
+        case .failed(let error):
             statusMessage = "Non riesco a modificare l'avvio al login: \(error.localizedDescription)"
             AppLog.append(statusMessage)
         }
