@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- Opening the DMG shows a single window with the app on the left, an arrow and the Applications folder on the right, so installing is one drag. The post-installation guide text file is no longer in the DMG.
+
 ### Fixed
 - The live sidebar no longer shows "Me" lines during a call. The microphone also hears the others through the speakers, so their words came out twice, once under "Me" even when you weren't talking. The microphone is now transcribed only when the Mac's audio isn't arriving, and those lines carry no label.
 - Teams participants whose display name contains a comma ("Rossi, Mario") are named again, in the sidebar and in the notes; before, they were never recognised.

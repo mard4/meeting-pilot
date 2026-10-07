@@ -79,9 +79,19 @@ def test_make_dmg_verifies_existing_app_before_packaging(tmp_path: Path) -> None
         "exit 0\n",
         encoding="utf-8",
     )
+    (tool_dir / "osascript").write_text(
+        "#!/bin/sh\n"
+        "cat > /dev/null\n"
+        "printf 'osascript\\n' >> \"$TOOL_LOG\"\n",
+        encoding="utf-8",
+    )
     (tool_dir / "hdiutil").write_text(
         "#!/bin/sh\n"
         "printf 'hdiutil %s\\n' \"$*\" >> \"$TOOL_LOG\"\n"
+        "case \"$1\" in\n"
+        "  attach) printf '/dev/disk9s1\\tApple_HFS\\t/Volumes/Meeting Pilot\\n'; exit 0 ;;\n"
+        "  detach) exit 0 ;;\n"
+        "esac\n"
         "out=''\n"
         "for arg in \"$@\"; do out=\"$arg\"; done\n"
         "mkdir -p \"$(dirname \"$out\")\"\n"
@@ -111,3 +121,8 @@ def test_make_dmg_verifies_existing_app_before_packaging(tmp_path: Path) -> None
         i for i, line in enumerate(log_lines) if line.startswith("hdiutil create")
     )
     assert verify_index < create_index
+    layout_index = log_lines.index("osascript")
+    convert_index = next(
+        i for i, line in enumerate(log_lines) if line.startswith("hdiutil convert")
+    )
+    assert create_index < layout_index < convert_index

@@ -7,6 +7,8 @@ BUILD_DIR="${MEETING_PILOT_BUILD_DIR:-$APP_SRC/build-current}"
 APP_PATH="$BUILD_DIR/Meeting Pilot.app"
 DMG_PATH="$BUILD_DIR/MeetingPilot.dmg"
 STAGING="$BUILD_DIR/dmg-staging"
+RW_DMG="$BUILD_DIR/MeetingPilot-rw.dmg"
+VOLUME_NAME="Meeting Pilot"
 CODESIGN_IDENTITY="${CODESIGN_IDENTITY:-}"
 NOTARY_KEYCHAIN_PROFILE="${NOTARY_KEYCHAIN_PROFILE:-}"
 
@@ -28,20 +30,55 @@ if ! app_signature_valid; then
 fi
 app_signature_valid
 
-rm -rf "$STAGING" "$DMG_PATH"
-mkdir -p "$STAGING"
+rm -rf "$STAGING" "$DMG_PATH" "$RW_DMG"
+mkdir -p "$STAGING/.background"
 ditto "$APP_PATH" "$STAGING/Meeting Pilot.app"
 codesign --verify --deep --strict --verbose=2 "$STAGING/Meeting Pilot.app" >/dev/null
-cp "$APP_SRC/Guida post-installazione.txt" "$STAGING/"
+cp "$APP_SRC/assets/dmg_background.tiff" "$STAGING/.background/background.tiff"
 ln -s /Applications "$STAGING/Applications"
 xattr -cr "$STAGING" 2>/dev/null || true
 
 hdiutil create \
-  -volname "Meeting Pilot" \
+  -volname "$VOLUME_NAME" \
   -srcfolder "$STAGING" \
   -ov \
-  -format UDZO \
-  "$DMG_PATH"
+  -fs HFS+ \
+  -format UDRW \
+  "$RW_DMG"
+
+# Lay out the window the user sees on opening the DMG: the app on the left, an
+# arrow on the background and the Applications link on the right.
+MOUNT_DIR="$(hdiutil attach -readwrite -noverify -noautoopen "$RW_DMG" | awk -F '\t' '/\/Volumes\// {print $NF; exit}')"
+DISK_NAME="$(basename "$MOUNT_DIR")"
+if ! osascript <<APPLESCRIPT
+tell application "Finder"
+  tell disk "$DISK_NAME"
+    open
+    set current view of container window to icon view
+    set toolbar visible of container window to false
+    set statusbar visible of container window to false
+    set the bounds of container window to {200, 120, 860, 548}
+    set viewOptions to the icon view options of container window
+    set arrangement of viewOptions to not arranged
+    set icon size of viewOptions to 128
+    set text size of viewOptions to 15
+    set background picture of viewOptions to file ".background:background.tiff"
+    set position of item "Meeting Pilot.app" of container window to {165, 190}
+    set position of item "Applications" of container window to {495, 190}
+    update without registering applications
+    delay 1
+    close
+  end tell
+end tell
+APPLESCRIPT
+then
+  echo "Finder non ha applicato il layout del DMG (serve il permesso Automazione per Finder)." >&2
+fi
+sync
+hdiutil detach "$MOUNT_DIR" -quiet || hdiutil detach "$MOUNT_DIR" -force -quiet
+
+hdiutil convert "$RW_DMG" -format UDZO -imagekey zlib-level=9 -ov -o "$DMG_PATH"
+rm -f "$RW_DMG"
 
 if [[ -n "$CODESIGN_IDENTITY" && "$CODESIGN_IDENTITY" != "-" ]]; then
   codesign --force --timestamp --sign "$CODESIGN_IDENTITY" "$DMG_PATH"
