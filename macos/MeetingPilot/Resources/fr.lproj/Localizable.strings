@@ -878,3 +878,28 @@
 "Non sono riuscito ad aggiungere le slide" = "Impossible d'ajouter les diapositives";
 "Slide non aggiunte" = "Diapositives non ajoutées";
 "Allega il PDF delle slide: corregge la trascrizione e riscrive il riassunto" = "Joindre le PDF des diapositives : corrige la transcription et réécrit le résumé";
+
+/* In-app updates */
+"Aggiornamenti" = "Mises à jour";
+"Versione" = "Version";
+"Controlla automaticamente" = "Vérifier automatiquement";
+"Cerca una nuova versione all'avvio e ogni 6 ore, e ti avvisa quando c'è." = "Cherche une nouvelle version au lancement et toutes les 6 heures, et vous prévient quand il y en a une.";
+"Stai usando Meeting Pilot %@." = "Vous utilisez Meeting Pilot %@.";
+"Controllo gli aggiornamenti..." = "Recherche de mises à jour...";
+"Meeting Pilot %@ è la versione più recente." = "Meeting Pilot %@ est la version la plus récente.";
+"Disponibile la versione %@. Potrai aggiornare quando registrazione ed elaborazione sono finite." = "La version %@ est disponible. Vous pourrez mettre à jour une fois l'enregistrement et le traitement terminés.";
+"Disponibile la versione %@ (hai la %@). L'app si riavvia da sola." = "La version %@ est disponible (vous avez la %@). L'app redémarre toute seule.";
+"Disponibile la versione %@. Sposta l'app in Applicazioni per aggiornarla da qui, oppure scaricala dalla pagina delle release." = "La version %@ est disponible. Déplacez l'app dans Applications pour la mettre à jour d'ici, ou téléchargez-la depuis la page des versions.";
+"Scarico e installo la versione %@..." = "Téléchargement et installation de la version %@...";
+"Novità" = "Nouveautés";
+"Aggiorna e riavvia" = "Mettre à jour et redémarrer";
+"Controlla ora" = "Vérifier maintenant";
+"Aggiorna a Meeting Pilot %@" = "Mettre à jour vers Meeting Pilot %@";
+"Controlla aggiornamenti" = "Rechercher des mises à jour";
+"Aggiornamento disponibile" = "Mise à jour disponible";
+"Meeting Pilot %@ è pronto. Aggiorna da Impostazioni o dal menu." = "Meeting Pilot %@ est prêt. Mettez à jour depuis les Réglages ou le menu.";
+"Non riesco a controllare gli aggiornamenti. Controlla la connessione." = "Impossible de rechercher des mises à jour. Vérifiez la connexion.";
+"Download dell'aggiornamento non riuscito. Riprova più tardi." = "Impossible de télécharger la mise à jour. Réessayez plus tard.";
+"L'aggiornamento scaricato non è valido. Scaricalo dalla pagina delle release." = "La mise à jour téléchargée n'est pas valide. Téléchargez-la depuis la page des versions.";
+"Non riesco a installare l'aggiornamento. Scaricalo dalla pagina delle release." = "Impossible d'installer la mise à jour. Téléchargez-la depuis la page des versions.";
+"Aggiorna quando registrazione ed elaborazione sono finite" = "Mettez à jour une fois l'enregistrement et le traitement terminés";

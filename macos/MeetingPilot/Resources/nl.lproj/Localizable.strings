@@ -878,3 +878,28 @@
 "Non sono riuscito ad aggiungere le slide" = "Kon de dia's niet toevoegen";
 "Slide non aggiunte" = "Dia's niet toegevoegd";
 "Allega il PDF delle slide: corregge la trascrizione e riscrive il riassunto" = "Voeg de pdf met dia's toe: corrigeert het transcript en herschrijft de samenvatting";
+
+/* In-app updates */
+"Aggiornamenti" = "Updates";
+"Versione" = "Versie";
+"Controlla automaticamente" = "Automatisch controleren";
+"Cerca una nuova versione all'avvio e ogni 6 ore, e ti avvisa quando c'è." = "Zoekt bij het openen en elke 6 uur naar een nieuwe versie en meldt het als die er is.";
+"Stai usando Meeting Pilot %@." = "Je gebruikt Meeting Pilot %@.";
+"Controllo gli aggiornamenti..." = "Zoeken naar updates...";
+"Meeting Pilot %@ è la versione più recente." = "Meeting Pilot %@ is de nieuwste versie.";
+"Disponibile la versione %@. Potrai aggiornare quando registrazione ed elaborazione sono finite." = "Versie %@ is beschikbaar. Je kunt updaten zodra opnemen en verwerken klaar zijn.";
+"Disponibile la versione %@ (hai la %@). L'app si riavvia da sola." = "Versie %@ is beschikbaar (je hebt %@). De app start vanzelf opnieuw.";
+"Disponibile la versione %@. Sposta l'app in Applicazioni per aggiornarla da qui, oppure scaricala dalla pagina delle release." = "Versie %@ is beschikbaar. Zet de app in Apps om hem hier te updaten, of download hem van de releasepagina.";
+"Scarico e installo la versione %@..." = "Versie %@ downloaden en installeren...";
+"Novità" = "Wat is er nieuw";
+"Aggiorna e riavvia" = "Update en herstart";
+"Controlla ora" = "Nu controleren";
+"Aggiorna a Meeting Pilot %@" = "Update naar Meeting Pilot %@";
+"Controlla aggiornamenti" = "Zoek naar updates";
+"Aggiornamento disponibile" = "Update beschikbaar";
+"Meeting Pilot %@ è pronto. Aggiorna da Impostazioni o dal menu." = "Meeting Pilot %@ staat klaar. Update via Instellingen of het menu.";
+"Non riesco a controllare gli aggiornamenti. Controlla la connessione." = "Kan niet naar updates zoeken. Controleer de verbinding.";
+"Download dell'aggiornamento non riuscito. Riprova più tardi." = "Kan de update niet downloaden. Probeer het later opnieuw.";
+"L'aggiornamento scaricato non è valido. Scaricalo dalla pagina delle release." = "De gedownloade update is ongeldig. Download hem van de releasepagina.";
+"Non riesco a installare l'aggiornamento. Scaricalo dalla pagina delle release." = "Kan de update niet installeren. Download hem van de releasepagina.";
+"Aggiorna quando registrazione ed elaborazione sono finite" = "Update zodra opnemen en verwerken klaar zijn";
