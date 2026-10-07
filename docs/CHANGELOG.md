@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-07
+
 ### Added
 - Slides can be added to a meeting already processed, live recordings included: Add Slides in the Diary, or right-click it in the recent meetings. Names and technical words the transcript misheard are corrected from the slides ("Cubernetes", "Kuber netes" become Kubernetes, while plurals and ordinary words are left alone), the summary is written again following the slides, and the notes in the Diary, Obsidian, Notion and Apple Notes are replaced: the old ones go to the Trash, so hand edits can be recovered. `meeting-pilot attach-slides --session-dir DIR [--slides PDF]` does the same from the command line.
 
@@ -13,6 +15,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Opening the DMG shows a single window with the app on the left, an arrow and the Applications folder on the right, so installing is one drag. The post-installation guide text file is no longer in the DMG.
 
 ### Fixed
+- Launch at login works again after updating the app: the login item is registered again whenever the app changes, and Settings says when it is switched off in System Settings, with a shortcut to Login Items.
+- With Apple Intelligence as the provider, the chat answers with it instead of the OpenAI-compatible endpoint left in the settings, which failed. Chat, retry and save errors now show as one readable sentence instead of a traceback.
 - The live sidebar no longer shows "Me" lines during a call. The microphone also hears the others through the speakers, so their words came out twice, once under "Me" even when you weren't talking. The microphone is now transcribed only when the Mac's audio isn't arriving, and those lines carry no label.
 - Teams participants whose display name contains a comma ("Rossi, Mario") are named again, in the sidebar and in the notes; before, they were never recognised.
 - In the sidebar, a Teams line now ends when the speaking border moves to someone else, so two people talking back to back no longer share one line and one name.
