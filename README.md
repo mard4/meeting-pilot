@@ -7,6 +7,7 @@
 <h1 align="center">Meeting Pilot</h1>
 <p align="center">
   <a href="https://meetingpilotapp.com">🌐 Website</a> ·
+  <a href="https://meetingpilotapp.com/support/">☕ Support</a> ·
   <a href="https://github.com/mard4/meeting-pilot/releases/latest/download/MeetingPilot.dmg">⬇ Download</a> ·
   <a href="mailto:support@meetingpilotapp.com">@ Email</a> 
 </p>
@@ -237,6 +238,16 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
 
 > [!IMPORTANT]
 > Make sure you're allowed to record the people in your meetings.
+
+## ☕ Support
+
+Meeting Pilot is free and stays free. If it saves you time, you can pay what you want for it, buy me a coffee, or help in other ways: it covers the Apple Developer account that signs the app, and keeps updates coming.
+
+<p align="center">
+  <a href="https://meetingpilotapp.com/support/"><img src="https://img.shields.io/badge/☕_Pay_what_you_want-ef2f49?style=for-the-badge" alt="Pay what you want" /></a>
+</p>
+
+Not a money thing? A ⭐ on this repo, a bug report or telling a friend helps just as much.
 
 ## 🛠️ For developers
 
