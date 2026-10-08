@@ -10,8 +10,8 @@ STAGING="$BUILD_DIR/dmg-staging"
 RW_DMG="$BUILD_DIR/MeetingPilot-rw.dmg"
 VOLUME_NAME="Meeting Pilot"
 # The same choice as build_app.sh: a Developer ID in the keychain is used without asking.
-CODESIGN_IDENTITY="${CODESIGN_IDENTITY:-$(security find-identity -v -p codesigning 2>/dev/null \
-  | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -n 1)}"
+IDENTITIES="$(security find-identity -v -p codesigning 2>/dev/null || true)"
+CODESIGN_IDENTITY="${CODESIGN_IDENTITY:-$(sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' <<< "$IDENTITIES" | sed -n 1p)}"
 NOTARY_KEYCHAIN_PROFILE="${NOTARY_KEYCHAIN_PROFILE:-}"
 
 if [[ -n "$NOTARY_KEYCHAIN_PROFILE" && "$CODESIGN_IDENTITY" != "Developer ID Application:"* ]]; then
@@ -24,7 +24,10 @@ app_signature_valid() {
   # A bundle left over from an ad hoc or self-signed build must not end up in a Developer
   # ID DMG: the app has to be signed by the identity the DMG is.
   if [[ -n "$CODESIGN_IDENTITY" && "$CODESIGN_IDENTITY" != "-" ]]; then
-    codesign -dv --verbose=2 "$APP_PATH" 2>&1 | grep -qxF "Authority=$CODESIGN_IDENTITY"
+    # Read whole first: with pipefail, `grep -q` quitting early kills codesign with SIGPIPE.
+    local details
+    details="$(codesign -dv --verbose=2 "$APP_PATH" 2>&1)"
+    grep -qxF "Authority=$CODESIGN_IDENTITY" <<< "$details"
   fi
 }
 
