@@ -123,11 +123,19 @@ extension NSImage {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNotificationCenterDelegate {
-    let model = AppModel()
+    let model: AppModel
     private let popover = NSPopover()
     private var statusItem: NSStatusItem?
     private var mainWindow: NSWindow?
     private var diaryWindow: NSWindow?
+
+    override init() {
+        // Before the model writes its first file, so every file it or its children create
+        // is readable by this account only.
+        AppLog.restrictAccess()
+        model = AppModel()
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
 #if DEBUG

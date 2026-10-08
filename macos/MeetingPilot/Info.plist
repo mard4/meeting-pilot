@@ -29,7 +29,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.2.1</string>
+	<string>0.3.0</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -42,13 +42,13 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>5</string>
+	<string>6</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Meeting Pilot usa AppleScript per leggere i dettagli della riunione da Microsoft Teams e salvare i riepiloghi in Note.</string>
 	<key>NSAudioCaptureUsageDescription</key>
-	<string>Meeting Pilot registra l'audio di Microsoft Teams per includere anche le voci degli altri partecipanti.</string>
+	<string>Meeting Pilot registra l'audio del Mac (per esempio una chiamata Teams o una lezione online) solo mentre registri, per includere anche le voci degli altri partecipanti.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Meeting Pilot registra la tua voce insieme all'audio della riunione.</string>
 	<key>NSPrincipalClass</key>

@@ -1310,8 +1310,13 @@ final class AppModel: ObservableObject {
         DispatchQueue.global(qos: .userInitiated).async {
             let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
             // The key goes through curl's stdin config, not argv, so `ps` can't show it.
-            var arguments = ["-sS", "-m", "8", "\(resolvedBaseURL)/models"]
+            var arguments = ["-sS", "-m", "8", "--proto", "=http,https", "--url", "\(resolvedBaseURL)/models"]
             var curlConfig: String?
+            // A line break would end the header line and start a curl option of its own.
+            if key.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) {
+                DispatchQueue.main.async { self.providerStatusMessage = "La chiave API contiene caratteri non validi" }
+                return
+            }
             if !key.isEmpty {
                 arguments += ["-K", "-"]
                 let escapedKey = key.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")

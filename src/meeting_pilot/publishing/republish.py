@@ -62,7 +62,7 @@ def _withdraw(config: Config, target: str, receipt: dict[str, Any]) -> None:
         Client(auth=config.notion_token).pages.update(page_id=receipt["id"], in_trash=True)
     elif target == "apple_notes" and receipt.get("note_id"):
         result = subprocess.run(
-            ["osascript", "-e", "on run argv", "-e", 'tell application "Notes" to delete note id (item 1 of argv)',
+            ["/usr/bin/osascript", "-e", "on run argv", "-e", 'tell application "Notes" to delete note id (item 1 of argv)',
              "-e", "end run", str(receipt["note_id"])],
             text=True,
             capture_output=True,

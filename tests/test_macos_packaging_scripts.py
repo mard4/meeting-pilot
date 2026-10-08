@@ -22,7 +22,7 @@ def test_build_prefers_the_stable_self_signed_certificate() -> None:
 
     assert 'SELF_SIGNED_IDENTITY="${MEETING_PILOT_SIGNING_CERT:-Meeting Pilot Signing}"' in script
     assert 'security find-certificate -c "$SELF_SIGNED_IDENTITY"' in script
-    assert 'local_sign --deep --identifier "$BUNDLE_ID" "$APP_DIR"' in script
+    assert 'hardened_sign --entitlements "$APP_ENTITLEMENTS" --identifier "$BUNDLE_ID" "$APP_DIR"' in script
     # Apple's timestamp service only signs for Developer ID certificates.
     assert 'if [[ "$CODESIGN_IDENTITY" == "Developer ID Application:"* ]]; then\n  codesign --force --timestamp' in dmg
 
@@ -35,6 +35,19 @@ def test_bundle_id_is_consistent_everywhere() -> None:
     assert not bundle_id.startswith("it.local.")
     assert re.search(r'static let bundleID = "([^"]+)"', swift).group(1) == bundle_id
     assert f'pkg-ref id="{bundle_id}.pkg"' in distribution
+
+
+def test_local_build_hardens_everything_but_the_python_cli() -> None:
+    script = (APP_SRC / "Scripts/build_app.sh").read_text()
+    local = script[script.index('if [[ "$CODESIGN_IDENTITY" != "Developer ID Application:"* ]]'):script.index("else\n  # Notarization")]
+
+    assert 'local_sign --options runtime "$@"' in local
+    assert 'local_sign --deep "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI"' in local
+    for helper in ("TeamsOCR", "TeamsWindowID", "AppleTranscriber", "AppleIntelligenceSummarizer", "fluidaudiocli", "llama-server"):
+        assert re.search(rf'hardened_sign "[^"]*{helper}"', local), helper
+    # Without --deep, the bundle signature leaves the helpers' own flags alone.
+    assert not re.search(r'_sign [^\n]*--deep[^\n]*"\$APP_DIR"', local)
+    assert local.count('--entitlements "$APP_ENTITLEMENTS"') == 2
 
 
 def test_developer_id_build_uses_hardened_runtime_entitlements() -> None:

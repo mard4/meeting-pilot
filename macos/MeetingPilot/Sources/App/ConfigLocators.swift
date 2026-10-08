@@ -14,9 +14,12 @@ import UserNotifications
 
 enum ProjectLocator {
     static func findProjectRoot() -> URL {
+#if DEBUG
+        // Release builds ignore it: the project root locates the CLI when the bundle has none.
         if let value = ProcessInfo.processInfo.environment["MEETING_PILOT_PROJECT_ROOT"], !value.isEmpty {
             return URL(fileURLWithPath: NSString(string: value).expandingTildeInPath)
         }
+#endif
         if let resource = Bundle.main.url(forResource: "default-project-root", withExtension: "txt"),
            let text = try? String(contentsOf: resource, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines),
            !text.isEmpty {
@@ -673,6 +676,20 @@ enum AppLog {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 
+    /// Recordings, transcripts and logs hold what was said in meetings, but the default
+    /// umask (022) leaves new files readable by every other account on the Mac. This
+    /// process and the CLI it starts create them for this account only from now on, and
+    /// the logs written by earlier versions are closed too (the CLI does the meeting folders).
+    static func restrictAccess() {
+        umask(0o077)
+        for name in ["MeetingPilot.log", "meeting-pilot.log", "meeting-pilot.err.log"] {
+            let path = directory.appendingPathComponent(name).path
+            if FileManager.default.fileExists(atPath: path) {
+                try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: path)
+            }
+        }
+    }
+
     static func append(_ message: String) {
         ensureDirectory()
         let formatter = ISO8601DateFormatter()
@@ -703,9 +720,7 @@ enum Shell {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
-        if !environment.isEmpty {
-            process.environment = ProcessInfo.processInfo.environment.merging(environment) { $1 }
-        }
+        process.environment = childEnvironment(environment)
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe
@@ -739,12 +754,21 @@ enum Shell {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
-        process.environment = ProcessInfo.processInfo.environment.merging(environment) { $1 }
+        process.environment = childEnvironment(environment)
         process.standardInput = FileHandle.nullDevice
         process.standardOutput = try appendingHandle(for: standardOutput)
         process.standardError = try appendingHandle(for: standardError)
         try process.run()
         return process
+    }
+
+    /// This app's environment plus `extra`, without the variables that load code into a
+    /// child: a child runs with this app's privacy permissions, and whoever launched the
+    /// app chose its environment.
+    private static func childEnvironment(_ extra: [String: String]) -> [String: String] {
+        ProcessInfo.processInfo.environment
+            .filter { !$0.key.hasPrefix("DYLD_") && !$0.key.hasPrefix("PYTHON") }
+            .merging(extra) { $1 }
     }
 
     /// Full command lines of running processes, for `pgrep -f`-style matching.

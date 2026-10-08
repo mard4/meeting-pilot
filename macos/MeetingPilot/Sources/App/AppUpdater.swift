@@ -3,6 +3,7 @@
 
 import AppKit
 import Foundation
+import Security
 import UserNotifications
 
 /// A release version such as "v0.2.1" or "0.3", compared number by number.
@@ -270,8 +271,8 @@ final class AppUpdater: ObservableObject {
     }
 
     /// Mounts the DMG, copies the app out with `ditto` (which keeps signature and execute
-    /// bits), and accepts it only if its signature verifies and it is the expected version
-    /// of this same app. Runs off the main thread.
+    /// bits), and accepts it only if it is the expected version of this same app, signed
+    /// by the same signer. Runs off the main thread.
     private static func stage(downloadedDMG: URL, expected: AppVersion) -> Result<URL, UpdateError> {
         let fileManager = FileManager.default
         let work = fileManager.temporaryDirectory.appendingPathComponent("MeetingPilotUpdate-\(UUID().uuidString)")
@@ -304,9 +305,32 @@ final class AppUpdater: ObservableObject {
               version == expected
         else { return .failure(.invalid("bundle identifier or version mismatch")) }
 
-        let verify = runTool("/usr/bin/codesign", ["--verify", "--deep", "--strict", stagedApp.path])
-        guard verify.status == 0 else { return .failure(.invalid("codesign: \(verify.output)")) }
+        if let failure = signatureFailure(of: stagedApp) { return .failure(.invalid(failure)) }
         return .success(stagedApp)
+    }
+
+    /// Nil when `app`'s signature is intact, nested code included, and satisfies the
+    /// designated requirement of the running app. A bare validity check would accept any
+    /// signature, an ad hoc one made by anybody included; the requirement makes the update
+    /// come from whoever signed this copy (with a certificate, its leaf or Team ID).
+    static func signatureFailure(of app: URL) -> String? {
+        var running: SecCode?
+        var runningStatic: SecStaticCode?
+        var requirement: SecRequirement?
+        var staged: SecStaticCode?
+        var status = SecCodeCopySelf([], &running)
+        if status == errSecSuccess, let running { status = SecCodeCopyStaticCode(running, [], &runningStatic) }
+        if status == errSecSuccess, let runningStatic { status = SecCodeCopyDesignatedRequirement(runningStatic, [], &requirement) }
+        if status == errSecSuccess { status = SecStaticCodeCreateWithPath(app as CFURL, [], &staged) }
+        guard status == errSecSuccess, let requirement, let staged else {
+            return "signature check unavailable: \(status)"
+        }
+        let flags = SecCSFlags(rawValue: kSecCSCheckAllArchitectures | kSecCSCheckNestedCode | kSecCSStrictValidate)
+        status = SecStaticCodeCheckValidity(staged, flags, requirement)
+        guard status == errSecSuccess else {
+            return "signature does not match this app: \(SecCopyErrorMessageString(status, nil) as String? ?? String(status))"
+        }
+        return nil
     }
 
     /// Starts a small shell script that outlives the app: it waits for this process to
