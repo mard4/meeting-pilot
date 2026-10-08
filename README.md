@@ -163,8 +163,7 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
 ## ⬇ Installation
 
 1. **[Download the `.dmg`](https://github.com/mard4/meeting-pilot/releases/latest/download/MeetingPilot.dmg)** → drag to `Applications` (or use the `curl` one-liner above).
-2. Blocked on first launch? **System Settings → Privacy & Security → Open Anyway**. Once.
-3. A short welcome tour asks whether you study, work or both, then the permissions below, as they're needed.
+2. A short welcome tour asks whether you study, work or both, then the permissions below, as they're needed.
 
 <sub>macOS 14+. On macOS 26+ Apple transcribes and FluidAudio labels the speakers, and Apple Intelligence can write the summaries. Older Macs download the Parakeet speech model (~460 MB) on first use and summarize with a local or API model.</sub>
 
