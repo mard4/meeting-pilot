@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Security
+- The app and its helpers run with the hardened runtime even without a Developer ID, so no library can be injected into the process that holds the microphone, system audio, Accessibility and Automation permissions. The Python CLI is the only exception.
+- The helpers the CLI starts (Apple transcriber and summarizer, FluidAudio, llama-server, Teams OCR) always come from the app bundle: paths written in `.env` no longer apply, and `osascript`, `screencapture` and `defaults` are called by full path, so a program planted in Homebrew's folders cannot run with the app's permissions.
+- Updates are installed only when signed by the same signer as the running app, not just with any valid signature.
+- Notion sign-in runs in a web authentication sheet that receives the token itself, so another app registering `meetingpilot://` cannot catch it; the sign-in state is kept in memory and used once.
+- The Meeting Pilot model's server needs a key that only the running CLI knows and no longer exposes its slots, so other processes and other accounts on the Mac cannot read the transcripts sent to it.
+- Recordings, transcripts, notes and logs are readable by your account only; existing meeting folders and logs are closed on the next launch.
+- Builds use the pinned FluidAudio revision and install Python dependencies with the hashes in `uv.lock`; `uv` is no longer copied into the app. `install.sh` stops if the downloaded app's signature does not verify.
+
 ## [0.3.0] - 2026-10-08
 
 ### Added

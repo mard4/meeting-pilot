@@ -40,7 +40,7 @@ Apple.
 
 La app usa questo ordine:
 
-1. variabile ambiente `MEETING_PILOT_PROJECT_ROOT`
+1. variabile ambiente `MEETING_PILOT_PROJECT_ROOT` (solo build debug)
 2. file bundle `Resources/default-project-root.txt`
 3. percorso corrente del progetto usato in fase di build
 

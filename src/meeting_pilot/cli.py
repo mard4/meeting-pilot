@@ -39,6 +39,8 @@ from .language import config_language, label, resolve_output_language
 
 
 def main() -> None:
+    # Everything this writes is about meetings: readable by this account only.
+    os.umask(0o077)
     try:
         _main()
     except Exception as exc:  # noqa: BLE001 - every failure ends in one readable line

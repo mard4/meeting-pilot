@@ -48,7 +48,7 @@
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Meeting Pilot usa AppleScript per leggere i dettagli della riunione da Microsoft Teams e salvare i riepiloghi in Note.</string>
 	<key>NSAudioCaptureUsageDescription</key>
-	<string>Meeting Pilot registra l'audio di Microsoft Teams per includere anche le voci degli altri partecipanti.</string>
+	<string>Meeting Pilot registra l'audio del Mac (per esempio una chiamata Teams o una lezione online) solo mentre registri, per includere anche le voci degli altri partecipanti.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Meeting Pilot registra la tua voce insieme all'audio della riunione.</string>
 	<key>NSPrincipalClass</key>

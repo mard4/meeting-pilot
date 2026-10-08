@@ -76,7 +76,7 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         self.assertIn('WindowGroup("Meeting Pilot")', app)
         self.assertIn(".environmentObject(appDelegate.model)", app)
         self.assertIn("private var mainWindow: NSWindow?", delegate)
-        self.assertIn("let model = AppModel()", delegate)
+        self.assertIn("model = AppModel()", delegate)
         self.assertIn("showMainWindow()", delegate)
         self.assertIn("mainWindow?.makeKeyAndOrderFront(nil)", delegate)
         self.assertIn("applicationShouldHandleReopen", delegate)

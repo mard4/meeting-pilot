@@ -265,7 +265,7 @@ return "not-found"
 '''
     try:
         result = subprocess.run(
-            ["osascript"],
+            ["/usr/bin/osascript"],
             input=script,
             text=True,
             stdout=subprocess.PIPE,
@@ -385,7 +385,7 @@ end tell
 '''
     try:
         result = subprocess.run(
-            ["osascript"],
+            ["/usr/bin/osascript"],
             input=script,
             text=True,
             stdout=subprocess.PIPE,
@@ -425,7 +425,7 @@ def _read_ocr_lines(screenshot_path: Path) -> list[str]:
     window_id = _teams_window_id(script_dir)
     try:
         screenshot_result = subprocess.run(
-            ["screencapture", "-x", "-l", window_id, str(screenshot_path)],
+            ["/usr/sbin/screencapture", "-x", "-l", window_id, str(screenshot_path)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -500,7 +500,7 @@ tell application "System Events"
   end if
 end tell
 '''
-    subprocess.run(["osascript"], input=script, text=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
+    subprocess.run(["/usr/bin/osascript"], input=script, text=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
 
 
 def _parse_lines(lines: list[str], window_titles: list[str]) -> dict[str, Any]:

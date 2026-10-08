@@ -8,7 +8,6 @@ APP_DIR="$BUILD_DIR/Meeting Pilot.app"
 CONTENTS="$APP_DIR/Contents"
 MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
-TOOLS="$RESOURCES/Tools"
 # Release builds sign with a certificate of their own ("Meeting Pilot Signing", made once in
 # Keychain Access, see DISTRIBUZIONE.md) when it is in the keychain: unlike ad hoc signatures,
 # which change with every build, it keeps the app's privacy permissions and login item valid
@@ -29,7 +28,7 @@ APP_ENTITLEMENTS="$APP_SRC/MeetingPilot.entitlements"
 CLI_ENTITLEMENTS="$APP_SRC/MeetingPilotCLI.entitlements"
 
 rm -rf "$APP_DIR"
-mkdir -p "$MACOS" "$RESOURCES" "$TOOLS"
+mkdir -p "$MACOS" "$RESOURCES"
 
 APP_ICON_SOURCE="$APP_SRC/assets/app_icon.png"
 ICONSET_DIR="$APP_SRC/Resources/AppIcon.iconset"
@@ -76,6 +75,18 @@ FLUID_AUDIO_CLI="$FLUID_AUDIO_SOURCE/.build/release/fluidaudiocli"
 if [[ ! -d "$FLUID_AUDIO_SOURCE" || ! -d "$FLUID_AUDIO_MODELS/speaker-diarization/Segmentation.mlmodelc" || ! -d "$FLUID_AUDIO_MODELS/speaker-diarization/Embedding.mlmodelc" ]]; then
   echo "FluidAudio e i modelli di diarizzazione (anche offline) sono richiesti per creare il bundle." >&2
   echo "Scaricali una volta con: fluidaudiocli process <audio> --mode offline" >&2
+  exit 1
+fi
+# The checkout lives in a folder any process of this account can write, and both the app
+# and the CLI are built from it: build only the pinned revision, with no local changes.
+FLUID_AUDIO_REF="${FLUID_AUDIO_REF:-b68f484789d81fda21efbf81e2ca9fcfd9dc22aa}"
+if [[ "$(git -C "$FLUID_AUDIO_SOURCE" rev-parse HEAD 2>/dev/null)" != "$FLUID_AUDIO_REF" ]]; then
+  git -C "$FLUID_AUDIO_SOURCE" fetch --quiet origin "$FLUID_AUDIO_REF"
+  git -C "$FLUID_AUDIO_SOURCE" checkout --quiet "$FLUID_AUDIO_REF"
+  rm -f "$FLUID_AUDIO_CLI"
+fi
+if [[ -n "$(git -C "$FLUID_AUDIO_SOURCE" status --porcelain --untracked-files=no)" ]]; then
+  echo "FluidAudio ha modifiche locali in $FLUID_AUDIO_SOURCE: annullale prima di creare il bundle." >&2
   exit 1
 fi
 if [[ ! -x "$FLUID_AUDIO_CLI" ]]; then
@@ -125,7 +136,6 @@ if [[ -z "$UV_BIN" || ! -x "$UV_BIN" ]]; then
   echo "uv non trovato. Installalo sul Mac di build o imposta MEETING_PILOT_UV_BIN." >&2
   exit 1
 fi
-cp "$UV_BIN" "$TOOLS/uv"
 
 # MeetingPilot links FluidAudio directly (for the live speaker-diarization sidebar), so
 # it builds via SwiftPM instead of a raw `swiftc` invocation: SwiftPM's `--product
@@ -179,7 +189,12 @@ if [[ ! -x "$PYTHON_BIN" ]]; then
   "$UV_BIN" venv --python 3.11 "$ROOT_DIR/.venv311"
 fi
 if ! "$PYTHON_BIN" -c 'import PyInstaller' >/dev/null 2>&1; then
-  "$UV_BIN" pip install --python "$PYTHON_BIN" -e "$ROOT_DIR[build]"
+  # Exactly the versions in uv.lock, each checked against its hash, as they end up in the app.
+  LOCKED_REQUIREMENTS="$(mktemp)"
+  (cd "$ROOT_DIR" && "$UV_BIN" export --locked --extra build --no-emit-project --format requirements-txt -q -o "$LOCKED_REQUIREMENTS")
+  "$UV_BIN" pip install --python "$PYTHON_BIN" --require-hashes -r "$LOCKED_REQUIREMENTS"
+  "$UV_BIN" pip install --python "$PYTHON_BIN" --no-deps -e "$ROOT_DIR[build]"
+  rm -f "$LOCKED_REQUIREMENTS"
 fi
 rm -rf "$BUILD_DIR/pyinstaller-work" "$BUILD_DIR/pyinstaller-dist"
 PYTHONPATH="$ROOT_DIR/src" "$PYTHON_BIN" -m PyInstaller \
@@ -216,32 +231,38 @@ for required in \
   fi
 done
 
-chmod +x "$MACOS/MeetingPilot" "$MACOS/AppleTranscriber" "$MACOS/AppleIntelligenceSummarizer" "$MACOS/TeamsOCR" "$MACOS/TeamsWindowID" "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI" "$RESOURCES/FluidAudio/bin/fluidaudiocli" "$RESOURCES/LlamaCpp/bin/llama-server" "$TOOLS/uv"
+chmod +x "$MACOS/MeetingPilot" "$MACOS/AppleTranscriber" "$MACOS/AppleIntelligenceSummarizer" "$MACOS/TeamsOCR" "$MACOS/TeamsWindowID" "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI" "$RESOURCES/FluidAudio/bin/fluidaudiocli" "$RESOURCES/LlamaCpp/bin/llama-server"
 
 if [[ "$CODESIGN_IDENTITY" != "Developer ID Application:"* ]]; then
-  # Ad hoc ("-") or a self-signed certificate: no hardened runtime, as without a Team ID
-  # library validation would refuse PyInstaller's libraries.
+  # Ad hoc ("-") or a self-signed certificate. Everything but the PyInstaller CLI gets the
+  # hardened runtime, which stops DYLD_INSERT_LIBRARIES and unsigned libraries from running
+  # inside an app that holds microphone, audio, Accessibility and Automation permissions.
+  # The CLI cannot: without a Team ID library validation would refuse its libraries.
   local_sign() {
     codesign --force --sign "$CODESIGN_IDENTITY" "$@"
   }
-  local_sign "$TOOLS/uv"
+  hardened_sign() {
+    local_sign --options runtime "$@"
+  }
   local_sign --deep "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI"
-  local_sign "$MACOS/TeamsOCR"
-  local_sign "$MACOS/TeamsWindowID"
-  local_sign "$MACOS/AppleTranscriber"
-  local_sign "$MACOS/AppleIntelligenceSummarizer"
-  local_sign "$RESOURCES/FluidAudio/bin/fluidaudiocli"
-  local_sign "$RESOURCES/LlamaCpp/bin/llama-server"
-  local_sign "$MACOS/MeetingPilot"
+  hardened_sign "$MACOS/TeamsOCR"
+  hardened_sign "$MACOS/TeamsWindowID"
+  hardened_sign "$MACOS/AppleTranscriber"
+  hardened_sign "$MACOS/AppleIntelligenceSummarizer"
+  hardened_sign "$RESOURCES/FluidAudio/bin/fluidaudiocli"
+  hardened_sign "$RESOURCES/LlamaCpp/bin/llama-server"
+  # Signing the bundle last seals the helpers without re-signing them (no --deep), so
+  # they keep their own flags; the entitlements are what the hardened runtime requires
+  # for the microphone and Apple Events.
   if [[ "$CODESIGN_IDENTITY" == "-" ]]; then
     # Keep the bundle identifier stable so macOS can retain its TCC permissions
-    # across local ad-hoc rebuilds. --deep also seals the nested CLI helpers.
-    codesign --force --deep --sign - --identifier "$BUNDLE_ID" \
+    # across local ad-hoc rebuilds.
+    hardened_sign --entitlements "$APP_ENTITLEMENTS" --identifier "$BUNDLE_ID" \
       -r="designated => identifier \"$BUNDLE_ID\"" "$APP_DIR"
   else
     # The default designated requirement names the certificate, which stays the same
     # from one release to the next.
-    local_sign --deep --identifier "$BUNDLE_ID" "$APP_DIR"
+    hardened_sign --entitlements "$APP_ENTITLEMENTS" --identifier "$BUNDLE_ID" "$APP_DIR"
   fi
 else
   # Notarization rejects any unsigned or non-hardened Mach-O, and --deep does not
@@ -255,7 +276,6 @@ else
     fi
   done < <(find "$RESOURCES/MeetingPilotCLI" "$RESOURCES/FluidAudio" -type f -print0)
   developer_sign --entitlements "$CLI_ENTITLEMENTS" "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI"
-  developer_sign "$TOOLS/uv"
   developer_sign "$MACOS/TeamsOCR"
   developer_sign "$MACOS/TeamsWindowID"
   developer_sign "$MACOS/AppleTranscriber"
