@@ -92,7 +92,7 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
     <td width="60%" align="center"><img src="docs/assets/readme/profile.png" alt="Welcome tour asking whether you are a student, a professional or both, with the sections each kind of note gets" width="100%" /></td>
   </tr>
   <tr>
-    <td width="60%" align="center"><img src="docs/assets/readme/lecture-slides.png" alt="A lecture in the Journal, its transcript split slide by slide next to the slides PDF" width="100%" /></td>
+    <td width="60%" align="center"><img src="docs/assets/readme/lecture-slides.png" alt="A Random Forests lecture in the Journal: summary, my notes and key concepts next to its slides PDF" width="100%" /></td>
     <td width="40%" valign="middle">
       <h3>SLIDES NEXT TO THE TRANSCRIPT</h3>
       Add the lecture's PDF: every part of the transcript is matched to its slide, on your Mac and without a model. The summary cites them as <i>(slide 3)</i>. Got the PDF after the lecture? Add it to any recording later: names and terms the transcript misheard are corrected from the slides, and the summary and notes are rewritten.
@@ -170,7 +170,7 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
 <table>
   <tr>
     <td align="center" width="50%"><img src="docs/assets/readme/publishing.png" alt="Publishing: Notion, Obsidian, Apple Notes and the local Journal, plus summary template, prompt and glossary" width="100%" /><br /><sub><b>Publishing</b> · where notes go, what they include</sub></td>
-    <td align="center" width="50%"><img src="docs/assets/readme/pipeline.png" alt="Pipeline: built-in recorder and audio source" width="100%" /><br /><sub><b>Pipeline</b> · recorder, audio source, transcription, summary model</sub></td>
+    <td align="center" width="50%"><img src="docs/assets/readme/pipeline.png" alt="Pipeline: built-in recorder, audio source, Apple On-Device transcription and the summary model" width="100%" /><br /><sub><b>Pipeline</b> · recorder, audio source, transcription, summary model</sub></td>
   </tr>
 </table>
 
