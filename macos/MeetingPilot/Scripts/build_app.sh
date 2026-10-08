@@ -15,8 +15,8 @@ RESOURCES="$CONTENTS/Resources"
 SELF_SIGNED_IDENTITY="${MEETING_PILOT_SIGNING_CERT:-Meeting Pilot Signing}"
 # A Developer ID in the keychain always wins: a release that silently fell back to another
 # signature would carry a designated requirement anyone can satisfy.
-DEVELOPER_ID_IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
-  | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -n 1)"
+IDENTITIES="$(security find-identity -v -p codesigning 2>/dev/null || true)"
+DEVELOPER_ID_IDENTITY="$(sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' <<< "$IDENTITIES" | sed -n 1p)"
 if [[ -z "${CODESIGN_IDENTITY:-}" ]]; then
   if [[ -n "$DEVELOPER_ID_IDENTITY" ]]; then
     CODESIGN_IDENTITY="$DEVELOPER_ID_IDENTITY"
