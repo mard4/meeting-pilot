@@ -79,8 +79,8 @@ struct AppRelease: Equatable {
 
 /// Checks GitHub for a newer release at launch and every few hours, and on request
 /// downloads its DMG, checks the app inside, swaps it in for the installed one and
-/// relaunches. Builds are signed ad hoc, so the new app gets a new signature: on its first
-/// launch `LaunchAtLogin.apply` sees the changed cdhash and registers the login item again.
+/// relaunches. Each build has a new cdhash: on its first launch `LaunchAtLogin.apply` sees
+/// it changed and registers the login item again.
 final class AppUpdater: ObservableObject {
     enum State: Equatable {
         case idle
@@ -373,7 +373,6 @@ final class AppUpdater: ObservableObject {
         mv "$backup" "$installed"
       fi
     fi
-    xattr -dr com.apple.quarantine "$installed" 2>/dev/null
     open "$installed"
     rm -rf "$work"
     """

@@ -13,8 +13,14 @@ RESOURCES="$CONTENTS/Resources"
 # which change with every build, it keeps the app's privacy permissions and login item valid
 # across updates. Without it the build falls back to an ad hoc signature.
 SELF_SIGNED_IDENTITY="${MEETING_PILOT_SIGNING_CERT:-Meeting Pilot Signing}"
+# A Developer ID in the keychain always wins: a release that silently fell back to another
+# signature would carry a designated requirement anyone can satisfy.
+DEVELOPER_ID_IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
+  | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -n 1)"
 if [[ -z "${CODESIGN_IDENTITY:-}" ]]; then
-  if security find-certificate -c "$SELF_SIGNED_IDENTITY" >/dev/null 2>&1; then
+  if [[ -n "$DEVELOPER_ID_IDENTITY" ]]; then
+    CODESIGN_IDENTITY="$DEVELOPER_ID_IDENTITY"
+  elif security find-certificate -c "$SELF_SIGNED_IDENTITY" >/dev/null 2>&1; then
     CODESIGN_IDENTITY="$SELF_SIGNED_IDENTITY"
   else
     CODESIGN_IDENTITY="-"

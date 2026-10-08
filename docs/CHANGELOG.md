@@ -6,22 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Security
-- The app and its helpers run with the hardened runtime even without a Developer ID, so no library can be injected into the process that holds the microphone, system audio, Accessibility and Automation permissions. The Python CLI is the only exception.
-- The helpers the CLI starts (Apple transcriber and summarizer, FluidAudio, llama-server, Teams OCR) always come from the app bundle: paths written in `.env` no longer apply, and `osascript`, `screencapture` and `defaults` are called by full path, so a program planted in Homebrew's folders cannot run with the app's permissions.
-- Updates are installed only when signed by the same signer as the running app, not just with any valid signature.
-- Notion sign-in runs in a web authentication sheet that receives the token itself, so another app registering `meetingpilot://` cannot catch it; the sign-in state is kept in memory and used once.
-- The Meeting Pilot model's server needs a key that only the running CLI knows and no longer exposes its slots, so other processes and other accounts on the Mac cannot read the transcripts sent to it.
-- Recordings, transcripts, notes and logs are readable by your account only; existing meeting folders and logs are closed on the next launch.
-- Builds use the pinned FluidAudio revision and install Python dependencies with the hashes in `uv.lock`; `uv` is no longer copied into the app. `install.sh` stops if the downloaded app's signature does not verify.
-
 ## [0.3.0] - 2026-10-08
 
 ### Added
+- Join the Meeting Pilot Discord from Settings or the menu bar icon's right-click menu, for questions, ideas and problems.
 - Meeting Pilot looks for a new version on GitHub at launch and every 6 hours, and tells you with a notification when there is one. Settings > Updates shows the version you have and an Update and Restart button: the app downloads the DMG, checks its signature, replaces itself in Applications and opens again, with launch at login still working. The same button is in the menu bar popover and its right-click menu. Updating waits while a meeting is being recorded or processed, and automatic checks can be turned off.
 
 ### Changed
-- Release builds are signed with the "Meeting Pilot Signing" certificate when it is in the keychain, instead of an ad hoc signature that changes with every build, so microphone, screen recording, accessibility and automation permissions and launch at login stay valid after an update. Without the certificate builds stay ad hoc; DISTRIBUZIONE.md explains how to create it once.
+- Meeting Pilot is signed with an Apple Developer ID and notarized by Apple: it opens on the first try, without going through Privacy & Security › Open Anyway. Because the signature changes this once, macOS asks again for the microphone, screen and system audio recording, Accessibility and Automation permissions, and for access to the saved Notion token and API keys; from then on they stay valid across updates. Builds use the Developer ID found in the keychain on their own, then the "Meeting Pilot Signing" certificate, then an ad hoc signature.
+
+### Security
+- The app and every helper run with the hardened runtime, so no library can be injected into the process that holds the microphone, system audio, Accessibility and Automation permissions.
+- The helpers the CLI starts (Apple transcriber and summarizer, FluidAudio, llama-server, Teams OCR) always come from the app bundle: paths written in `.env` no longer apply, and `osascript`, `screencapture` and `defaults` are called by full path, so a program planted in Homebrew's folders cannot run with the app's permissions.
+- Updates are installed only when signed by the same Developer ID team as the running app, not just with any valid signature, and Gatekeeper checks them like any other download.
+- Notion sign-in runs in a web authentication sheet that receives the token itself, so another app registering `meetingpilot://` cannot catch it; the sign-in state is kept in memory and used once.
+- The Meeting Pilot model's server needs a key that only the running CLI knows and no longer exposes its slots, so other processes and other accounts on the Mac cannot read the transcripts sent to it.
+- Recordings, transcripts, notes and logs are readable by your account only; existing meeting folders and logs are closed on the next launch.
+- Builds use the pinned FluidAudio revision and install Python dependencies with the hashes in `uv.lock`; `uv` is no longer copied into the app. `install.sh` stops unless the downloaded app is signed by the Meeting Pilot team and notarized.
 
 ## [0.2.1] - 2026-10-07
 
