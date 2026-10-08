@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-08
+
 ### Added
 - Meeting Pilot looks for a new version on GitHub at launch and every 6 hours, and tells you with a notification when there is one. Settings > Updates shows the version you have and an Update and Restart button: the app downloads the DMG, checks its signature, replaces itself in Applications and opens again, with launch at login still working. The same button is in the menu bar popover and its right-click menu. Updating waits while a meeting is being recorded or processed, and automatic checks can be turned off.
 
