@@ -9,6 +9,7 @@
   <a href="https://meetingpilotapp.com">🌐 Website</a> ·
   <a href="https://github.com/mard4/meeting-pilot/releases/latest/download/MeetingPilot.dmg">⬇ Download</a> ·
   <a href="mailto:support@meetingpilotapp.com">@ Email</a> ·
+  <a href="https://discord.gg/3Atx7yvFk">💬 Discord</a> ·
   <a href="https://martidan.gumroad.com/l/meetingpilot">♥ Support</a>
 </p>
 
@@ -243,6 +244,10 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
 
 Run from source, headless CLI, environment config → [DEVELOPMENT.md](docs/DEVELOPMENT.md). Contributing → [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
+## 💬 Community
+
+Questions, ideas, bug reports or just want to see what's coming next? [Join the Meeting Pilot Discord](https://discord.gg/3Atx7yvFk).
+
 ## ♥ Support
 
 Meeting Pilot is free and will stay free. If it saves you time, you can [pay what you want on Gumroad](https://martidan.gumroad.com/l/meetingpilot): it helps cover the Apple Developer account that signs the app and keeps updates coming. Enter €0 and you get exactly the same app.
@@ -259,6 +264,7 @@ Copyright (c) 2026 Mardeen · [MIT](LICENSE). Use, study, modify and share, incl
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-111?style=flat-square" alt="MIT" /></a>
   <a href="https://meetingpilot.pages.dev/"><img src="https://img.shields.io/badge/website-meetingpilot.pages.dev-111?style=flat-square" alt="Website" /></a>
 <a href="https://martidan.gumroad.com/l/meetingpilot"><img src="https://img.shields.io/badge/support-Gumroad-ff90e8?style=flat-square&logo=gumroad&logoColor=white" alt="Support on Gumroad" /></a>
+<a href="https://discord.gg/3Atx7yvFk"><img src="https://img.shields.io/badge/discord-join-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Join the Discord" /></a>
 <a href="mailto:support@meetingpilotapp.com"><img src="https://img.shields.io/badge/email-support%40meetingpilotapp.com-111?style=flat-square" alt="Email support@meetingpilotapp.com" /></a>
 </p>
 

@@ -313,11 +313,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             menu.addItem(NSMenuItem(title: localized("Controlla aggiornamenti"), action: #selector(checkForUpdatesFromMenu), keyEquivalent: ""))
         }
         menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: localized("Unisciti al Discord"), action: #selector(openDiscordFromMenu), keyEquivalent: ""))
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: localized("Esci"), action: #selector(quit), keyEquivalent: "q"))
         menu.items.forEach { $0.target = self }
         statusItem?.menu = menu
         statusItem?.button?.performClick(nil)
         statusItem?.menu = nil
+    }
+
+    @objc private func openDiscordFromMenu() {
+        NSWorkspace.shared.open(CommunityLinks.discord)
     }
 
     @objc private func openFromMenu() {

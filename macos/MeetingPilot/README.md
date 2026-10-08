@@ -3,6 +3,8 @@
 Interfaccia macOS nativa per controllare la pipeline `meeting-pilot`.
 E' una menu bar app: resta nella barra in alto di macOS, non nel Dock.
 
+Community: [Discord di Meeting Pilot](https://discord.gg/3Atx7yvFk).
+
 ## Build locale
 
 ```bash
@@ -15,7 +17,7 @@ open "macos/MeetingPilot/build-current/Meeting Pilot.app"
 Uso:
 
 - click sinistro sull'icona: apre la dashboard.
-- click destro sull'icona: menu rapido con avvio/pausa watcher ed uscita.
+- click destro sull'icona: menu rapido con avvio/pausa watcher, link al Discord ed uscita.
 - sezione Recorder: scegli TranscribeX, recorder macOS prompt o cartella custom.
 - sezione Recorder: abilita il banner "Vuoi iniziare la registrazione?", scegli ritardo e target da aprire con Avvia.
 - sezione Notion: scegli o cambia lo spazio parent, configura il nome pagina e riusa oppure crea una sola tabella per le riunioni.
