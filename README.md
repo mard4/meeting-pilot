@@ -8,9 +8,11 @@
 <p align="center">
   <a href="https://meetingpilotapp.com">🌐 Website</a> ·
   <a href="https://github.com/mard4/meeting-pilot/releases/latest/download/MeetingPilot.dmg">⬇ Download</a> ·
-  <a href="mailto:support@meetingpilotapp.com">@ Email</a> ·
-  <a href="https://discord.gg/3Atx7yvFk">💬 Discord</a> ·
-  <a href="https://martidan.gumroad.com/l/meetingpilot">♥ Support</a>
+  <a href="mailto:support@meetingpilotapp.com">@ Email</a>
+</p>
+<p align="center">
+  <a href="https://discord.gg/3Atx7yvFk"><img src="https://img.shields.io/badge/Discord-Entra%20nel%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Entra nel server Discord" /></a>
+  <a href="https://martidan.gumroad.com/l/meetingpilot"><img src="https://img.shields.io/badge/Support-Gumroad-ff90e8?style=for-the-badge&logo=gumroad&logoColor=black" alt="Support on Gumroad" /></a>
 </p>
 
 <!-- <h3 align="center">Your meetings. Your data.</h3> -->
