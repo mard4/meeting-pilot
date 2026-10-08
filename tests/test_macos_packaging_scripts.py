@@ -103,6 +103,8 @@ def test_make_dmg_verifies_existing_app_before_packaging(tmp_path: Path) -> None
         "exit 0\n",
         encoding="utf-8",
     )
+    # No signing identities: the test must not depend on the keychain of the Mac running it.
+    (tool_dir / "security").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     (tool_dir / "osascript").write_text(
         "#!/bin/sh\n"
         "cat > /dev/null\n"

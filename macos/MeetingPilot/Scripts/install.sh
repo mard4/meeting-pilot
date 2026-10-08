@@ -48,7 +48,9 @@ fi
 # Checked on the mounted image, before the installed copy is touched: a broken or foreign
 # signature stops the install instead of printing a warning after it.
 if ! codesign --verify --deep --strict "$mount_point/$APP_NAME" >/dev/null 2>&1 \
-  || ! codesign -dv "$mount_point/$APP_NAME" 2>&1 | grep -qx 'Identifier=io.github.mard4.MeetingPilot'; then
+  || ! codesign -dv "$mount_point/$APP_NAME" 2>&1 | grep -qx 'Identifier=io.github.mard4.MeetingPilot' \
+  || ! codesign -dv "$mount_point/$APP_NAME" 2>&1 | grep -qx 'TeamIdentifier=3F73JP5S4Q' \
+  || ! spctl --assess --type execute "$mount_point/$APP_NAME" 2>/dev/null; then
   echo "The app signature in the disk image could not be verified; nothing was installed." >&2
   exit 1
 fi

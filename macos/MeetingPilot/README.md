@@ -31,12 +31,11 @@ macos/MeetingPilot/Scripts/make_dmg.sh
 open macos/MeetingPilot/build-current
 ```
 
-Il DMG creato cosi contiene una app firmata ad-hoc e preserva i permessi di
-esecuzione. Su altri Mac restera' l'avviso Gatekeeper per sviluppatore non
-verificato, ma l'utente dovrebbe poter usare il flusso standard da Impostazioni
-di Sistema > Privacy e sicurezza > Apri comunque, senza Terminal. Per eliminare
-anche quell'avviso servono firma Developer ID, hardened runtime e notarizzazione
-Apple.
+Se nel portachiavi c'e' un certificato "Developer ID Application", gli script lo
+usano da soli: l'app ha l'hardened runtime e, con `NOTARY_KEYCHAIN_PROFILE`, il DMG
+viene notarizzato e si apre senza avvisi Gatekeeper (vedi DISTRIBUZIONE.md). Senza
+Developer ID il DMG contiene una app firmata ad-hoc: su altri Mac serve Impostazioni
+di Sistema > Privacy e sicurezza > Apri comunque.
 
 ## Come trova il progetto
 
