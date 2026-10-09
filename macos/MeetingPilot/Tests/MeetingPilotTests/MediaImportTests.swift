@@ -60,19 +60,7 @@ final class MediaImportTests: XCTestCase {
     /// fail the whole import; the lone half becomes U+FFFD and the rest is kept.
     func testTextWithALoneSurrogateStillWritesAsJSON() throws {
         let broken = NSString(characters: [0x0041, 0xD835, 0x0042], length: 3) as String
-        // PROBE: confirms the cause on macOS; removed once CI has shown it.
-        do {
-            _ = try JSONSerialization.data(withJSONObject: ["text": broken])
-            print("PROBE lone surrogate: written")
-        } catch {
-            print("PROBE lone surrogate: \(error.localizedDescription) | \(error)")
-        }
-        do {
-            _ = try JSONSerialization.data(withJSONObject: ["d": Double.nan])
-            print("PROBE nan: written")
-        } catch {
-            print("PROBE nan: \(error.localizedDescription) | \(error)")
-        }
+        XCTAssertThrowsError(try JSONSerialization.data(withJSONObject: ["text": broken]))
 
         let safe = SlideDeck.jsonSafe(broken)
         XCTAssertEqual(safe, "A\u{FFFD}B")

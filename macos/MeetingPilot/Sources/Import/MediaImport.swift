@@ -87,7 +87,7 @@ enum MediaImportInspector {
             }
             draft.isVideo = !(try await asset.loadTracks(withMediaType: .video)).isEmpty
             let duration = try await asset.load(.duration)
-            // JSON has no NaN or infinity: such a duration would fail writing `recording.json`.
+            // JSON has no NaN or infinity: JSONSerialization raises on them instead of throwing.
             if duration.isNumeric, duration.seconds.isFinite, duration.seconds > 0 {
                 draft.durationSeconds = duration.seconds
             }
