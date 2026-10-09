@@ -7,20 +7,31 @@ The macOS app copies the PDF into the sidecar as `slides/slides.pdf` and writes 
 
 A PDF without `slides.json`, as the command line leaves it, is read here with PDFKit
 through JavaScript for Automation, which every Mac has.
+
+Slides can also come as another document (a PowerPoint deck, a Word file, notes in
+Markdown, see `documents.py`), copied in as `slides/slides.<extension>`; the pipeline
+writes their text to `slides.json` the first time it reads them. Only a PDF is copied
+next to the published notes.
 """
 from __future__ import annotations
 
 import json
 import re
+import shutil
 import subprocess
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .documents import SUPPORTED_EXTENSIONS, extract_document_texts
+
 SLIDES_FOLDER = "slides"
 PDF_NAME = "slides.pdf"
 TEXT_NAME = "slides.json"
+SOURCE_STEM = "slides"
+# What can be attached as slides: a PDF, or a document read by `documents.py`.
+SLIDES_EXTENSIONS = {".pdf"} | SUPPORTED_EXTENSIONS
 
 _EXTRACT_SCRIPT = """
 ObjC.import('PDFKit');
@@ -57,6 +68,32 @@ def slides_pdf(session_dir: Path) -> Path | None:
     return pdf if pdf.is_file() else None
 
 
+def is_slides_file(path: Path) -> bool:
+    return path.suffix.lower() in SLIDES_EXTENSIONS
+
+
+def copy_slides_source(source: Path, folder: Path) -> Path:
+    """Copies a PDF or document into a sidecar's slides folder as `slides.<extension>`."""
+    if not is_slides_file(source):
+        supported = ", ".join(sorted(SLIDES_EXTENSIONS))
+        raise ValueError(f"Unsupported slides format: {source.name} (supported: {supported})")
+    folder.mkdir(parents=True, exist_ok=True)
+    copy = folder / (PDF_NAME if source.suffix.lower() == ".pdf" else f"{SOURCE_STEM}{source.suffix.lower()}")
+    shutil.copy2(source, copy)
+    return copy
+
+
+def slides_source(folder: Path) -> Path | None:
+    """The PDF or document the slides were read from."""
+    pdf = folder / PDF_NAME
+    if pdf.is_file():
+        return pdf
+    return next(
+        (path for path in sorted(folder.glob(f"{SOURCE_STEM}.*")) if path.name != TEXT_NAME and is_slides_file(path)),
+        None,
+    )
+
+
 def load_slides(session_dir: Path) -> list[Slide]:
     """The session's slides, or an empty list when it has none."""
     folder = slides_dir(session_dir)
@@ -67,12 +104,12 @@ def load_slides(session_dir: Path) -> list[Slide]:
     if isinstance(payload, dict) and isinstance(payload.get("pages"), list):
         texts = [str(page.get("text") or "") for page in payload["pages"] if isinstance(page, dict)]
         return slides_from_texts(texts)
-    pdf = folder / PDF_NAME
-    if not pdf.is_file():
+    source = slides_source(folder)
+    if source is None:
         return []
-    texts = extract_pdf_texts(pdf)
+    texts = extract_pdf_texts(source) if source.suffix.lower() == ".pdf" else extract_document_texts(source)
     (folder / TEXT_NAME).write_text(
-        json.dumps({"source_name": pdf.name, "pages": [{"page": i, "text": t} for i, t in enumerate(texts, 1)]},
+        json.dumps({"source_name": source.name, "pages": [{"page": i, "text": t} for i, t in enumerate(texts, 1)]},
                    ensure_ascii=False, indent=2),
         encoding="utf-8",
     )

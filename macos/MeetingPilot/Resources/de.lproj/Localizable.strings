@@ -713,12 +713,12 @@
 "Importa registrazioni, video di lezioni o podcast" = "Aufnahmen, Vorlesungsvideos oder Podcasts importieren";
 "File originale" = "Originaldatei";
 "Mostra nel Finder il video o l'audio importato" = "Importiertes Video oder Audio im Finder zeigen";
-"Scegli registrazioni, video di lezioni o podcast da trascrivere, e se vuoi il PDF delle slide." = "Wähle Aufnahmen, Vorlesungsvideos oder Podcasts zum Transkribieren und, falls vorhanden, das PDF der Folien.";
-"Scegli il PDF delle slide mostrate durante la registrazione." = "Wähle das PDF der Folien, die während der Aufnahme gezeigt wurden.";
+"Scegli registrazioni, video di lezioni o podcast da trascrivere, e se vuoi le slide o gli appunti (PDF, PowerPoint, Word, testo)." = "Wähle Aufnahmen, Vorlesungsvideos oder Podcasts zum Transkribieren und, falls vorhanden, die Folien oder Notizen (PDF, PowerPoint, Word, Text).";
+"Scegli le slide mostrate durante la registrazione o i tuoi appunti (PDF, PowerPoint, Word, testo)." = "Wähle die während der Aufnahme gezeigten Folien oder deine Notizen (PDF, PowerPoint, Word, Text).";
 "Il PDF delle slide non si apre" = "Das PDF der Folien lässt sich nicht öffnen";
 "Slide in attesa della registrazione" = "Folien warten auf ihre Aufnahme";
 "Togli le slide" = "Folien entfernen";
-"Aggiungi slide PDF…" = "Folien-PDF hinzufügen …";
+"Aggiungi slide o appunti…" = "Folien oder Notizen hinzufügen …";
 "Le slide vengono affiancate alla trascrizione e guidano la sintesi" = "Die Folien stehen neben dem Transkript und leiten die Zusammenfassung";
 "Mostra la slide e quello che è stato detto" = "Folie und das Gesagte zeigen";
 "Slide" = "Folien";
@@ -872,7 +872,7 @@
 "Aggiungi slide" = "Folien hinzufügen";
 "Aggiungi slide…" = "Folien hinzufügen…";
 "Cambia slide" = "Folien ändern";
-"Scegli il PDF delle slide: Meeting Pilot corregge la trascrizione, riscrive il riassunto seguendole e aggiorna le note." = "Wähle das PDF der Folien: Meeting Pilot korrigiert das Transkript, schreibt die Zusammenfassung entlang der Folien neu und aktualisiert die Notizen.";
+"Scegli le slide o gli appunti (PDF, PowerPoint, Word, testo): Meeting Pilot corregge la trascrizione, riscrive il riassunto seguendoli e aggiorna le note." = "Wähle die Folien oder Notizen (PDF, PowerPoint, Word, Text): Meeting Pilot korrigiert das Transkript, schreibt die Zusammenfassung entlang der Folien neu und aktualisiert die Notizen.";
 "Aggiungo le slide e riscrivo le note..." = "Folien werden hinzugefügt und Notizen neu geschrieben...";
 "Slide aggiunte: trascrizione, riassunto e note aggiornati" = "Folien hinzugefügt: Transkript, Zusammenfassung und Notizen aktualisiert";
 "Non sono riuscito ad aggiungere le slide" = "Die Folien konnten nicht hinzugefügt werden";

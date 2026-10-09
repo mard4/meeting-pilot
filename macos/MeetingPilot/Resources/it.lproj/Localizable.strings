@@ -693,12 +693,12 @@
 "Importa registrazioni, video di lezioni o podcast" = "Importa registrazioni, video di lezioni o podcast";
 "File originale" = "File originale";
 "Mostra nel Finder il video o l'audio importato" = "Mostra nel Finder il video o l'audio importato";
-"Scegli registrazioni, video di lezioni o podcast da trascrivere, e se vuoi il PDF delle slide." = "Scegli registrazioni, video di lezioni o podcast da trascrivere, e se vuoi il PDF delle slide.";
-"Scegli il PDF delle slide mostrate durante la registrazione." = "Scegli il PDF delle slide mostrate durante la registrazione.";
+"Scegli registrazioni, video di lezioni o podcast da trascrivere, e se vuoi le slide o gli appunti (PDF, PowerPoint, Word, testo)." = "Scegli registrazioni, video di lezioni o podcast da trascrivere, e se vuoi le slide o gli appunti (PDF, PowerPoint, Word, testo).";
+"Scegli le slide mostrate durante la registrazione o i tuoi appunti (PDF, PowerPoint, Word, testo)." = "Scegli le slide mostrate durante la registrazione o i tuoi appunti (PDF, PowerPoint, Word, testo).";
 "Il PDF delle slide non si apre" = "Il PDF delle slide non si apre";
 "Slide in attesa della registrazione" = "Slide in attesa della registrazione";
 "Togli le slide" = "Togli le slide";
-"Aggiungi slide PDF…" = "Aggiungi slide PDF…";
+"Aggiungi slide o appunti…" = "Aggiungi slide o appunti…";
 "Le slide vengono affiancate alla trascrizione e guidano la sintesi" = "Le slide vengono affiancate alla trascrizione e guidano la sintesi";
 "Mostra la slide e quello che è stato detto" = "Mostra la slide e quello che è stato detto";
 "Slide" = "Slide";
@@ -852,7 +852,7 @@
 "Aggiungi slide" = "Aggiungi slide";
 "Aggiungi slide…" = "Aggiungi slide…";
 "Cambia slide" = "Cambia slide";
-"Scegli il PDF delle slide: Meeting Pilot corregge la trascrizione, riscrive il riassunto seguendole e aggiorna le note." = "Scegli il PDF delle slide: Meeting Pilot corregge la trascrizione, riscrive il riassunto seguendole e aggiorna le note.";
+"Scegli le slide o gli appunti (PDF, PowerPoint, Word, testo): Meeting Pilot corregge la trascrizione, riscrive il riassunto seguendoli e aggiorna le note." = "Scegli le slide o gli appunti (PDF, PowerPoint, Word, testo): Meeting Pilot corregge la trascrizione, riscrive il riassunto seguendoli e aggiorna le note.";
 "Aggiungo le slide e riscrivo le note..." = "Aggiungo le slide e riscrivo le note...";
 "Slide aggiunte: trascrizione, riassunto e note aggiornati" = "Slide aggiunte: trascrizione, riassunto e note aggiornati";
 "Non sono riuscito ad aggiungere le slide" = "Non sono riuscito ad aggiungere le slide";
