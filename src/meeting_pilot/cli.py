@@ -66,7 +66,7 @@ def _main() -> None:
     import_parser.add_argument("media_file", type=Path)
     import_parser.add_argument("--title", help="Use this title instead of a generated one.")
     import_parser.add_argument("--date", help="When it was recorded, e.g. 2026-09-28T10:00. Defaults to now.")
-    import_parser.add_argument("--slides", type=Path, help="PDF of the slides shown, placed next to the transcript.")
+    import_parser.add_argument("--slides", type=Path, help="The slides shown (PDF, PPTX, ODP) or notes (DOCX, ODT, RTF, DOC, TXT, MD), placed next to the transcript.")
     import_parser.add_argument("--dry-run", action="store_true", help="Skip publishing.")
 
     watch_parser = subparsers.add_parser("watch", help="Watch the inbox folder forever.")
@@ -81,7 +81,7 @@ def _main() -> None:
         help="Add slides to a processed meeting: correct the transcript, summarize again and republish.",
     )
     attach_parser.add_argument("--session-dir", type=Path, required=True)
-    attach_parser.add_argument("--slides", type=Path, help="PDF of the slides shown; the app copies it in beforehand.")
+    attach_parser.add_argument("--slides", type=Path, help="The slides shown (PDF, PPTX, ODP) or notes (DOCX, ODT, RTF, DOC, TXT, MD); the app copies them in beforehand.")
     attach_parser.add_argument("--dry-run", action="store_true", help="Skip publishing.")
 
     retry_transcript = subparsers.add_parser("retry-transcription", help="Retry transcription and continue the pipeline from saved audio.")

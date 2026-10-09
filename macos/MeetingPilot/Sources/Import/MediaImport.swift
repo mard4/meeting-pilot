@@ -62,10 +62,10 @@ enum MediaImportError: LocalizedError {
 enum MediaImportInspector {
     /// What the open panel and drag and drop accept; anything else AVFoundation can
     /// read is still checked by `draft(for:)`.
-    static let contentTypes: [UTType] = [.audio, .movie, .audiovisualContent, .pdf]
+    static let contentTypes: [UTType] = [.audio, .movie, .audiovisualContent] + SlideDeck.contentTypes
 
     static func isSlides(_ url: URL) -> Bool {
-        UTType(filenameExtension: url.pathExtension)?.conforms(to: .pdf) == true
+        SlideDeck.isSlides(url)
     }
 
     /// Copied into the inbox as they are; everything else is converted to AAC first.

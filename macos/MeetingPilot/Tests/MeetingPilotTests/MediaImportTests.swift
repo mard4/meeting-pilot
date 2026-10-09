@@ -140,6 +140,23 @@ final class MediaImportTests: XCTestCase {
         XCTAssertNotNil(importer.history.importDate(for: fingerprint))
     }
 
+    /// Decks and notes in other formats go into the sidecar as they are, for the pipeline
+    /// to read; only a PDF is read here.
+    func testSlidesInOtherFormatsAreCopiedForThePipeline() throws {
+        let notes = folder.appendingPathComponent("Lezione 7 - appunti.DOCX")
+        try Data("not read here".utf8).write(to: notes)
+        let audio = folder.appendingPathComponent("lezione.m4a")
+
+        XCTAssertTrue(MediaImportInspector.isSlides(notes))
+        XCTAssertTrue(MediaImportInspector.isSlides(URL(fileURLWithPath: "/D/deck.pptx")))
+        XCTAssertTrue(MediaImportInspector.isSlides(URL(fileURLWithPath: "/D/appunti.md")))
+        XCTAssertFalse(MediaImportInspector.isSlides(URL(fileURLWithPath: "/D/lezione.mp3")))
+        try SlideDeck.write(notes, intoSidecarOf: audio)
+
+        let slides = MeetingSidecar.slidesDirectory(for: audio)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: slides.path), ["slides.docx"])
+    }
+
     /// One page per entry; `asImage` draws the text as a picture, like a scanned slide.
     private func makeSlides(_ pages: [String], asImage: Bool = false) throws -> URL {
         let url = folder.appendingPathComponent("slides-\(UUID().uuidString).pdf")

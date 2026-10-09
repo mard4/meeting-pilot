@@ -22,7 +22,7 @@ from typing import Any
 
 from .artifacts import MeetingArtifacts
 from .config import Config
-from .slides.deck import PDF_NAME, SLIDES_FOLDER
+from .slides.deck import SLIDES_FOLDER, copy_slides_source, is_slides_file
 from .transcription.session import audio_duration_seconds, sidecar_dir
 
 IMPORT_ORIGIN = "import"
@@ -86,6 +86,8 @@ def import_media_file(
         raise ValueError(f"File not found: {media}")
     if slides is not None and not slides.expanduser().is_file():
         raise ValueError(f"Slides not found: {slides}")
+    if slides is not None and not is_slides_file(slides):
+        raise ValueError(f"Unsupported slides format: {slides.name}")
     video = media.suffix.lower() in VIDEO_EXTENSIONS
     info: dict[str, Any] = {
         "call": False,
@@ -111,8 +113,7 @@ def import_media_file(
         sidecar.mkdir()
         (sidecar / "recording.json").write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
         if slides is not None:
-            (sidecar / SLIDES_FOLDER).mkdir()
-            shutil.copy2(slides.expanduser(), sidecar / SLIDES_FOLDER / PDF_NAME)
+            copy_slides_source(slides.expanduser(), sidecar / SLIDES_FOLDER)
         return process_audio(config, audio, dry_run=dry_run)
 
 

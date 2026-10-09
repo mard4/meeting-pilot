@@ -713,12 +713,12 @@
 "Importa registrazioni, video di lezioni o podcast" = "Importar gravações, vídeos de aulas ou podcasts";
 "File originale" = "Arquivo original";
 "Mostra nel Finder il video o l'audio importato" = "Mostrar no Finder o vídeo ou áudio importado";
-"Scegli registrazioni, video di lezioni o podcast da trascrivere, e se vuoi il PDF delle slide." = "Escolha gravações, vídeos de aulas ou podcasts para transcrever e, se tiver, o PDF dos slides.";
-"Scegli il PDF delle slide mostrate durante la registrazione." = "Escolha o PDF dos slides mostrados durante a gravação.";
+"Scegli registrazioni, video di lezioni o podcast da trascrivere, e se vuoi le slide o gli appunti (PDF, PowerPoint, Word, testo)." = "Escolha gravações, vídeos de aulas ou podcasts para transcrever e, se tiver, os slides ou apontamentos (PDF, PowerPoint, Word, texto).";
+"Scegli le slide mostrate durante la registrazione o i tuoi appunti (PDF, PowerPoint, Word, testo)." = "Escolha os slides mostrados durante a gravação ou os seus apontamentos (PDF, PowerPoint, Word, texto).";
 "Il PDF delle slide non si apre" = "Não é possível abrir o PDF dos slides";
 "Slide in attesa della registrazione" = "Slides aguardando a gravação";
 "Togli le slide" = "Remover os slides";
-"Aggiungi slide PDF…" = "Adicionar PDF dos slides…";
+"Aggiungi slide o appunti…" = "Adicionar slides ou apontamentos…";
 "Le slide vengono affiancate alla trascrizione e guidano la sintesi" = "Os slides aparecem ao lado da transcrição e orientam o resumo";
 "Mostra la slide e quello che è stato detto" = "Mostrar o slide e o que foi dito";
 "Slide" = "Slides";
@@ -872,7 +872,7 @@
 "Aggiungi slide" = "Adicionar slides";
 "Aggiungi slide…" = "Adicionar slides…";
 "Cambia slide" = "Alterar slides";
-"Scegli il PDF delle slide: Meeting Pilot corregge la trascrizione, riscrive il riassunto seguendole e aggiorna le note." = "Escolhe o PDF dos slides: o Meeting Pilot corrige a transcrição, reescreve o resumo seguindo-os e atualiza as notas.";
+"Scegli le slide o gli appunti (PDF, PowerPoint, Word, testo): Meeting Pilot corregge la trascrizione, riscrive il riassunto seguendoli e aggiorna le note." = "Escolhe os slides ou apontamentos (PDF, PowerPoint, Word, texto): o Meeting Pilot corrige a transcrição, reescreve o resumo seguindo-os e atualiza as notas.";
 "Aggiungo le slide e riscrivo le note..." = "A adicionar os slides e a reescrever as notas...";
 "Slide aggiunte: trascrizione, riassunto e note aggiornati" = "Slides adicionados: transcrição, resumo e notas atualizados";
 "Non sono riuscito ad aggiungere le slide" = "Não foi possível adicionar os slides";
