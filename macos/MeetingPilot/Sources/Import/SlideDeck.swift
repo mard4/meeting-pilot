@@ -34,7 +34,7 @@ enum SlideDeck {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try FileManager.default.copyItem(at: pdf, to: folder.appendingPathComponent("slides.pdf"))
         let payload: [String: Any] = [
-            "source_name": pdf.lastPathComponent,
+            "source_name": jsonSafe(pdf.lastPathComponent),
             "pages": texts.enumerated().map { ["page": $0.offset + 1, "text": $0.element] },
         ]
         let data = try JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys])
@@ -47,9 +47,17 @@ enum SlideDeck {
         }
         return (0..<document.pageCount).map { index in
             guard let page = document.page(at: index) else { return "" }
-            let text = (page.string ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let text = jsonSafe((page.string ?? "").trimmingCharacters(in: .whitespacesAndNewlines))
             return text.isEmpty ? recognizedText(on: page) : text
         }
+    }
+
+    /// A PDF's text layer can hold half of a UTF-16 surrogate pair (an emoji or a math
+    /// symbol cut by the PDF's encoding), which `JSONSerialization` refuses to write with
+    /// "The data couldn't be written because of an error in the content of the data",
+    /// failing the whole import. Re-decoding replaces each lone half with U+FFFD.
+    static func jsonSafe(_ text: String) -> String {
+        String(decoding: Array(text.utf16), as: UTF16.self)
     }
 
     /// Slides scanned or exported as pictures have no text layer; Vision reads them on

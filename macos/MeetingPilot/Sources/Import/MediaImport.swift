@@ -87,7 +87,8 @@ enum MediaImportInspector {
             }
             draft.isVideo = !(try await asset.loadTracks(withMediaType: .video)).isEmpty
             let duration = try await asset.load(.duration)
-            if duration.isNumeric, duration.seconds > 0 {
+            // JSON has no NaN or infinity: such a duration would fail writing `recording.json`.
+            if duration.isNumeric, duration.seconds.isFinite, duration.seconds > 0 {
                 draft.durationSeconds = duration.seconds
             }
             // Cameras, QuickTime, screen recordings and Voice Memos write when they recorded.
@@ -274,16 +275,16 @@ final class MediaImporter: ObservableObject {
     static func importInfo(for draft: MediaImportDraft) -> [String: Any] {
         var info: [String: Any] = [
             "media_kind": draft.isVideo ? "video" : "audio",
-            "original_name": draft.fileName,
-            "original_path": draft.sourceURL.path,
+            "original_name": SlideDeck.jsonSafe(draft.fileName),
+            "original_path": SlideDeck.jsonSafe(draft.sourceURL.path),
             "recorded_at": localTimestamp(draft.recordedAt),
         ]
-        if let duration = draft.durationSeconds {
+        if let duration = draft.durationSeconds, duration.isFinite {
             info["duration_seconds"] = duration
         }
         let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         if !title.isEmpty {
-            info["title"] = title
+            info["title"] = SlideDeck.jsonSafe(title)
         }
         return info
     }
