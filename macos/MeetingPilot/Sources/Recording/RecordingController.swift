@@ -524,7 +524,11 @@ final class RecordingController: ObservableObject {
                 }
                 let accessibilityError = (payload?["accessibility_error"] as? String) ?? ""
                 let participants = (payload?["participants"] as? [String]) ?? []
-                if !accessibilityError.isEmpty && participants.isEmpty {
+                // AppleScript's -2700 "is not running" also lands in accessibility_error;
+                // that's Teams being closed, not a missing permission.
+                if accessibilityError.contains("is not running") && participants.isEmpty {
+                    self.log("Metadati Teams non disponibili: Teams non è aperto")
+                } else if !accessibilityError.isEmpty && participants.isEmpty {
                     self.onStatusMessage("Consenti Accessibilità a Meeting Pilot per recuperare i partecipanti")
                     self.log("Metadati Teams non disponibili: manca il permesso Accessibilità\n\(output)")
                 } else if payload?["confidence"] != nil {
