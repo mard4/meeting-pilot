@@ -21,6 +21,12 @@ final class TeamsSpeakerTracker {
     private static let pollInterval: DispatchTimeInterval = .milliseconds(300)
     /// Tiles appear, move and disappear as people join or the layout changes.
     private static let rescanInterval: TimeInterval = 3
+    /// Nodes walked per window when looking for tiles. Per window rather than for the
+    /// whole app: the main Teams window (chats, activity) can use up a shared budget
+    /// before the walk ever reaches a separate meeting window.
+    private static let scanBudgetPerWindow = 6_000
+    /// How long Teams may run with no tile found before the log says so.
+    private static let noTilesReportSeconds: TimeInterval = 20
 
     private let outputURL: URL
     private let queue = DispatchQueue(label: "\(AppIdentity.bundleID).teams-speakers", qos: .utility)
@@ -39,6 +45,12 @@ final class TeamsSpeakerTracker {
     private var liveTalkingSince: [String: TimeInterval] = [:]
     private var liveTurns: [(name: String, start: TimeInterval, end: TimeInterval)] = []
     private static let liveHistorySeconds: TimeInterval = 120
+    /// What has been logged, so each condition is reported once per recording: a failure
+    /// here used to leave no trace, so a sidebar without names couldn't be told apart
+    /// from a call nobody spoke in.
+    private var reported: Set<String> = []
+    private var teamsSeenSince: TimeInterval?
+    private var lastScanSummary = ""
 
     init(outputURL: URL) {
         self.outputURL = outputURL
@@ -81,6 +93,12 @@ final class TeamsSpeakerTracker {
                 activeSince = nil
             }
             write()
+            if teamsSeenSince != nil {
+                let names = Set(segments.map { $0.name }).sorted()
+                AppLog.append(names.isEmpty
+                    ? "Speaker Teams: nessuno visto parlare durante la registrazione"
+                    : "Speaker Teams: \(segments.count) turni di \(names.joined(separator: ", "))")
+            }
         }
     }
 
@@ -104,7 +122,11 @@ final class TeamsSpeakerTracker {
     }
 
     private func poll() {
-        guard activeSince != nil, AXIsProcessTrusted() else { return }
+        guard activeSince != nil else { return }
+        guard AXIsProcessTrusted() else {
+            reportOnce("ax", "Speaker Teams non disponibili: manca il permesso Accessibilità")
+            return
+        }
         guard let teams = NSWorkspace.shared.runningApplications.first(where: {
             Self.teamsBundleIDs.contains($0.bundleIdentifier ?? "")
         }) else {
@@ -122,10 +144,17 @@ final class TeamsSpeakerTracker {
         }
 
         let uptime = ProcessInfo.processInfo.systemUptime
-        if tileContainers.isEmpty || uptime - lastScan >= Self.rescanInterval {
+        if teamsSeenSince == nil { teamsSeenSince = uptime }
+        // Also paced while nothing is found: each scan walks every Teams window.
+        if uptime - lastScan >= Self.rescanInterval {
             tileNames = [:]
             tileContainers = findTileContainers(in: app)
             lastScan = uptime
+            if tileContainers.isEmpty, let since = teamsSeenSince, uptime - since >= Self.noTilesReportSeconds {
+                reportOnce("tiles", "Speaker Teams: nessun riquadro partecipante trovato (\(lastScanSummary))")
+            } else if !tileContainers.isEmpty {
+                reportOnce("found", "Speaker Teams: riquadri partecipanti trovati (\(lastScanSummary))")
+            }
         }
 
         var talking = Set<String>()
@@ -138,6 +167,9 @@ final class TeamsSpeakerTracker {
             }
         }
 
+        if !talking.isEmpty {
+            reportOnce("talking", "Speaker Teams: primo bordo \"sta parlando\" visto")
+        }
         let now = recordedTime()
         for name in talking where talkingSince[name] == nil {
             talkingSince[name] = now
@@ -167,12 +199,39 @@ final class TeamsSpeakerTracker {
 
     /// Parents of the participant tiles. A tile is confirmed by its name also appearing as a
     /// text label inside it (see `tileName`), which keeps other context-menu items (chat,
-    /// roster) out and doesn't depend on the Teams UI language.
+    /// roster) out and doesn't depend on the Teams UI language. Windows are walked one at a
+    /// time, the meeting window first, each with its own node budget, and the walk stops at
+    /// the first window holding tiles.
     private func findTileContainers(in app: AXUIElement) -> [AXUIElement] {
+        let windows = elements(app, kAXWindowsAttribute)
+        let titled = windows.map { (window: $0, title: string($0, kAXTitleAttribute) ?? "") }
+        let ordered = titled.filter { looksLikeTeamsMeetingTitle($0.title) }
+            + titled.filter { !looksLikeTeamsMeetingTitle($0.title) }
+        var summary: [String] = []
+        for (window, title) in ordered {
+            let (containers, visited) = findTileContainers(under: window)
+            summary.append("\"\(title)\": \(visited) elementi, \(containers.count) gruppi di riquadri")
+            if !containers.isEmpty {
+                lastScanSummary = summary.joined(separator: "; ")
+                return containers
+            }
+        }
+        // No window list (seen while Teams starts up): fall back to the app's own children.
+        if windows.isEmpty {
+            let (containers, visited) = findTileContainers(under: app)
+            summary.append("nessuna finestra, \(visited) elementi dall'app")
+            lastScanSummary = summary.joined(separator: "; ")
+            return containers
+        }
+        lastScanSummary = summary.joined(separator: "; ")
+        return []
+    }
+
+    private func findTileContainers(under root: AXUIElement) -> (containers: [AXUIElement], visited: Int) {
         var containers: [AXUIElement] = []
         var visited = 0
         func walk(_ element: AXUIElement, depth: Int) {
-            guard depth < 60, visited < 6_000 else { return }
+            guard depth < 60, visited < Self.scanBudgetPerWindow else { return }
             visited += 1
             let role = string(element, kAXRoleAttribute)
             if role == kAXMenuBarRole || role == kAXMenuRole { return }
@@ -186,8 +245,13 @@ final class TeamsSpeakerTracker {
                 walk(child, depth: depth + 1)
             }
         }
-        walk(app, depth: 0)
-        return containers
+        walk(root, depth: 0)
+        return (containers, visited)
+    }
+
+    private func reportOnce(_ key: String, _ message: String) {
+        guard reported.insert(key).inserted else { return }
+        AppLog.append(message)
     }
 
     private func tileName(_ element: AXUIElement) -> String? {
@@ -265,8 +329,12 @@ final class TeamsSpeakerTracker {
     }
 
     private func children(of element: AXUIElement) -> [AXUIElement] {
+        elements(element, kAXChildrenAttribute)
+    }
+
+    private func elements(_ element: AXUIElement, _ attribute: String) -> [AXUIElement] {
         var raw: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &raw) == .success else { return [] }
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &raw) == .success else { return [] }
         return raw as? [AXUIElement] ?? []
     }
 
