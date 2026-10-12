@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Slides and notes can be added in more formats than PDF: PowerPoint (`.pptx`) and LibreOffice Impress (`.odp`) decks, Word (`.docx`, `.doc`), LibreOffice Writer (`.odt`) and RTF documents, and plain text or Markdown notes, when importing a recording or later on one already processed. Decks are matched to the transcript slide by slide; documents are split at page breaks, headings and every few paragraphs. Only a PDF is copied next to the published notes.
 
 ### Fixed
+- The live sidebar's transcript can be selected and copied. Before, dragging over it moved the whole sidebar; now the sidebar moves by its header.
 - The record banner for a Teams call no longer comes back after you close it. Muting yourself, or the call window being minimized for a moment, made the same call look new; now a call has to be gone for a minute before the next one prompts again.
 
 ## [0.3.0] - 2026-10-08

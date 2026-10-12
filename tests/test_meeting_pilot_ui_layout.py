@@ -775,6 +775,16 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         self.assertIn("audioPaths", helper)
         self.assertIn("!isTranscriptionProcessActive(for: session, activeCommands: activeCommands)", source)
 
+    def test_live_sidebar_transcript_is_selectable_and_moves_from_its_header(self):
+        source = SOURCE.read_text()
+        window = _section(source, "final class LiveSidebarWindow", "struct LiveSidebarView")
+        header = _section(source, "private var header: some View", "private var silentSystemAudioBanner")
+        transcript = _section(source, "private var transcriptList: some View", ".onChange(of: store.state.transcript.count)")
+
+        self.assertIn("panel.isMovableByWindowBackground = false", window)
+        self.assertIn(".overlay(WindowDragHandle())", header)
+        self.assertIn(".textSelection(.enabled)", transcript)
+
     def test_recording_prompt_is_only_shown_for_a_new_meeting(self):
         source = SOURCE.read_text()
         helper = _section(source, "func pollMeeting()", "private func")
