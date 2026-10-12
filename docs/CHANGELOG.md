@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Slides and notes can be added in more formats than PDF: PowerPoint (`.pptx`) and LibreOffice Impress (`.odp`) decks, Word (`.docx`, `.doc`), LibreOffice Writer (`.odt`) and RTF documents, and plain text or Markdown notes, when importing a recording or later on one already processed. Decks are matched to the transcript slide by slide; documents are split at page breaks, headings and every few paragraphs. Only a PDF is copied next to the published notes.
+
 ## [0.3.0] - 2026-10-08
 
 ### Added
