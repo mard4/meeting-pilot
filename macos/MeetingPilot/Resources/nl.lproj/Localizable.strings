@@ -713,12 +713,12 @@
 "Importa registrazioni, video di lezioni o podcast" = "Opnames, collegevideo's of podcasts importeren";
 "File originale" = "Origineel bestand";
 "Mostra nel Finder il video o l'audio importato" = "Toon de geïmporteerde video of audio in de Finder";
-"Scegli registrazioni, video di lezioni o podcast da trascrivere, e se vuoi il PDF delle slide." = "Kies opnames, collegevideo's of podcasts om te transcriberen, en de pdf met dia's als je die hebt.";
-"Scegli il PDF delle slide mostrate durante la registrazione." = "Kies de pdf met de dia's die tijdens de opname werden getoond.";
+"Scegli registrazioni, video di lezioni o podcast da trascrivere, e se vuoi le slide o gli appunti (PDF, PowerPoint, Word, testo)." = "Kies opnames, collegevideo's of podcasts om te transcriberen, en de dia's of aantekeningen als je die hebt (pdf, PowerPoint, Word, tekst).";
+"Scegli le slide mostrate durante la registrazione o i tuoi appunti (PDF, PowerPoint, Word, testo)." = "Kies de dia's die tijdens de opname werden getoond of je aantekeningen (pdf, PowerPoint, Word, tekst).";
 "Il PDF delle slide non si apre" = "De pdf met dia's kan niet worden geopend";
 "Slide in attesa della registrazione" = "Dia's wachten op hun opname";
 "Togli le slide" = "Dia's verwijderen";
-"Aggiungi slide PDF…" = "Pdf met dia's toevoegen…";
+"Aggiungi slide o appunti…" = "Dia's of aantekeningen toevoegen…";
 "Le slide vengono affiancate alla trascrizione e guidano la sintesi" = "De dia's staan naast het transcript en sturen de samenvatting";
 "Mostra la slide e quello che è stato detto" = "Toon de dia en wat er werd gezegd";
 "Slide" = "Dia's";
@@ -872,7 +872,7 @@
 "Aggiungi slide" = "Dia's toevoegen";
 "Aggiungi slide…" = "Dia's toevoegen…";
 "Cambia slide" = "Dia's wijzigen";
-"Scegli il PDF delle slide: Meeting Pilot corregge la trascrizione, riscrive il riassunto seguendole e aggiorna le note." = "Kies de pdf met dia's: Meeting Pilot corrigeert het transcript, herschrijft de samenvatting volgens de dia's en werkt de notities bij.";
+"Scegli le slide o gli appunti (PDF, PowerPoint, Word, testo): Meeting Pilot corregge la trascrizione, riscrive il riassunto seguendoli e aggiorna le note." = "Kies de dia's of aantekeningen (pdf, PowerPoint, Word, tekst): Meeting Pilot corrigeert het transcript, herschrijft de samenvatting volgens de dia's en werkt de notities bij.";
 "Aggiungo le slide e riscrivo le note..." = "Dia's toevoegen en notities herschrijven...";
 "Slide aggiunte: trascrizione, riassunto e note aggiornati" = "Dia's toegevoegd: transcript, samenvatting en notities bijgewerkt";
 "Non sono riuscito ad aggiungere le slide" = "Kon de dia's niet toevoegen";
