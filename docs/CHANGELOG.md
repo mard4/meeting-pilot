@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- After closing the main window, clicking Meeting Pilot in the Dock opens it again. Before, the window was gone for good until the app was quit and reopened.
+
 ## [0.3.0] - 2026-10-08
 
 ### Added
