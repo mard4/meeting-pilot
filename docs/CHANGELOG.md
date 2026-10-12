@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- The live sidebar's transcript can be selected and copied. Before, dragging over it moved the whole sidebar; now the sidebar moves by its header.
+
 ## [0.3.0] - 2026-10-08
 
 ### Added
