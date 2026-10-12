@@ -64,6 +64,41 @@ final class RecordingControllerDetectionTests: XCTestCase {
         XCTAssertEqual(controller.runtimeStatus, "Call Teams rilevata: Weekly sync")
     }
 
+    func testShortGapInTheCallDoesNotPromptAgain() {
+        var clock = Date(timeIntervalSince1970: 0)
+        controller.now = { clock }
+        platform.title = "Weekly sync"
+        platform.input = true
+        controller.pollMeeting()
+        XCTAssertEqual(controller.meetingPromptCount, 1)
+
+        // Muting in Teams releases the microphone for a while.
+        platform.input = false
+        clock += 20
+        controller.pollMeeting()
+        platform.input = true
+        clock += 2
+        controller.pollMeeting()
+        XCTAssertEqual(controller.meetingPromptCount, 1)
+    }
+
+    func testCallGoneLongerThanToleranceCountsAsNew() {
+        var clock = Date(timeIntervalSince1970: 0)
+        controller.now = { clock }
+        platform.title = "Weekly sync"
+        platform.input = true
+        controller.pollMeeting()
+        XCTAssertEqual(controller.meetingPromptCount, 1)
+
+        platform.title = nil
+        clock += 61
+        controller.pollMeeting()
+        platform.title = "Weekly sync"
+        clock += 2
+        controller.pollMeeting()
+        XCTAssertEqual(controller.meetingPromptCount, 2)
+    }
+
     func testPromptsDisabledLeavesStatusUntouched() {
         controller.settings = { .init(mode: "macos_prompt", folder: "", openTarget: "", promptEnabled: false,
                                       promptDelaySeconds: 3600, teamsOCREnabled: false) }
