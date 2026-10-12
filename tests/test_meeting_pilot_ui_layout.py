@@ -779,11 +779,12 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         source = SOURCE.read_text()
         helper = _section(source, "func pollMeeting()", "private func")
 
-        self.assertIn("private var meetingWasDetected = false", source)
+        self.assertIn("private var meetingLastSeenAt: Date?", source)
         self.assertIn("let appInputActive = platform.processIsRunningInput() == true", helper)
         self.assertIn("let activeMeeting = title != nil && appInputActive", helper)
-        self.assertIn("let meetingJustStarted = activeMeeting && !meetingWasDetected", helper)
-        self.assertIn("meetingWasDetected = activeMeeting", helper)
+        # A short gap (mute, a missed title read) is the same call, not a new one.
+        self.assertIn("< meetingGapToleranceSeconds", helper)
+        self.assertIn("let meetingJustStarted = activeMeeting && !sameCall", helper)
         self.assertIn("guard let title, activeMeeting else", helper)
         self.assertNotIn("title != lastPromptTitle", helper)
         self.assertNotIn("Date().timeIntervalSince(lastPromptDate)", helper)

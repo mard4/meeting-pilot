@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- The record banner for a Teams call no longer comes back after you close it. Muting yourself, or the call window being minimized for a moment, made the same call look new; now a call has to be gone for a minute before the next one prompts again.
+
 ## [0.3.0] - 2026-10-08
 
 ### Added
