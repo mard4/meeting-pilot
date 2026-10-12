@@ -73,14 +73,15 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         delegate = _section(source, "final class AppDelegate", "enum AppSection")
         app = _section(source, "struct MeetingPilotApp", "final class AppDelegate")
 
-        self.assertIn('WindowGroup("Meeting Pilot")', app)
-        self.assertIn(".environmentObject(appDelegate.model)", app)
+        # The main window is AppKit's: a SwiftUI WindowGroup window, once closed, could
+        # not be brought back from the Dock.
+        self.assertNotIn("WindowGroup(", app)
         self.assertIn("private var mainWindow: NSWindow?", delegate)
         self.assertIn("model = AppModel()", delegate)
-        self.assertIn("showMainWindow()", delegate)
-        self.assertIn("mainWindow?.makeKeyAndOrderFront(nil)", delegate)
-        self.assertIn("applicationShouldHandleReopen", delegate)
-        self.assertIn("mainWindow?.orderFrontRegardless()", delegate)
+        launch = _section(delegate, "func applicationDidFinishLaunching", "let statusItem = NSStatusBar")
+        self.assertIn("showMainWindow()", launch)
+        self.assertIn("window.makeKeyAndOrderFront(nil)", delegate)
+        self.assertIn("window.orderFrontRegardless()", delegate)
         self.assertIn("NSApp.setActivationPolicy(.regular)", delegate)
         # `.accessory` is only allowed in the DEBUG-only snapshot renderer.
         release_launch = delegate[delegate.index("#endif"):]
@@ -282,13 +283,18 @@ class MeetingPilotUILayoutTests(unittest.TestCase):
         self.assertIn('case "multi_select":', source)
         self.assertIn('names.map { ["name": $0] }', source)
 
-    def test_menu_bar_reuses_the_swiftui_main_window(self):
+    def test_dock_and_menu_bar_reopen_the_same_main_window_after_closing(self):
         source = SOURCE.read_text()
         app_delegate = _section(source, "final class AppDelegate", "enum AppSection")
 
-        main_window = _section(app_delegate, "private func showMainWindow()", "private func existingMainWindow")
-        self.assertIn("existingMainWindow()", main_window)
-        self.assertNotIn("let window = NSWindow(", main_window)
+        reopen = _section(app_delegate, "func applicationShouldHandleReopen", "func applicationShouldTerminate")
+        self.assertIn("showMainWindow()", reopen)
+        main_window = _section(app_delegate, "private func showMainWindow()", "private func makeMainWindow")
+        self.assertIn("mainWindow ?? makeMainWindow()", main_window)
+        self.assertNotIn("NSWindow(", main_window)
+        make_window = _section(app_delegate, "private func makeMainWindow()", "@objc private func openDiaryFromMenu")
+        self.assertIn("window.isReleasedWhenClosed = false", make_window)
+        self.assertIn(".environmentObject(model)", make_window)
 
     def test_notion_renaming_resets_stale_destination_ids(self):
         source = SOURCE.read_text()
