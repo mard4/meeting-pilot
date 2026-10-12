@@ -8,7 +8,7 @@ struct MediaImportSheet: View {
     @EnvironmentObject private var model: AppModel
     @State private var drafts: [MediaImportDraft] = []
     @State private var requested: [URL] = []
-    /// PDFs chosen or dropped before the recording they belong to has been read.
+    /// Slides chosen or dropped before the recording they belong to has been read.
     @State private var pendingSlides: [URL] = []
     @State private var loading = 0
     @State private var options = MediaImportOptions()
@@ -198,7 +198,7 @@ struct MediaImportSheet: View {
     }
 
     /// Reads each new file once; drafts keep the order the files were chosen in. PDFs
-    /// are slides for the recordings, attached once every recording has been read.
+    /// and documents are slides for the recordings, attached once every recording has been read.
     private func load(_ urls: [URL]) {
         let new = urls.filter { !requested.contains($0) }
         guard !new.isEmpty else { return }
@@ -321,7 +321,7 @@ private extension MediaImportRow {
                 Button {
                     if let url = chooseSlides() { draft.slidesURL = url }
                 } label: {
-                    Label(localized("Aggiungi slide PDF…"), systemImage: "doc.richtext")
+                    Label(localized("Aggiungi slide o appunti…"), systemImage: "doc.richtext")
                         .font(MPFont.caption(.medium))
                 }
                 .buttonStyle(.plain)
