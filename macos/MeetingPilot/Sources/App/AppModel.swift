@@ -1626,7 +1626,7 @@ final class AppModel: ObservableObject {
         panel.allowsMultipleSelection = true
         panel.allowedContentTypes = MediaImportInspector.contentTypes
         panel.prompt = localized("Importa")
-        panel.message = localized("Scegli registrazioni, video di lezioni o podcast da trascrivere, e se vuoi il PDF delle slide.")
+        panel.message = localized("Scegli registrazioni, video di lezioni o podcast da trascrivere, e se vuoi le slide o gli appunti (PDF, PowerPoint, Word, testo).")
         guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
         requestImport(panel.urls)
     }
@@ -1636,9 +1636,9 @@ final class AppModel: ObservableObject {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.pdf]
+        panel.allowedContentTypes = SlideDeck.contentTypes
         panel.prompt = localized("Scegli")
-        panel.message = localized("Scegli il PDF delle slide mostrate durante la registrazione.")
+        panel.message = localized("Scegli le slide mostrate durante la registrazione o i tuoi appunti (PDF, PowerPoint, Word, testo).")
         return panel.runModal() == .OK ? panel.url : nil
     }
 
@@ -1850,9 +1850,9 @@ final class AppModel: ObservableObject {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.pdf]
+        panel.allowedContentTypes = SlideDeck.contentTypes
         panel.prompt = localized("Aggiungi")
-        panel.message = localized("Scegli il PDF delle slide: Meeting Pilot corregge la trascrizione, riscrive il riassunto seguendole e aggiorna le note.")
+        panel.message = localized("Scegli le slide o gli appunti (PDF, PowerPoint, Word, testo): Meeting Pilot corregge la trascrizione, riscrive il riassunto seguendoli e aggiorna le note.")
         guard panel.runModal() == .OK, let pdf = panel.url else { return }
         attachSlides(pdf, toSessionAt: session)
     }
