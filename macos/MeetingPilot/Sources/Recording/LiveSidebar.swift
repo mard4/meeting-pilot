@@ -127,6 +127,20 @@ private final class LiveSidebarPanel: NSPanel {
     override var canBecomeKey: Bool { true }
 }
 
+/// Moves the sidebar when dragged. Only the header carries it: with the whole panel
+/// movable by its background, dragging over the transcript moved the window instead
+/// of selecting text.
+private struct WindowDragHandle: NSViewRepresentable {
+    final class HandleView: NSView {
+        override func mouseDown(with event: NSEvent) {
+            window?.performDrag(with: event)
+        }
+    }
+
+    func makeNSView(context: Context) -> NSView { HandleView() }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
+
 final class LiveSidebarWindow {
     static let shared = LiveSidebarWindow()
 
@@ -184,7 +198,9 @@ final class LiveSidebarWindow {
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hidesOnDeactivate = false
-        panel.isMovableByWindowBackground = true
+        // WindowDragHandle in the header moves the panel, leaving drags elsewhere to
+        // text selection.
+        panel.isMovableByWindowBackground = false
         // Take keyboard focus only when the notes editor is clicked, so the meeting app
         // stays frontmost the rest of the time.
         panel.becomesKeyOnlyIfNeeded = true
@@ -273,15 +289,18 @@ struct LiveSidebarView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            BrandTile(size: 26)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(localized("Dal vivo"))
-                    .font(.mpDisplay(12))
-                Text(localized("Trascrizione e parlanti"))
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.5))
+            HStack(spacing: 10) {
+                BrandTile(size: 26)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(localized("Dal vivo"))
+                        .font(.mpDisplay(12))
+                    Text(localized("Trascrizione e parlanti"))
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+                Spacer()
             }
-            Spacer()
+            .overlay(WindowDragHandle())
             HStack(spacing: 5) {
                 Circle()
                     .fill(MeetingPilotDesign.accentStrong)
@@ -461,6 +480,7 @@ struct LiveSidebarView: View {
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .textSelection(.enabled)
             }
             .onChange(of: store.state.transcript.count) {
                 guard let last = store.state.transcript.last else { return }
