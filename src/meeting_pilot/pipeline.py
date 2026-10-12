@@ -20,7 +20,7 @@ from .publishing.notion_publisher import publish_to_notion
 from .publishing.republish import withdraw_previous_notes
 from .slides import attach_slides, cite_slides
 from .slides.corrections import find_corrections, save_corrections
-from .slides.deck import PDF_NAME, load_slides, slides_dir
+from .slides.deck import copy_slides_source, load_slides, slides_dir
 from .summarization.long_transcripts import fit_for_summary
 from .summarization.omlx_client import summarize
 from .platforms.teams.teams_scraper import read_saved_teams_runtime_metadata
@@ -261,13 +261,12 @@ def attach_slides_later(
     return session_dir
 
 
-def _copy_slides(pdf: Path, session_dir: Path) -> None:
-    if not pdf.is_file():
-        raise ValueError(f"Slides not found: {pdf}")
+def _copy_slides(source: Path, session_dir: Path) -> None:
+    if not source.is_file():
+        raise ValueError(f"Slides not found: {source}")
     folder = slides_dir(session_dir)
     shutil.rmtree(folder, ignore_errors=True)
-    folder.mkdir(parents=True)
-    shutil.copy2(pdf, folder / PDF_NAME)
+    copy_slides_source(source, folder)
 
 
 def _saved_metadata(session_dir: Path) -> dict:

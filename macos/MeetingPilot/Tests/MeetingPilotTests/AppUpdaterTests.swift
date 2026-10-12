@@ -55,4 +55,26 @@ final class AppUpdaterTests: XCTestCase {
         XCTAssertTrue(script.contains(#"mv "$backup" "$installed""#))
         XCTAssertTrue(script.contains(#"open "$installed""#))
     }
+
+    /// A valid signature is not enough: an ad hoc one anybody can make must not pass for
+    /// an update of this app.
+    func testUpdateSignedBySomeoneElseIsRejected() throws {
+        let app = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpdaterTest-\(UUID().uuidString)/Meeting Pilot.app")
+        defer { try? FileManager.default.removeItem(at: app.deletingLastPathComponent()) }
+        let executables = app.appendingPathComponent("Contents/MacOS")
+        try FileManager.default.createDirectory(at: executables, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(atPath: "/usr/bin/true", toPath: executables.appendingPathComponent("MeetingPilot").path)
+        let info: [String: Any] = ["CFBundleIdentifier": AppIdentity.bundleID, "CFBundleExecutable": "MeetingPilot"]
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
+            .write(to: app.appendingPathComponent("Contents/Info.plist"))
+        let sign = Process()
+        sign.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        sign.arguments = ["--force", "--sign", "-", app.path]
+        try sign.run()
+        sign.waitUntilExit()
+        XCTAssertEqual(sign.terminationStatus, 0)
+
+        XCTAssertNotNil(AppUpdater.signatureFailure(of: app))
+    }
 }

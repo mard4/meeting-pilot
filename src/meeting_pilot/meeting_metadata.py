@@ -129,7 +129,7 @@ def _query_calendar_app(target: datetime, window: timedelta) -> list[CalendarCan
     script = _calendar_applescript(target - window, target + window)
     try:
         result = subprocess.run(
-            ["osascript"],
+            ["/usr/bin/osascript"],
             input=script,
             text=True,
             stdout=subprocess.PIPE,

@@ -45,6 +45,17 @@ if [[ ! -d "$mount_point/$APP_NAME" ]]; then
   exit 1
 fi
 
+# Checked on the mounted image, before the installed copy is touched: a broken or foreign
+# signature stops the install instead of printing a warning after it.
+signature="$(codesign -dv "$mount_point/$APP_NAME" 2>&1 || true)"
+if ! codesign --verify --deep --strict "$mount_point/$APP_NAME" >/dev/null 2>&1 \
+  || ! grep -qx 'Identifier=io.github.mard4.MeetingPilot' <<< "$signature" \
+  || ! grep -qx 'TeamIdentifier=3F73JP5S4Q' <<< "$signature" \
+  || ! spctl --assess --type execute "$mount_point/$APP_NAME" 2>/dev/null; then
+  echo "The app signature in the disk image could not be verified; nothing was installed." >&2
+  exit 1
+fi
+
 if pgrep -xq "Meeting Pilot"; then
   echo "==> Quitting the running copy"
   osascript -e 'quit app "Meeting Pilot"' 2>/dev/null || true
@@ -54,9 +65,6 @@ fi
 echo "==> Installing to $DEST"
 rm -rf "$DEST/$APP_NAME"
 ditto "$mount_point/$APP_NAME" "$DEST/$APP_NAME"
-
-codesign --verify --deep --strict "$DEST/$APP_NAME" >/dev/null 2>&1 \
-  || echo "Warning: the app signature could not be verified." >&2
 
 echo "==> Meeting Pilot installed in $DEST"
 open "$DEST/$APP_NAME"

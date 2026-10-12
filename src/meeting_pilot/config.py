@@ -202,6 +202,19 @@ class Config:
             self.failed_dir,
         ):
             folder.mkdir(parents=True, exist_ok=True)
+            _restrict_to_owner(folder, 0o700)
+        for file in (self.processed_sources_file, self.teams_runtime_metadata_file):
+            _restrict_to_owner(file, 0o600)
+
+
+def _restrict_to_owner(path: Path, mode: int) -> None:
+    """Recordings and transcripts made before the CLI set its umask were readable by
+    every account on the Mac; closing the folder that holds them is enough."""
+    try:
+        if path.exists() and path.stat().st_uid == os.getuid() and path.stat().st_mode & 0o077:
+            path.chmod(mode)
+    except OSError:
+        pass
 
 
 def _publish_targets_from_env() -> tuple[str, ...]:

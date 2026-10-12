@@ -56,6 +56,31 @@ final class MediaImportTests: XCTestCase {
         XCTAssertEqual(info["title"] as? String, "Integrali impropri")
     }
 
+    /// Slide text with half a surrogate pair, as PDFKit can return it, made JSONSerialization
+    /// fail the whole import; the lone half becomes U+FFFD and the rest is kept.
+    func testTextWithALoneSurrogateStillWritesAsJSON() throws {
+        let broken = NSString(characters: [0x0041, 0xD835, 0x0042], length: 3) as String
+        XCTAssertThrowsError(try JSONSerialization.data(withJSONObject: ["text": broken]))
+
+        let safe = SlideDeck.jsonSafe(broken)
+        XCTAssertEqual(safe, "A\u{FFFD}B")
+        let data = try JSONSerialization.data(withJSONObject: ["text": safe])
+        let decoded = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: String])
+        XCTAssertEqual(decoded["text"], "A\u{FFFD}B")
+        XCTAssertEqual(SlideDeck.jsonSafe("Reti neurali; π ≈ 3.14 🧠"), "Reti neurali; π ≈ 3.14 🧠")
+    }
+
+    func testImportInfoLeavesOutADurationJSONCannotHold() throws {
+        let draft = MediaImportDraft(
+            sourceURL: URL(fileURLWithPath: "/D/1 Intro; Training Deep NNs.mp3"),
+            recordedAt: date("2026-10-09 14:00"), durationSeconds: .nan
+        )
+        let info = MediaImporter.importInfo(for: draft)
+        XCTAssertNil(info["duration_seconds"])
+        XCTAssertEqual(info["original_name"] as? String, "1 Intro; Training Deep NNs.mp3")
+        XCTAssertNoThrow(try JSONSerialization.data(withJSONObject: info))
+    }
+
     func testFingerprintIdentifiesTheSameContentAndHistoryRemembersIt() throws {
         let a = folder.appendingPathComponent("a.mp3")
         let b = folder.appendingPathComponent("b.mp3")
@@ -113,6 +138,23 @@ final class MediaImportTests: XCTestCase {
         XCTAssertEqual(leftovers, [])
         let fingerprint = try XCTUnwrap(MediaImportHistory.fingerprint(of: source))
         XCTAssertNotNil(importer.history.importDate(for: fingerprint))
+    }
+
+    /// Decks and notes in other formats go into the sidecar as they are, for the pipeline
+    /// to read; only a PDF is read here.
+    func testSlidesInOtherFormatsAreCopiedForThePipeline() throws {
+        let notes = folder.appendingPathComponent("Lezione 7 - appunti.DOCX")
+        try Data("not read here".utf8).write(to: notes)
+        let audio = folder.appendingPathComponent("lezione.m4a")
+
+        XCTAssertTrue(MediaImportInspector.isSlides(notes))
+        XCTAssertTrue(MediaImportInspector.isSlides(URL(fileURLWithPath: "/D/deck.pptx")))
+        XCTAssertTrue(MediaImportInspector.isSlides(URL(fileURLWithPath: "/D/appunti.md")))
+        XCTAssertFalse(MediaImportInspector.isSlides(URL(fileURLWithPath: "/D/lezione.mp3")))
+        try SlideDeck.write(notes, intoSidecarOf: audio)
+
+        let slides = MeetingSidecar.slidesDirectory(for: audio)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: slides.path), ["slides.docx"])
     }
 
     /// One page per entry; `asImage` draws the text as a picture, like a scanned slide.

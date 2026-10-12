@@ -1,4 +1,5 @@
 import AppKit
+import AuthenticationServices
 import Foundation
 
 /// Notion sign-in (OAuth via the Cloudflare worker), destination provisioning and the
@@ -18,6 +19,12 @@ final class NotionConnection: ObservableObject {
 
     private let envURL: URL
     private var knownReceiptPaths: Set<String>?
+    /// The sign-in in progress. Its state lives only in memory and is used once: kept in
+    /// `.env`, which any process can write, it would let a callback with someone else's
+    /// token through, and every meeting would then be published to their workspace.
+    private var pendingOAuthState: String?
+    private var authSession: ASWebAuthenticationSession?
+    private let authPresentation = OAuthPresentation()
 
     init(envURL: URL) {
         self.envURL = envURL
@@ -140,19 +147,44 @@ final class NotionConnection: ObservableObject {
         }
     }
 
+    /// The token comes back in a `meetingpilot://` URL. The authentication session catches
+    /// it itself, so it never goes through Launch Services, where another app registering
+    /// the same scheme could receive it.
     func startOAuth() {
         let state = UUID().uuidString
-        EnvFile.update(at: envURL, values: ["NOTION_OAUTH_STATE": state])
         guard let url = URL(string: "https://meeting-pilot-oauth.c59nm9zsd7.workers.dev/notion/start?state=\(state)") else { return }
+        pendingOAuthState = state
+        EnvFile.remove(at: envURL, keys: ["NOTION_OAUTH_STATE"])
+        authSession?.cancel()
+        let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "meetingpilot") { [weak self] callback, error in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.authSession = nil
+                if let callback {
+                    self.handleOAuthCallback(callback)
+                } else if (error as? ASWebAuthenticationSessionError)?.code == .canceledLogin {
+                    self.pendingOAuthState = nil
+                    self.onStatusMessage("Collegamento a Notion annullato.")
+                } else if let error {
+                    self.pendingOAuthState = nil
+                    self.onStatusMessage("Collegamento a Notion non riuscito: \(error.localizedDescription)")
+                }
+            }
+        }
+        session.presentationContextProvider = authPresentation
+        authSession = session
         onStatusMessage("Apro Notion per il collegamento...")
-        NSWorkspace.shared.open(url)
+        if !session.start() {
+            authSession = nil
+            pendingOAuthState = nil
+            onStatusMessage("Non riesco ad aprire Notion per il collegamento.")
+        }
     }
 
     func handleOAuthCallback(_ url: URL) {
         guard url.scheme == "meetingpilot",
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
         let values = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value ?? "") })
-        let env = EnvFile.load(from: envURL)
         let callbackState = values["state"] ?? ""
         // Accept callbacks produced by both Worker HTML versions. In the older
         // version, HTML escaping could prefix these parameter names with "amp;".
@@ -165,10 +197,11 @@ final class NotionConnection: ObservableObject {
             choices = [NotionPageChoice(id: parent, title: parentTitle)]
         }
 
-        guard callbackState == env["NOTION_OAUTH_STATE"] else {
+        guard let expectedState = pendingOAuthState, !callbackState.isEmpty, callbackState == expectedState else {
             onStatusMessage("Sessione Notion scaduta: riprova il collegamento.")
             return
         }
+        pendingOAuthState = nil
         guard !token.isEmpty else {
             onStatusMessage("Notion non ha restituito il token: riprova il collegamento.")
             return
@@ -262,5 +295,12 @@ final class NotionConnection: ObservableObject {
         appPageId = ""
         seriesDatabaseId = ""
         occurrencesDatabaseId = ""
+    }
+}
+
+/// Shows the Notion sign-in sheet over the app's window, or on its own when none is open.
+private final class OAuthPresentation: NSObject, ASWebAuthenticationPresentationContextProviding {
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        NSApp.keyWindow ?? NSApp.windows.first { $0.isVisible } ?? ASPresentationAnchor()
     }
 }

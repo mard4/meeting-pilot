@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import atexit
 import os
+import secrets
 import shutil
 import socket
 import subprocess
@@ -96,6 +97,8 @@ def server_command(config: Config, port: int) -> list[str]:
         "--jinja",
         "--reasoning-budget", "0",
         "--no-webui",
+        # The prompts are meeting transcripts; nothing else needs the slots monitor.
+        "--no-slots",
         *VARIANTS[variant_name(config)].server_args,
     ]
 
@@ -108,6 +111,12 @@ def server(config: Config) -> Iterator[str]:
         yield base_url
     finally:
         _SERVER.release()
+
+
+def request_headers() -> dict[str, str]:
+    """What every request to the server must carry: it listens on localhost, where any
+    process and any other account on the Mac could otherwise read the transcripts sent."""
+    return {"Authorization": f"Bearer {API_KEY}"}
 
 
 def _resolve_command(command: str) -> str:
@@ -171,7 +180,10 @@ class _Server:
         command = server_command(config, port)
         log_path = path.parent / "llama-server.log"
         with log_path.open("w") as log:
-            process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT)
+            # The key goes through the environment, not argv, where `ps` would show it.
+            process = subprocess.Popen(
+                command, stdout=log, stderr=subprocess.STDOUT, env={**os.environ, "LLAMA_API_KEY": API_KEY}
+            )
         # atexit doesn't run when this process is killed; the watchdog stops the server then.
         watchdog = subprocess.Popen(
             ["/bin/sh", "-c", 'while kill -0 "$1" 2>/dev/null; do sleep 5; done; kill "$2" 2>/dev/null', "sh",
@@ -233,5 +245,6 @@ def _log_tail(path: Path) -> str:
     return " | ".join(lines[-3:])[:500]
 
 
+API_KEY = secrets.token_urlsafe(32)
 _SERVER = _Server()
 atexit.register(_SERVER.shutdown)

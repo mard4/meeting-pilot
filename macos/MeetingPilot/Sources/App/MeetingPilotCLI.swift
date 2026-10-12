@@ -26,9 +26,33 @@ struct MeetingPilotCLI {
             environment["SSL_CERT_FILE"] = certificate
         }
         // Apps launched from Finder get a bare PATH; the login shell used to add these.
+        // They go last: Homebrew's folders are writable by the user, so a planted
+        // `osascript` there must not shadow the system one.
         let inherited = ProcessInfo.processInfo.environment["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
-        environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:\(inherited)"
+        environment["PATH"] = "\(inherited):/opt/homebrew/bin:/usr/local/bin"
+        environment.merge(Self.bundledHelperEnvironment) { $1 }
         return environment.merging(extra) { $1 }
+    }
+
+    /// The helpers shipped inside the app. The CLI reads `.env` without overriding the
+    /// environment, so these win over any path written there: whatever the CLI starts
+    /// runs with this app's privacy permissions, and `.env` is writable by any process.
+    static var bundledHelperEnvironment: [String: String] {
+        let helpers = Bundle.main.executableURL?.deletingLastPathComponent()
+        let resources = Bundle.main.resourceURL
+        let commands: [String: URL?] = [
+            "APPLE_TRANSCRIBER_CMD": helpers?.appendingPathComponent("AppleTranscriber"),
+            "APPLE_INTELLIGENCE_SUMMARIZER_CMD": helpers?.appendingPathComponent("AppleIntelligenceSummarizer"),
+            "MEETING_PILOT_OCR_COMMAND": helpers?.appendingPathComponent("TeamsOCR"),
+            "MEETING_PILOT_TEAMS_WINDOW_COMMAND": helpers?.appendingPathComponent("TeamsWindowID"),
+            "FLUID_AUDIO_CMD": resources?.appendingPathComponent("FluidAudio/bin/fluidaudiocli"),
+            "LLAMA_SERVER_CMD": resources?.appendingPathComponent("LlamaCpp/bin/llama-server"),
+        ]
+        return commands.reduce(into: [:]) { environment, entry in
+            if let path = entry.value?.path, FileManager.default.isExecutableFile(atPath: path) {
+                environment[entry.key] = path
+            }
+        }
     }
 
     static var teamsHelperEnvironment: [String: String] {

@@ -18,7 +18,7 @@ from ..config import Config
 from ..language import NOT_FOUND_ANSWERS, config_language, label, language_name
 from ..slides.deck import TEXT_NAME, slides_dir, slides_from_texts
 from ..summarization.apple_intelligence_client import chat_with_apple_intelligence
-from ..summarization.omlx_client import is_ollama, ollama_chat_request, strip_model_wrapping, summary_endpoint
+from ..summarization.omlx_client import is_ollama, ollama_chat_request, request_headers, strip_model_wrapping, summary_endpoint
 from .knowledge_base import default_knowledge_index_path, load_knowledge_documents
 from ..tag_catalog import catalog_values
 
@@ -527,9 +527,7 @@ def _openai_compatible_chat(config: Config) -> ChatProvider:
             ],
             "temperature": 0.0,
         }
-        headers = {"Content-Type": "application/json"}
-        if config.summary_api_key:
-            headers["Authorization"] = f"Bearer {config.summary_api_key}"
+        headers = request_headers(config)
         with summary_endpoint(config) as base_url:
             ollama = is_ollama(config)
             if ollama:

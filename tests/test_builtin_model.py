@@ -17,7 +17,7 @@ from meeting_pilot.summarization.omlx_client import summarize_with_openai_compat
 # Stands in for llama-server: answers /health, records each chat request next to
 # itself and replies with fixed meeting notes.
 FAKE_SERVER = f"""#!{sys.executable}
-import json, sys
+import json, os, sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
@@ -42,6 +42,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         Path(__file__).with_name("request.json").write_text(json.dumps(request))
+        Path(__file__).with_name("auth.json").write_text(json.dumps({{
+            "header": self.headers.get("Authorization"), "key": os.environ.get("LLAMA_API_KEY"),
+        }}))
         notes = {{"title": "Lancio", "summary": "Sintesi", "participants": [], "topics": [], "decisions": [],
                  "action_items": [], "open_questions": [], "risks": []}}
         self.reply({{"choices": [{{"message": {{"content": json.dumps(notes)}}}}]}})
@@ -141,6 +144,26 @@ class BuiltinModelTests(unittest.TestCase):
             self.assertEqual(request["response_format"], {"type": "json_object"})
             with self.assertRaises(ProcessLookupError):
                 os.kill(server_pid, 0)
+
+    def test_server_requires_a_key_only_this_process_knows(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = self.make_config(root, command=str(self.make_fake_server(root)))
+            self.install_model(config)
+            artifacts = MeetingArtifacts(
+                session_dir=root, audio_file=root / "audio.m4a", title="Lancio", transcript_text="Giulia: ok."
+            )
+
+            summarize_with_openai_compatible(config, artifacts, "worker")
+            auth = json.loads((root / "auth.json").read_text())
+            args = json.loads((root / "args.json").read_text())
+            builtin_model._SERVER.shutdown()
+
+            self.assertTrue(auth["key"])
+            self.assertEqual(auth["header"], f"Bearer {auth['key']}")
+            # On the command line `ps` would show it to every account.
+            self.assertNotIn(auth["key"], args)
+            self.assertIn("--no-slots", args)
 
     def test_server_stays_up_while_in_use_and_is_reused(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -520,7 +520,7 @@ def normalize_language(value: str | None) -> str | None:
 def macos_language() -> str | None:
     try:
         result = subprocess.run(
-            ["defaults", "read", "-g", "AppleLanguages"],
+            ["/usr/bin/defaults", "read", "-g", "AppleLanguages"],
             capture_output=True,
             text=True,
             timeout=3,

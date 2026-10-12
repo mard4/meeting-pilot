@@ -14,7 +14,7 @@ import certifi
 from ..artifacts import MeetingArtifacts
 from ..config import Config
 from .apple_intelligence_client import AppleIntelligenceUnavailable, summarize_with_apple_intelligence
-from .builtin_model import is_builtin, server as builtin_server
+from .builtin_model import is_builtin, request_headers as builtin_request_headers, server as builtin_server
 from ..business_glossary import summary_instructions as business_glossary_instructions
 from ..language import config_language, language_name
 from ..profiles import STUDENT, resolve_profile
@@ -121,9 +121,7 @@ def summarize_with_openai_compatible(
     # need it to fill the fields reliably.
     if config.summary_response_format_json or is_builtin(config):
         payload["response_format"] = {"type": "json_object"}
-    headers = {"Content-Type": "application/json"}
-    if config.summary_api_key:
-        headers["Authorization"] = f"Bearer {config.summary_api_key}"
+    headers = request_headers(config)
 
     timeout_seconds = max(15, int(getattr(config, "summary_timeout_seconds", 180)))
     with summary_endpoint(config) as base_url:
@@ -156,6 +154,16 @@ def summarize_with_openai_compatible(
         return json.loads(strip_model_wrapping(content))
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"Summary provider returned non-JSON content: {content[:500]}") from exc
+
+
+def request_headers(config: Config) -> dict[str, str]:
+    """JSON headers plus the key: the provider's, or the one of the bundled server."""
+    headers = {"Content-Type": "application/json"}
+    if is_builtin(config):
+        headers.update(builtin_request_headers())
+    elif config.summary_api_key:
+        headers["Authorization"] = f"Bearer {config.summary_api_key}"
+    return headers
 
 
 def summary_endpoint(config: Config) -> AbstractContextManager[str]:

@@ -42,7 +42,11 @@ spctl --assess --type execute -v "macos/MeetingPilot/build-current/Meeting Pilot
 ```
 
 Con firma ad-hoc, `codesign` deve risultare valido e `codesign -dv` deve mostrare
-`Signature=adhoc`. `spctl` dira' comunque `rejected`: e' normale senza Developer
+`Signature=adhoc` e `flags=0x10002(adhoc,runtime)`: anche senza Developer ID l'app e i
+suoi helper Swift, FluidAudio e llama-server hanno l'hardened runtime (niente
+`DYLD_INSERT_LIBRARIES` nell'app che ha i permessi di microfono e Automazione). Solo la
+CLI Python ne resta senza, perche' senza Team ID la library validation rifiuterebbe le
+librerie di PyInstaller. `spctl` dira' comunque `rejected`: e' normale senza Developer
 ID e notarizzazione.
 
 Il DMG e' una distribuzione drag-and-drop: l'utente deve copiare

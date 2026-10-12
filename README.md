@@ -9,7 +9,11 @@
   <a href="https://meetingpilotapp.com">🌐 Website</a> ·
   <a href="https://meetingpilotapp.com/support/">☕ Support</a> ·
   <a href="https://github.com/mard4/meeting-pilot/releases/latest/download/MeetingPilot.dmg">⬇ Download</a> ·
-  <a href="mailto:support@meetingpilotapp.com">@ Email</a> 
+  <a href="mailto:support@meetingpilotapp.com">@ Email</a>
+</p>
+<p align="center">
+  <a href="https://discord.gg/3Atx7yvFk"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="" /></a>
+  <a href="https://martidan.gumroad.com/l/meetingpilot"><img src="https://img.shields.io/badge/Support-Gumroad-ff90e8?style=for-the-badge&logo=gumroad&logoColor=black" alt="Support on Gumroad" /></a>
 </p>
 
 <!-- <h3 align="center">Your meetings. Your data.</h3> -->
@@ -92,7 +96,7 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
     <td width="60%" align="center"><img src="docs/assets/readme/profile.png" alt="Welcome tour asking whether you are a student, a professional or both, with the sections each kind of note gets" width="100%" /></td>
   </tr>
   <tr>
-    <td width="60%" align="center"><img src="docs/assets/readme/lecture-slides.png" alt="A lecture in the Journal, its transcript split slide by slide next to the slides PDF" width="100%" /></td>
+    <td width="60%" align="center"><img src="docs/assets/readme/lecture-slides.png" alt="A Random Forests lecture in the Journal: summary, my notes and key concepts next to its slides PDF" width="100%" /></td>
     <td width="40%" valign="middle">
       <h3>SLIDES NEXT TO THE TRANSCRIPT</h3>
       Add the lecture's PDF: every part of the transcript is matched to its slide, on your Mac and without a model. The summary cites them as <i>(slide 3)</i>. Got the PDF after the lecture? Add it to any recording later: names and terms the transcript misheard are corrected from the slides, and the summary and notes are rewritten.
@@ -162,15 +166,14 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
 ## ⬇ Installation
 
 1. **[Download the `.dmg`](https://github.com/mard4/meeting-pilot/releases/latest/download/MeetingPilot.dmg)** → drag to `Applications` (or use the `curl` one-liner above).
-2. Blocked on first launch? **System Settings → Privacy & Security → Open Anyway**. Once.
-3. A short welcome tour asks whether you study, work or both, then the permissions below, as they're needed.
+2. A short welcome tour asks whether you study, work or both, then the permissions below, as they're needed.
 
 <sub>macOS 14+. On macOS 26+ Apple transcribes and FluidAudio labels the speakers, and Apple Intelligence can write the summaries. Older Macs download the Parakeet speech model (~460 MB) on first use and summarize with a local or API model.</sub>
 
 <table>
   <tr>
     <td align="center" width="50%"><img src="docs/assets/readme/publishing.png" alt="Publishing: Notion, Obsidian, Apple Notes and the local Journal, plus summary template, prompt and glossary" width="100%" /><br /><sub><b>Publishing</b> · where notes go, what they include</sub></td>
-    <td align="center" width="50%"><img src="docs/assets/readme/pipeline.png" alt="Pipeline: built-in recorder and audio source" width="100%" /><br /><sub><b>Pipeline</b> · recorder, audio source, transcription, summary model</sub></td>
+    <td align="center" width="50%"><img src="docs/assets/readme/pipeline.png" alt="Pipeline: built-in recorder, audio source, Apple On-Device transcription and the summary model" width="100%" /><br /><sub><b>Pipeline</b> · recorder, audio source, transcription, summary model</sub></td>
   </tr>
 </table>
 
@@ -239,19 +242,17 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
 > [!IMPORTANT]
 > Make sure you're allowed to record the people in your meetings.
 
-## ☕ Support
-
-Meeting Pilot is free and stays free. If it saves you time, you can pay what you want for it, buy me a coffee, or help in other ways: it covers the Apple Developer account that signs the app, and keeps updates coming.
-
-<p align="center">
-  <a href="https://meetingpilotapp.com/support/"><img src="https://img.shields.io/badge/☕_Pay_what_you_want-ef2f49?style=for-the-badge" alt="Pay what you want" /></a>
-</p>
-
-Not a money thing? A ⭐ on this repo, a bug report or telling a friend helps just as much.
-
 ## 🛠️ For developers
 
 Run from source, headless CLI, environment config → [DEVELOPMENT.md](docs/DEVELOPMENT.md). Contributing → [CONTRIBUTING.md](.github/CONTRIBUTING.md).
+
+## 💬 Community
+
+Questions, ideas, bug reports or just want to see what's coming next? [Join the Meeting Pilot Discord](https://discord.gg/3Atx7yvFk).
+
+## ♥ Support
+
+Meeting Pilot is free and will stay free. If it saves you time, you can [pay what you want on Gumroad](https://martidan.gumroad.com/l/meetingpilot): it helps cover the Apple Developer account that signs the app and keeps updates coming. Enter €0 and you get exactly the same app.
 
 ## License
 
@@ -264,7 +265,8 @@ Copyright (c) 2026 Mardeen · [MIT](LICENSE). Use, study, modify and share, incl
   <img src="https://img.shields.io/badge/macOS-14%2B-111?style=flat-square&logo=apple&logoColor=white" alt="macOS 14+" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-111?style=flat-square" alt="MIT" /></a>
   <a href="https://meetingpilot.pages.dev/"><img src="https://img.shields.io/badge/website-meetingpilot.pages.dev-111?style=flat-square" alt="Website" /></a>
-<a href="https://meetingpilotapp.com/support/"><img src="https://img.shields.io/badge/support-Gumroad-ff90e8?style=flat-square&logo=gumroad&logoColor=white" alt="Support on Gumroad" /></a>
+<a href="https://martidan.gumroad.com/l/meetingpilot"><img src="https://img.shields.io/badge/support-Gumroad-ff90e8?style=flat-square&logo=gumroad&logoColor=white" alt="Support on Gumroad" /></a>
+<a href="https://discord.gg/3Atx7yvFk"><img src="https://img.shields.io/badge/discord-join-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Join the Discord" /></a>
 <a href="mailto:support@meetingpilotapp.com"><img src="https://img.shields.io/badge/email-support%40meetingpilotapp.com-111?style=flat-square" alt="Email support@meetingpilotapp.com" /></a>
 </p>
 

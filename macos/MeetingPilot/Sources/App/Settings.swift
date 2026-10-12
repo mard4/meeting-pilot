@@ -279,6 +279,10 @@ struct SettingsOverviewView: View {
                 SettingsDivider()
                 AutomaticUpdateChecksRow()
             }
+
+            SettingsGroup(title: "Community") {
+                DiscordRow()
+            }
         }
         .onAppear {
             audioFolder = model.recorderFolder
@@ -550,6 +554,24 @@ struct UpdateRow: View {
                         .buttonStyle(CompactButtonStyle())
                 }
             }
+        }
+    }
+}
+
+/// Meeting Pilot's Discord server, shared by Settings and the menu bar icon's menu.
+enum CommunityLinks {
+    static let discord = URL(string: "https://discord.gg/3Atx7yvFk")!
+}
+
+struct DiscordRow: View {
+    var body: some View {
+        SettingsLine(
+            title: "Discord",
+            detail: "Domande, idee e novità insieme agli altri utenti di Meeting Pilot.",
+            icon: SettingsIcon(symbol: "bubble.left.and.bubble.right.fill")
+        ) {
+            Button(localized("Unisciti")) { NSWorkspace.shared.open(CommunityLinks.discord) }
+                .buttonStyle(CompactButtonStyle())
         }
     }
 }

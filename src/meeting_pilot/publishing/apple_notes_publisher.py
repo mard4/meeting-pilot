@@ -27,7 +27,7 @@ def publish_to_apple_notes(config: Config, artifacts: MeetingArtifacts) -> dict[
 
         script = _apple_script()
         result = subprocess.run(
-            ["osascript", "-", str(title_path), str(body_path)],
+            ["/usr/bin/osascript", "-", str(title_path), str(body_path)],
             input=script,
             text=True,
             capture_output=True,

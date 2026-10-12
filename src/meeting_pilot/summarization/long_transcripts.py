@@ -21,7 +21,7 @@ import certifi
 from ..artifacts import MeetingArtifacts
 from ..config import Config
 from .builtin_model import is_builtin, transcript_limit as builtin_transcript_limit
-from .omlx_client import is_ollama, ollama_chat_request, strip_model_wrapping, summary_endpoint
+from .omlx_client import is_ollama, ollama_chat_request, request_headers, strip_model_wrapping, summary_endpoint
 
 # Matches the cap in `summarize_with_openai_compatible`.
 TRANSCRIPT_LIMIT = 120_000
@@ -79,9 +79,7 @@ def _complete_text(config: Config, system_prompt: str, user_prompt: str) -> str:
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
-    headers = {"Content-Type": "application/json"}
-    if config.summary_api_key:
-        headers["Authorization"] = f"Bearer {config.summary_api_key}"
+    headers = request_headers(config)
     with summary_endpoint(config) as base_url:
         ollama = is_ollama(config)
         if ollama:

@@ -1,5 +1,6 @@
 import AppKit
 import PDFKit
+import UniformTypeIdentifiers
 import Vision
 
 enum SlideDeckError: LocalizedError {
@@ -15,8 +16,25 @@ enum SlideDeckError: LocalizedError {
 
 /// Slides attached to an import. The PDF and its text per page go into the sidecar as
 /// `slides/slides.pdf` and `slides/slides.json`, where the pipeline places each slide
-/// along the transcript (see `slides/deck.py`).
+/// along the transcript (see `slides/deck.py`). A deck or notes in another format go in
+/// as `slides/slides.<extension>`, and the pipeline reads their text (see `slides/documents.py`).
 enum SlideDeck {
+    /// Read by the pipeline rather than here: PowerPoint and LibreOffice decks, Word,
+    /// LibreOffice and RTF documents, plain text and Markdown notes.
+    static let documentExtensions: Set<String> = ["pptx", "odp", "docx", "doc", "odt", "rtf", "txt", "md", "markdown"]
+
+    /// What the panels accept as slides.
+    static let contentTypes: [UTType] = [.pdf, .rtf, .plainText]
+        + documentExtensions.sorted().compactMap { UTType(filenameExtension: $0) }
+
+    static func isPDF(_ url: URL) -> Bool {
+        UTType(filenameExtension: url.pathExtension)?.conforms(to: .pdf) == true
+    }
+
+    static func isSlides(_ url: URL) -> Bool {
+        isPDF(url) || documentExtensions.contains(url.pathExtension.lowercased())
+    }
+
     static func write(_ pdf: URL, intoSidecarOf audioURL: URL) throws {
         try write(pdf, into: MeetingSidecar.slidesDirectory(for: audioURL))
     }
@@ -30,11 +48,17 @@ enum SlideDeck {
     }
 
     private static func write(_ pdf: URL, into folder: URL) throws {
+        guard isPDF(pdf) else {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let copy = folder.appendingPathComponent("slides").appendingPathExtension(pdf.pathExtension.lowercased())
+            try FileManager.default.copyItem(at: pdf, to: copy)
+            return
+        }
         let texts = try pageTexts(of: pdf)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try FileManager.default.copyItem(at: pdf, to: folder.appendingPathComponent("slides.pdf"))
         let payload: [String: Any] = [
-            "source_name": pdf.lastPathComponent,
+            "source_name": jsonSafe(pdf.lastPathComponent),
             "pages": texts.enumerated().map { ["page": $0.offset + 1, "text": $0.element] },
         ]
         let data = try JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys])
@@ -47,9 +71,17 @@ enum SlideDeck {
         }
         return (0..<document.pageCount).map { index in
             guard let page = document.page(at: index) else { return "" }
-            let text = (page.string ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let text = jsonSafe((page.string ?? "").trimmingCharacters(in: .whitespacesAndNewlines))
             return text.isEmpty ? recognizedText(on: page) : text
         }
+    }
+
+    /// A PDF's text layer can hold half of a UTF-16 surrogate pair (an emoji or a math
+    /// symbol cut by the PDF's encoding), which `JSONSerialization` refuses to write with
+    /// "The data couldn't be written because of an error in the content of the data",
+    /// failing the whole import. Re-decoding replaces each lone half with U+FFFD.
+    static func jsonSafe(_ text: String) -> String {
+        String(decoding: Array(text.utf16), as: UTF16.self)
     }
 
     /// Slides scanned or exported as pictures have no text layer; Vision reads them on
@@ -71,7 +103,7 @@ enum SlideDeck {
         return (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
     }
 
-    /// Which of the files being imported a dropped PDF belongs to: the one sharing the
+    /// Which of the files being imported dropped slides belong to: the one sharing the
     /// most words with its name ("Lezione 7.mp4" and "Lezione 7 - slide.pdf"), else the first.
     static func bestMatch(for pdf: URL, among candidates: [MediaImportDraft]) -> MediaImportDraft? {
         let words = nameWords(pdf)

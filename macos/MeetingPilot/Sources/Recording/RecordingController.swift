@@ -76,6 +76,7 @@ final class RecordingController: ObservableObject {
     /// Where detection and recording events are written; tests swap it out.
     var log: (String) -> Void = { AppLog.append($0) }
     var settings: () -> RecorderSettings = { .fallback }
+    var now: () -> Date = { Date() }
 
     private(set) var externalRecordingStartedAt: Date?
 
@@ -88,8 +89,14 @@ final class RecordingController: ObservableObject {
     private var teamsMetadataCaptureInProgress = false
     private var reportedAccessibilityMissingForActiveRecording = false
     private var activeRecordingTitle = ""
-    private var meetingWasDetected = false
+    /// When the call was last seen. A gap shorter than `meetingGapToleranceSeconds` (muting
+    /// in Teams releases the microphone, the call window minimized for a moment) is the same
+    /// call, so a prompt already shown or closed for it does not come back.
+    private var meetingLastSeenAt: Date?
+    private let meetingGapToleranceSeconds: TimeInterval = 60
     private var recordingPromptShownForCurrentMeeting = false
+    /// Prompts offered for detected calls, so tests can tell a new call from the same one.
+    private(set) var meetingPromptCount = 0
     private var switchPromptShownForCurrentCall = false
     private var microphoneWasActive = false
     private var recordingObservedMeeting = false
@@ -157,7 +164,7 @@ final class RecordingController: ObservableObject {
     /// After a recorder change, prompt again for a meeting that is already in progress
     /// instead of waiting for the next one.
     func resetMeetingDetection() {
-        meetingWasDetected = false
+        meetingLastSeenAt = nil
         recordingPromptShownForCurrentMeeting = false
     }
 
@@ -170,6 +177,8 @@ final class RecordingController: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             guard let self else { return }
             guard !requiresActiveMeeting || self.hasActiveAudioMeeting() else {
+                // Not shown, so the call counts as new the next time it is seen.
+                self.meetingLastSeenAt = nil
                 self.recordingPromptShownForCurrentMeeting = false
                 return
             }
@@ -332,14 +341,19 @@ final class RecordingController: ObservableObject {
         let title = platform.meetingPromptTitle()
         let appInputActive = platform.processIsRunningInput() == true
         let activeMeeting = title != nil && appInputActive
-        let meetingJustStarted = activeMeeting && !meetingWasDetected
-        meetingWasDetected = activeMeeting
+        let checkedAt = now()
+        let sameCall = meetingLastSeenAt.map { checkedAt.timeIntervalSince($0) < meetingGapToleranceSeconds } ?? false
+        let meetingJustStarted = activeMeeting && !sameCall
+        if activeMeeting { meetingLastSeenAt = checkedAt }
 
         guard let title, activeMeeting else {
             runtimeStatus = title == nil
                 ? "Nessuna call \(platform.displayName) rilevata"
                 : "\(platform.displayName) aperto, nessuna call audio attiva"
-            recordingPromptShownForCurrentMeeting = false
+            if !sameCall {
+                meetingLastSeenAt = nil
+                recordingPromptShownForCurrentMeeting = false
+            }
             return
         }
 
@@ -351,6 +365,7 @@ final class RecordingController: ObservableObject {
 
         runtimeStatus = "Call \(platform.displayName) rilevata: \(title)"
         recordingPromptShownForCurrentMeeting = true
+        meetingPromptCount += 1
         showRecordingPrompt(title: title, requiresActiveMeeting: true)
     }
 
@@ -524,7 +539,11 @@ final class RecordingController: ObservableObject {
                 }
                 let accessibilityError = (payload?["accessibility_error"] as? String) ?? ""
                 let participants = (payload?["participants"] as? [String]) ?? []
-                if !accessibilityError.isEmpty && participants.isEmpty {
+                // AppleScript's -2700 "is not running" also lands in accessibility_error;
+                // that's Teams being closed, not a missing permission.
+                if accessibilityError.contains("is not running") && participants.isEmpty {
+                    self.log("Metadati Teams non disponibili: Teams non è aperto")
+                } else if !accessibilityError.isEmpty && participants.isEmpty {
                     self.onStatusMessage("Consenti Accessibilità a Meeting Pilot per recuperare i partecipanti")
                     self.log("Metadati Teams non disponibili: manca il permesso Accessibilità\n\(output)")
                 } else if payload?["confidence"] != nil {
