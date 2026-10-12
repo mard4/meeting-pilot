@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - The live sidebar's transcript can be selected and copied. Before, dragging over it moved the whole sidebar; now the sidebar moves by its header.
+- After closing the main window, clicking Meeting Pilot in the Dock opens it again. Before, the window was gone for good until the app was quit and reopened.
 - The record banner for a Teams call no longer comes back after you close it. Muting yourself, or the call window being minimized for a moment, made the same call look new; now a call has to be gone for a minute before the next one prompts again.
 
 ## [0.3.0] - 2026-10-08

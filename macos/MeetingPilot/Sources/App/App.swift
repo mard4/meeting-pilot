@@ -20,13 +20,9 @@ struct MeetingPilotApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("Meeting Pilot") {
-            // RootView applies the theme; reading it here would not update, as this
-            // closure doesn't observe the model.
-            RootView()
-                .environmentObject(appDelegate.model)
-                .frame(minWidth: 760, minHeight: 540)
-        }
+        // The main window is AppKit's, owned by AppDelegate.showMainWindow(). A SwiftUI
+        // WindowGroup window, once closed, was gone for good: clicking the Dock icon
+        // found nothing to bring back.
         Settings {
             EmptyView()
         }
@@ -173,6 +169,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         let demoChat = false
 #endif
         if !demoChat {
+            showMainWindow()
             model.recording.startMeetingDetectionMonitor()
             model.updater.startAutomaticChecks()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
@@ -332,17 +329,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     private func showMainWindow() {
         model.refresh()
-        mainWindow = existingMainWindow() ?? mainWindow
+        let window = mainWindow ?? makeMainWindow()
+        mainWindow = window
         NSApp.activate(ignoringOtherApps: true)
         NSRunningApplication.current.activate(options: [.activateAllWindows])
-        mainWindow?.makeKeyAndOrderFront(nil)
-        mainWindow?.orderFrontRegardless()
+        window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
     }
 
-    private func existingMainWindow() -> NSWindow? {
-        NSApp.windows.first { window in
-            window !== diaryWindow && window.title == "Meeting Pilot"
-        }
+    /// Kept after closing, so the Dock icon, the menu bar and notifications can always
+    /// bring it back.
+    private func makeMainWindow() -> NSWindow {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 1100, height: 760),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Meeting Pilot"
+        window.isReleasedWhenClosed = false
+        // RootView applies the theme itself.
+        window.contentViewController = NSHostingController(
+            rootView: RootView()
+                .environmentObject(model)
+                .frame(minWidth: 760, minHeight: 540)
+        )
+        window.contentMinSize = NSSize(width: 760, height: 540)
+        window.setContentSize(NSSize(width: 1100, height: 760))
+        window.center()
+        window.setFrameAutosaveName("MeetingPilotMainWindow")
+        return window
     }
 
     @objc private func openDiaryFromMenu() {
