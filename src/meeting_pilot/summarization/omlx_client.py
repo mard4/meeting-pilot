@@ -130,23 +130,15 @@ def summarize_with_openai_compatible(
             url, body = ollama_chat_request(config, payload["messages"], temperature=0.2, json_output=True)
         else:
             url, body = f"{base_url}/chat/completions", payload
-        request = urllib.request.Request(
-            url,
-            data=json.dumps(body).encode("utf-8"),
-            headers=headers,
-            method="POST",
-        )
-        ssl_context = ssl.create_default_context(cafile=certifi.where())
         print(
             f"Summary request started: model={config.summary_model}, timeout={timeout_seconds}s",
             flush=True,
         )
         try:
-            with urllib.request.urlopen(request, timeout=timeout_seconds, context=ssl_context) as response:
-                data = json.loads(response.read().decode("utf-8"))
-        except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
+            data = post_chat_request(url, body, headers, timeout_seconds)
+        except RuntimeError as exc:
             print(f"Summary request failed: {exc}", flush=True)
-            raise RuntimeError(f"Summary provider request failed: {exc}") from exc
+            raise
     print("Summary request completed.", flush=True)
 
     content = data["message"]["content"] if ollama else data["choices"][0]["message"]["content"]
@@ -154,6 +146,49 @@ def summarize_with_openai_compatible(
         return json.loads(strip_model_wrapping(content))
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"Summary provider returned non-JSON content: {content[:500]}") from exc
+
+
+def post_chat_request(url: str, body: dict[str, Any], headers: dict[str, str], timeout_seconds: int) -> dict[str, Any]:
+    """Sends a chat request and returns the decoded answer. Some models (newer OpenAI
+    reasoning models) take only their default temperature and answer 400 naming it:
+    the request is sent once more without one. A bare "400 Bad Request" says nothing,
+    so the provider's own explanation is kept in the error."""
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    while True:
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(body).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=timeout_seconds, context=ssl_context) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            detail = _http_error_detail(exc)
+            if exc.code == 400 and "temperature" in body and "temperature" in detail.lower():
+                body = {key: value for key, value in body.items() if key != "temperature"}
+                continue
+            reason = f"{exc} ({detail})" if detail else str(exc)
+            raise RuntimeError(f"Summary provider request failed: {reason}") from exc
+        except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
+            raise RuntimeError(f"Summary provider request failed: {exc}") from exc
+
+
+def _http_error_detail(error: urllib.error.HTTPError) -> str:
+    """The message in an error response, as OpenAI-compatible servers send it."""
+    try:
+        text = error.read().decode("utf-8", errors="replace").strip()
+    except (OSError, AttributeError):
+        return ""
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return text[:300]
+    message = data.get("error") if isinstance(data, dict) else None
+    if isinstance(message, dict):
+        message = message.get("message")
+    return str(message or text)[:300]
 
 
 def request_headers(config: Config) -> dict[str, str]:
