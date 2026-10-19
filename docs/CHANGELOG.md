@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.0] - 2026-10-19
+
+### Added
+- PowerPoint slides (`.pptx`) are shown as pictures, like a PDF: Meeting Pilot turns the deck into a PDF on the Mac, when importing a recording or adding slides later, with a converter built into the app (no Office, Keynote or LibreOffice needed, nothing sent online). The Diary shows the slides next to the transcript, and Obsidian and Notion get them too. If a deck cannot be converted, its text is still used as before. LibreOffice Impress decks (`.odp`) are still read as text only.
+- Obsidian and Notion show each slide next to what was said while it was on screen, as the Diary does. In Obsidian each part of the transcript by slide opens with the slide's picture and a link to its page in the PDF; in Notion each slide's toggle holds the picture and the transcript side by side. Meetings already published get the pictures when slides are added again.
+
+### Fixed
+- Apple Intelligence summaries of long meetings (about an hour or more) no longer stop with "Exceeded model context window size": the answer is kept within the model's limits, and a part that is still too long is summarized again in smaller pieces.
+- Cloud summaries no longer fail with "Bad Request" on models that refuse a custom temperature, such as recent GPT-5 models: the request is sent again without it. Errors from the provider now include the reason it gave.
+
 ## [0.4.0] - 2026-10-19
 
 ### Added
