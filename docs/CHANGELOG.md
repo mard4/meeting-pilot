@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.4.0] - 2026-10-19
 
 ### Added
 - Slides and notes can be added in more formats than PDF: PowerPoint (`.pptx`) and LibreOffice Impress (`.odp`) decks, Word (`.docx`, `.doc`), LibreOffice Writer (`.odt`) and RTF documents, and plain text or Markdown notes, when importing a recording or later on one already processed. Decks are matched to the transcript slide by slide; documents are split at page breaks, headings and every few paragraphs. Only a PDF is copied next to the published notes.
@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The live sidebar's transcript can be selected and copied. Before, dragging over it moved the whole sidebar; now the sidebar moves by its header.
 - After closing the main window, clicking Meeting Pilot in the Dock opens it again. Before, the window was gone for good until the app was quit and reopened.
 - The record banner for a Teams call no longer comes back after you close it. Muting yourself, or the call window being minimized for a moment, made the same call look new; now a call has to be gone for a minute before the next one prompts again.
+- Speaker names in Teams are found when the call is in its own window. Before, a busy main Teams window could use up the search before the meeting window was reached; the log now also says when tiles are found or why names are missing.
+- Importing a recording no longer fails when the slides' text or the recording's duration contain values that could not be written as JSON.
 
 ## [0.3.0] - 2026-10-08
 
