@@ -9,19 +9,19 @@ its own, so it gets the full text.
 from __future__ import annotations
 
 import dataclasses
-import json
-import socket
-import ssl
-import urllib.error
-import urllib.request
 from typing import Any
-
-import certifi
 
 from ..artifacts import MeetingArtifacts
 from ..config import Config
 from .builtin_model import is_builtin, transcript_limit as builtin_transcript_limit
-from .omlx_client import is_ollama, ollama_chat_request, request_headers, strip_model_wrapping, summary_endpoint
+from .omlx_client import (
+    is_ollama,
+    ollama_chat_request,
+    post_chat_request,
+    request_headers,
+    strip_model_wrapping,
+    summary_endpoint,
+)
 
 # Matches the cap in `summarize_with_openai_compatible`.
 TRANSCRIPT_LIMIT = 120_000
@@ -87,18 +87,7 @@ def _complete_text(config: Config, system_prompt: str, user_prompt: str) -> str:
         else:
             url = f"{base_url}/chat/completions"
             body: dict[str, Any] = {"model": config.summary_model, "messages": messages, "temperature": 0.2}
-        request = urllib.request.Request(
-            url,
-            data=json.dumps(body).encode("utf-8"),
-            headers=headers,
-            method="POST",
-        )
         timeout_seconds = max(15, int(getattr(config, "summary_timeout_seconds", 180)))
-        ssl_context = ssl.create_default_context(cafile=certifi.where())
-        try:
-            with urllib.request.urlopen(request, timeout=timeout_seconds, context=ssl_context) as response:
-                data = json.loads(response.read().decode("utf-8"))
-        except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
-            raise RuntimeError(f"Summary provider request failed: {exc}") from exc
+        data = post_chat_request(url, body, headers, timeout_seconds)
     content = data["message"]["content"] if ollama else data["choices"][0]["message"]["content"]
     return strip_model_wrapping(str(content))
