@@ -17,7 +17,8 @@ enum SlideDeckError: LocalizedError {
 /// Slides attached to an import. The PDF and its text per page go into the sidecar as
 /// `slides/slides.pdf` and `slides/slides.json`, where the pipeline places each slide
 /// along the transcript (see `slides/deck.py`). A deck or notes in another format go in
-/// as `slides/slides.<extension>`, and the pipeline reads their text (see `slides/documents.py`).
+/// as `slides/slides.<extension>`, and the pipeline reads their text (see `slides/documents.py`),
+/// except PowerPoint decks, which become a PDF first (see `convertedPowerPoint`).
 enum SlideDeck {
     /// Read by the pipeline rather than here: PowerPoint and LibreOffice decks, Word,
     /// LibreOffice and RTF documents, plain text and Markdown notes.
@@ -48,21 +49,66 @@ enum SlideDeck {
     }
 
     private static func write(_ pdf: URL, into folder: URL) throws {
+        if let converted = convertedPowerPoint(pdf) {
+            defer { try? FileManager.default.removeItem(at: converted.deletingLastPathComponent()) }
+            try writePDF(converted, named: pdf.lastPathComponent, into: folder)
+            return
+        }
         guard isPDF(pdf) else {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             let copy = folder.appendingPathComponent("slides").appendingPathExtension(pdf.pathExtension.lowercased())
             try FileManager.default.copyItem(at: pdf, to: copy)
             return
         }
+        try writePDF(pdf, named: pdf.lastPathComponent, into: folder)
+    }
+
+    private static func writePDF(_ pdf: URL, named sourceName: String, into folder: URL) throws {
         let texts = try pageTexts(of: pdf)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try FileManager.default.copyItem(at: pdf, to: folder.appendingPathComponent("slides.pdf"))
         let payload: [String: Any] = [
-            "source_name": jsonSafe(pdf.lastPathComponent),
+            "source_name": jsonSafe(sourceName),
             "pages": texts.enumerated().map { ["page": $0.offset + 1, "text": $0.element] },
         ]
         let data = try JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys])
         try data.write(to: folder.appendingPathComponent("slides.json"), options: .atomic)
+    }
+
+    /// A PowerPoint deck turned into a PDF by the bundled office2pdf, so the Diary, Obsidian
+    /// and Notion show its slides as pictures, as they do for a PDF. Nil when the deck is
+    /// another format or does not convert: then it goes in as it is and the pipeline reads
+    /// only its text.
+    private static func convertedPowerPoint(_ deck: URL) -> URL? {
+        guard deck.pathExtension.lowercased() == "pptx",
+              let converter = Bundle.main.resourceURL?.appendingPathComponent("Office2Pdf/bin/office2pdf"),
+              FileManager.default.isExecutableFile(atPath: converter.path) else { return nil }
+        let folder = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MeetingPilot-slides-\(UUID().uuidString)", isDirectory: true)
+        let output = folder.appendingPathComponent("slides.pdf")
+        let process = Process()
+        process.executableURL = converter
+        process.arguments = [deck.path, "-o", output.path]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try process.run()
+        } catch {
+            AppLog.append("Conversione PowerPoint non avviata: \(error.localizedDescription)")
+            try? FileManager.default.removeItem(at: folder)
+            return nil
+        }
+        // Drain before waiting: a child that fills the pipe buffer would otherwise block forever.
+        let log = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        process.waitUntilExit()
+        guard process.terminationStatus == 0, PDFDocument(url: output)?.pageCount ?? 0 > 0 else {
+            AppLog.append("Conversione PowerPoint non riuscita (\(deck.lastPathComponent))\n\(log)")
+            try? FileManager.default.removeItem(at: folder)
+            return nil
+        }
+        return output
     }
 
     static func pageTexts(of pdf: URL) throws -> [String] {
