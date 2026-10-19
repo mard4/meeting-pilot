@@ -56,6 +56,7 @@ def _withdraw(config: Config, target: str, receipt: dict[str, Any]) -> None:
         note = Path(receipt["path"])
         _move_to_trash(note)
         _move_to_trash(note.parent / "Slides" / f"{note.stem}.pdf")
+        _move_to_trash(note.parent / "Slides" / note.stem)
     elif target == "notion" and receipt.get("id") and config.notion_token:
         from notion_client import Client
 
@@ -76,7 +77,7 @@ def _withdraw(config: Config, target: str, receipt: dict[str, Any]) -> None:
 
 
 def _move_to_trash(path: Path) -> None:
-    if not path.is_file():
+    if not path.exists():
         return
     trash = Path.home() / ".Trash"
     trash.mkdir(parents=True, exist_ok=True)

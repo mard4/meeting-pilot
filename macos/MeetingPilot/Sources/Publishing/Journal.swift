@@ -692,9 +692,13 @@ struct MarkdownReader: View {
                     index += 1
                 }
                 if header.kind == "slide", let page = slideNumber(header.title) {
-                    // Obsidian copies of the page link each part to its slide: `[[slides.pdf#page=3|…]]`.
+                    // Obsidian copies of the page head each part with its slide's picture and a
+                    // link to it: `![[Slides/…/slide-3.jpg|480]]`, `[[slides.pdf#page=3|…]]`.
                     let turns = content
-                        .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("[[") }
+                        .filter { line in
+                            let trimmed = line.trimmingCharacters(in: .whitespaces)
+                            return !trimmed.hasPrefix("[[") && !trimmed.hasPrefix("![[")
+                        }
                         .map { $0.replacingOccurrences(of: "**", with: "") }
                     let title = header.title.components(separatedBy: " · ").dropFirst().joined(separator: " · ")
                     elements.append(.slideTranscript(

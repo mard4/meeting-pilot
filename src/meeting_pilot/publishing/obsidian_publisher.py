@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from ..artifacts import MeetingArtifacts, write_obsidian_receipt
-from ..slides.deck import slides_pdf
+from ..slides.deck import slide_images, slides_pdf
 from ..config import Config
 from ..language import config_language, label
 from ..profiles import STUDENT, artifacts_profile
@@ -27,6 +27,9 @@ from .meeting_format import (
     transcript_turns,
     when_text,
 )
+
+# Wide enough to read a slide, narrow enough to keep what was said on it in view.
+OBSIDIAN_SLIDE_WIDTH = 480
 
 
 def publish_to_obsidian(config: Config, artifacts: MeetingArtifacts) -> dict[str, Any]:
@@ -52,9 +55,20 @@ def publish_to_obsidian(config: Config, artifacts: MeetingArtifacts) -> dict[str
         relative = copy.relative_to(vault_root).as_posix()
         open_slide = label(config_language(config), "open_slide")
         slides = f"[[{relative}]]"
+        # Each slide's picture, in a folder named like the PDF, heads the part said on it.
+        pictures = {}
+        images = slide_images(artifacts.session_dir) if artifacts.slide_sections else {}
+        if images:
+            picture_folder = copy.with_suffix("")
+            shutil.rmtree(picture_folder, ignore_errors=True)
+            picture_folder.mkdir(parents=True)
+            for page, image in images.items():
+                shutil.copy2(image, picture_folder / image.name)
+                pictures[page] = f"{picture_folder.relative_to(vault_root).as_posix()}/{image.name}"
 
-        def slide_link(page: int) -> str:
-            return f"[[{relative}#page={page}|{open_slide} {page}]]"
+        def slide_link(page: int) -> list[str]:
+            link = f"[[{relative}#page={page}|{open_slide} {page}]]"
+            return [f"![[{pictures[page]}|{OBSIDIAN_SLIDE_WIDTH}]]", link] if page in pictures else [link]
 
     content = _note_content(config, artifacts, title, note_date, slides=slides, slide_link=slide_link)
     note_path.write_text(content, encoding="utf-8")
@@ -119,14 +133,15 @@ def _note_content(
     date: str,
     header_callout: bool = True,
     slides: str | None = None,
-    slide_link: Callable[[int], str] | None = None,
+    slide_link: Callable[[int], list[str]] | None = None,
 ) -> str:
     """Obsidian-flavoured Markdown, also read by the in-app Diary.
 
     The Diary draws date, duration and participants in its own header from the
     frontmatter, so it asks for the note without the header callout. `slides` is where
-    this destination keeps its copy of the slides, and `slide_link` links one of their
-    pages when the destination can open it.
+    this destination keeps its copy of the slides, and `slide_link` gives the lines that
+    head the part said on one of their pages (its picture, a link to it) when the
+    destination can show them.
     """
     lang = config_language(config)
 
@@ -162,7 +177,7 @@ def _note_content(
             parts.extend(["", f"## {t('transcript_by_slide')}"])
             for section in artifacts.slide_sections:
                 title_line = f"{t('slide')} {section.page} · {section.title}".rstrip(" ·")
-                links = [slide_link(section.page)] if slide_link else []
+                links = slide_link(section.page) if slide_link else []
                 parts.extend(["", *_transcript_callout(title_line, "\n".join(section.lines()), kind="slide", first_lines=links)])
         else:
             parts.extend(["", *_transcript_callout(t("full_transcript"), artifacts.transcript_text)])

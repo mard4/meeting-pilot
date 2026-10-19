@@ -7,7 +7,7 @@ from typing import Any
 from ..artifacts import MeetingArtifacts, write_notion_receipt
 from ..config import Config
 from ..language import config_language, label
-from ..slides.deck import slides_pdf
+from ..slides.deck import slide_images, slides_pdf
 from .obsidian_publisher import _sanitize_filename
 from ..profiles import STUDENT, WORKER, artifacts_profile, user_profile
 from .meeting_format import (
@@ -52,7 +52,8 @@ def publish_to_notion(config: Config, artifacts: MeetingArtifacts) -> dict[str, 
     occurrences_schema = occurrences_source.get("properties") or {}
     wanted = _build_properties(config, artifacts, title, schema=occurrences_schema, keep_unsupported=True)
     occurrences_schema = _ensure_properties(notion, occurrences_source_id, occurrences_schema, wanted)
-    blocks = _build_blocks(config, artifacts, slides_upload=_upload_slides(notion, artifacts, title))
+    pictures = _upload_slide_pictures(notion, artifacts) if config.notion_include_transcript else {}
+    blocks = _build_blocks(config, artifacts, slides_upload=_upload_slides(notion, artifacts, title), slide_pictures=pictures)
     page = notion.pages.create(
         parent={"type": "data_source_id", "data_source_id": occurrences_source_id},
         properties=_properties_supported_by_schema(wanted, occurrences_schema),
@@ -62,6 +63,8 @@ def publish_to_notion(config: Config, artifacts: MeetingArtifacts) -> dict[str, 
     # A page is created with at most 100 blocks; a lecture split by slide can have more.
     for start in range(MAX_CHILDREN, len(blocks), MAX_CHILDREN):
         notion.blocks.children.append(block_id=page["id"], children=blocks[start:start + MAX_CHILDREN])
+    if pictures:
+        _fill_slide_parts(notion, page["id"], config, artifacts, pictures)
     write_notion_receipt(artifacts.session_dir, page)
     return page
 
@@ -84,6 +87,74 @@ def _upload_slides(notion: Any, artifacts: MeetingArtifacts, title: str) -> str 
         print(f"Publication warning: slides not uploaded to Notion: {exc}")
         return None
     return str(upload["id"])
+
+
+def _upload_slide_pictures(notion: Any, artifacts: MeetingArtifacts) -> dict[int, str]:
+    """Each slide said something on, uploaded as a picture to show beside it, by page;
+    the slides without one keep only their text."""
+    uploads = getattr(notion, "file_uploads", None)
+    if uploads is None or not artifacts.slide_sections:
+        return {}
+    images = slide_images(artifacts.session_dir)
+    pictures: dict[int, str] = {}
+    for page in sorted({section.page for section in artifacts.slide_sections}):
+        image = images.get(page)
+        if image is None or image.stat().st_size > MAX_UPLOAD_BYTES:
+            continue
+        try:
+            upload = uploads.create(mode="single_part", filename=image.name, content_type="image/jpeg")
+            uploads.send(upload["id"], file=(image.name, image.read_bytes(), "image/jpeg"))
+        except Exception as exc:
+            print(f"Publication warning: slide {page} picture not uploaded to Notion: {exc}")
+            continue
+        pictures[page] = str(upload["id"])
+    return pictures
+
+
+def _fill_slide_parts(
+    notion: Any, page_id: str, config: Config, artifacts: MeetingArtifacts, pictures: dict[int, str]
+) -> None:
+    """Puts the slide's picture beside what was said on it inside each slide's toggle, as
+    the Diary does. Notion nests children only two levels deep per request, so the two
+    columns are added to the toggles once the page exists."""
+    lang = config_language(config)
+    # A slide shown twice has two toggles with the same heading, so they are paired in order.
+    sections = [section for section in artifacts.slide_sections if section.page in pictures]
+    for block in _children(notion, page_id):
+        if not sections:
+            return
+        if block.get("type") != "heading_3" or block.get("has_children"):
+            continue
+        text = "".join(part.get("plain_text", "") for part in block["heading_3"].get("rich_text", []))
+        if text != _slide_heading(sections[0], lang):
+            continue
+        section = sections.pop(0)
+        transcript = _transcript_blocks("\n".join(section.lines()))
+        children = [_columns([[_uploaded_image(pictures[section.page])], transcript])]
+        try:
+            notion.blocks.children.append(block_id=block["id"], children=children)
+        except Exception as exc:
+            print(f"Publication warning: slide {section.page} picture not shown in Notion: {exc}")
+            notion.blocks.children.append(block_id=block["id"], children=transcript)
+
+
+def _children(notion: Any, block_id: str) -> list[dict[str, Any]]:
+    blocks: list[dict[str, Any]] = []
+    cursor = None
+    while True:
+        response = notion.blocks.children.list(block_id=block_id, **({"start_cursor": cursor} if cursor else {}))
+        blocks.extend(response.get("results", []))
+        cursor = response.get("next_cursor")
+        if not response.get("has_more") or not cursor:
+            return blocks
+
+
+def _uploaded_image(upload_id: str) -> dict[str, Any]:
+    return {"object": "block", "type": "image", "image": {"type": "file_upload", "file_upload": {"id": upload_id}}}
+
+
+def _slide_heading(section: Any, lang: str) -> str:
+    return f"{label(lang, 'slide')} {section.page} · {section.title}".rstrip(" ·")
 
 
 def _build_properties(
@@ -242,7 +313,14 @@ def _occurrence_title(artifacts: MeetingArtifacts, series_title: str) -> str:
     return series_title
 
 
-def _build_blocks(config: Config, artifacts: MeetingArtifacts, slides_upload: str | None = None) -> list[dict[str, Any]]:
+def _build_blocks(
+    config: Config,
+    artifacts: MeetingArtifacts,
+    slides_upload: str | None = None,
+    slide_pictures: dict[int, str] | None = None,
+) -> list[dict[str, Any]]:
+    """The page's blocks. The toggles of slides in `slide_pictures` start empty and get
+    the picture beside the transcript once the page exists (see `_fill_slide_parts`)."""
     summary = artifacts.omlx_summary or {}
     blocks: list[dict[str, Any]] = []
     lang = config_language(config)
@@ -281,8 +359,8 @@ def _build_blocks(config: Config, artifacts: MeetingArtifacts, slides_upload: st
         if artifacts.slide_sections:
             blocks.extend(_heading("🎙️ " + t("transcript_by_slide")))
             for section in artifacts.slide_sections:
-                heading = f"{t('slide')} {section.page} · {section.title}".rstrip(" ·")
-                blocks.append(_transcript_toggle(heading, "\n".join(section.lines()), level=3))
+                transcript = "" if section.page in (slide_pictures or {}) else "\n".join(section.lines())
+                blocks.append(_transcript_toggle(_slide_heading(section, lang), transcript, level=3))
         else:
             blocks.append(_transcript_toggle("🎙️ " + t("full_transcript"), artifacts.transcript_text or t("no_transcript")))
     return blocks
@@ -558,16 +636,12 @@ def _bullet_rich(rich_text: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _transcript_toggle(title: str, transcript: str, level: int = 2) -> dict[str, Any]:
+    """An empty `transcript` leaves the toggle without children, to fill later."""
     kind = f"heading_{level}"
-    return {
-        "object": "block",
-        "type": kind,
-        kind: {
-            "rich_text": [_text(title)],
-            "is_toggleable": True,
-            "children": _transcript_blocks(transcript),
-        },
-    }
+    heading: dict[str, Any] = {"rich_text": [_text(title)], "is_toggleable": True}
+    if transcript:
+        heading["children"] = _transcript_blocks(transcript)
+    return {"object": "block", "type": kind, kind: heading}
 
 
 def _transcript_blocks(transcript: str) -> list[dict[str, Any]]:

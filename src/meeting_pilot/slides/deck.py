@@ -29,6 +29,9 @@ from .documents import SUPPORTED_EXTENSIONS, extract_document_texts
 SLIDES_FOLDER = "slides"
 PDF_NAME = "slides.pdf"
 TEXT_NAME = "slides.json"
+# One picture per slide, which Obsidian and Notion show beside what was said on it.
+IMAGES_FOLDER = "images"
+IMAGE_WIDTH = 1280
 SOURCE_STEM = "slides"
 # What can be attached as slides: a PDF, or a document read by `documents.py`.
 SLIDES_EXTENSIONS = {".pdf"} | SUPPORTED_EXTENSIONS
@@ -44,6 +47,29 @@ function run(argv) {
     pages.push(text && !text.isNil() ? ObjC.unwrap(text) : '');
   }
   return JSON.stringify(pages);
+}
+"""
+
+_RENDER_SCRIPT = """
+ObjC.import('PDFKit');
+ObjC.import('AppKit');
+function run(argv) {
+  var doc = $.PDFDocument.alloc.initWithURL($.NSURL.fileURLWithPath(argv[0]));
+  if (!doc || doc.isNil()) return 'null';
+  var width = parseFloat(argv[2]);
+  var names = [];
+  for (var i = 0; i < doc.pageCount; i++) {
+    var page = doc.pageAtIndex(i);
+    var bounds = page.boundsForBox($.kPDFDisplayBoxMediaBox);
+    var size = $.NSMakeSize(width, width * bounds.size.height / bounds.size.width);
+    var image = page.thumbnailOfSizeForBox(size, $.kPDFDisplayBoxMediaBox);
+    var rep = $.NSBitmapImageRep.imageRepWithData(image.TIFFRepresentation);
+    var data = rep.representationUsingTypeProperties($.NSBitmapImageFileTypeJPEG, $({NSImageCompressionFactor: 0.85}));
+    var name = 'slide-' + (i + 1) + '.jpg';
+    if (!data.writeToFileAtomically(argv[1] + '/' + name, true)) return 'null';
+    names.push(name);
+  }
+  return JSON.stringify(names);
 }
 """
 
@@ -66,6 +92,43 @@ def slides_pdf(session_dir: Path) -> Path | None:
     """The session's slides PDF, which publishers copy next to the note."""
     pdf = slides_dir(session_dir) / PDF_NAME
     return pdf if pdf.is_file() else None
+
+
+def slide_images(session_dir: Path) -> dict[int, Path]:
+    """A JPEG of each page of the session's slides PDF by page number, drawn once with
+    PDFKit through JavaScript for Automation and kept in the sidecar; empty without a PDF
+    or when it cannot be drawn, and the notes then link the PDF only."""
+    pdf = slides_pdf(session_dir)
+    if pdf is None:
+        return {}
+    folder = slides_dir(session_dir) / IMAGES_FOLDER
+    images = {int(path.stem.rsplit("-", 1)[-1]): path for path in folder.glob("slide-*.jpg")}
+    if images and min(path.stat().st_mtime for path in images.values()) >= pdf.stat().st_mtime:
+        return dict(sorted(images.items()))
+    shutil.rmtree(folder, ignore_errors=True)
+    folder.mkdir(parents=True, exist_ok=True)
+    try:
+        result = subprocess.run(
+            ["/usr/bin/osascript", "-l", "JavaScript", "-", str(pdf), str(folder), str(IMAGE_WIDTH)],
+            input=_RENDER_SCRIPT,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=300,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(f"Slide pictures not drawn: {exc}")
+        shutil.rmtree(folder, ignore_errors=True)
+        return {}
+    try:
+        names = json.loads(result.stdout or "null")
+    except json.JSONDecodeError:
+        names = None
+    if not isinstance(names, list):
+        print(f"Slide pictures not drawn: {(result.stderr or 'not a PDF').strip()}")
+        shutil.rmtree(folder, ignore_errors=True)
+        return {}
+    return {page: folder / str(name) for page, name in enumerate(names, 1)}
 
 
 def is_slides_file(path: Path) -> bool:
