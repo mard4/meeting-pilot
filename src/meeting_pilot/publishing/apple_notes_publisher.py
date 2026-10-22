@@ -11,7 +11,7 @@ from ..artifacts import MeetingArtifacts
 from ..config import Config
 from .obsidian_publisher import _include
 from ..language import config_language, label
-from ..profiles import STUDENT, artifacts_profile
+from ..profiles import STUDENT, VIDEO, artifacts_profile
 
 
 def publish_to_apple_notes(config: Config, artifacts: MeetingArtifacts) -> dict[str, Any]:
@@ -70,13 +70,13 @@ def _note_body(config: Config, artifacts: MeetingArtifacts) -> str:
     def t(key: str) -> str:
         return label(lang, key)
 
-    lecture = artifacts_profile(config, artifacts) == STUDENT
+    kind = artifacts_profile(config, artifacts)
     project = metadata.get("project") or frontmatter.get("project")
     theme = metadata.get("theme") or frontmatter.get("theme")
     if project or theme:
         parts.extend(["", t("classification")])
         if project:
-            parts.append(f"{t('course' if lecture else 'project')}: {project}")
+            parts.append(f"{t({STUDENT: 'course', VIDEO: 'subject'}.get(kind, 'project'))}: {project}")
         if theme:
             parts.append(f"{t('theme')}: {theme}")
     if _include(config, "summary"):
@@ -85,11 +85,10 @@ def _note_body(config: Config, artifacts: MeetingArtifacts) -> str:
         parts.extend(["", t("my_notes"), artifacts.user_notes])
     if _include(config, "overview"):
         parts.extend(["", t("overview"), _overview(artifacts, lang)])
-    keys = (
-        ("topics", "key_concepts", "assignments", "exam_hints", "review_questions", "references")
-        if lecture
-        else ("topics", "decisions", "action_items", "open_questions", "risks")
-    )
+    keys = {
+        STUDENT: ("topics", "key_concepts", "assignments", "exam_hints", "review_questions", "references"),
+        VIDEO: ("topics", "steps", "key_points", "tools", "tips", "references"),
+    }.get(kind, ("topics", "decisions", "action_items", "open_questions", "risks"))
     sections = [(t(key), summary.get(key), _include(config, key)) for key in keys]
     for heading, values, included in sections:
         if not included:
@@ -160,7 +159,7 @@ def _render_values(values: Any) -> str:
 
 
 def _render_dict(value: dict[str, Any]) -> str:
-    keys = ["term", "explanation", "text", "task", "topic", "title", "question", "risk", "owner", "due_date", "status"]
+    keys = ["term", "explanation", "step", "details", "name", "use", "text", "task", "topic", "title", "question", "risk", "owner", "due_date", "status"]
     parts = [str(value[key]) for key in keys if value.get(key)]
     if parts:
         return " - ".join(parts)

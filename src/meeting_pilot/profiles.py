@@ -2,7 +2,8 @@
 
 USER_PROFILE says who uses the app: "worker", "student" or "both". Every recording is
 then either a work meeting or a lecture, and that decides the summary sections the
-model writes and the publishers render.
+model writes and the publishers render. A video imported from a link (a tutorial, a talk,
+a podcast) is neither: it gets video notes, with its steps, ideas and tools, whoever the user is.
 """
 from __future__ import annotations
 
@@ -14,6 +15,9 @@ from typing import Any
 WORKER = "worker"
 STUDENT = "student"
 BOTH = "both"
+# Not a user profile: the kind of notes a video gets (see resolve_profile).
+VIDEO = "video"
+NOTE_KINDS = {WORKER, STUDENT, VIDEO}
 
 # Matched against the meeting title when the user is both a student and a worker.
 # Words that also name ordinary work meetings ("prova", "class", "lab", "in corso") are left out;
@@ -44,11 +48,15 @@ def user_profile(config: object) -> str:
 
 
 def resolve_profile(config: object, session_dir: Path, meeting_metadata: dict[str, Any], title: str) -> str:
-    """Per-meeting choice from the live sidebar, then the user's only profile, then a
-    keyword match on the meeting title, then work."""
+    """Per-recording choice (the live sidebar, the import sheet), then video notes for a
+    video imported from a link, then the user's only profile, then a keyword match on the
+    meeting title, then work. A file imported from the Mac is often a meeting recorded
+    elsewhere, so only a link makes video notes on its own."""
     choice = _sidecar_choice(session_dir)
-    if choice in {WORKER, STUDENT}:
+    if choice in NOTE_KINDS:
         return choice
+    if meeting_metadata.get("origin") == "import" and meeting_metadata.get("source_url"):
+        return VIDEO
     profile = user_profile(config)
     if profile != BOTH:
         return profile
@@ -65,7 +73,7 @@ def resolve_profile(config: object, session_dir: Path, meeting_metadata: dict[st
 def artifacts_profile(config: object, artifacts: object) -> str:
     """The profile a summary was written for, or the one this recording resolves to."""
     summary = getattr(artifacts, "omlx_summary", None) or {}
-    if summary.get("profile") in {WORKER, STUDENT}:
+    if summary.get("profile") in NOTE_KINDS:
         return summary["profile"]
     return resolve_profile(
         config,

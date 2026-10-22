@@ -162,7 +162,7 @@ final class MediaImportTests: XCTestCase {
         draft.recordedAt = date("2026-09-28 10:00")
         draft.title = "Lezione di prova"
         draft.slidesURL = try makeSlides(["Termodinamica", "Entropia"])
-        importer.start([draft], options: MediaImportOptions(template: "interview", profile: .student), inbox: inbox)
+        importer.start([draft], options: MediaImportOptions(template: "interview", noteKind: .student), inbox: inbox)
 
         for _ in 0..<100 where !importer.jobs.isEmpty {
             try await Task.sleep(nanoseconds: 100_000_000)

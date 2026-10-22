@@ -51,11 +51,20 @@ struct MediaImportRequest: Identifiable, Equatable {
     var link: String?
 }
 
+/// The notes an import becomes, written to the sidecar's `profile.json` for `profiles.py`.
+enum NoteKind: String {
+    case worker
+    case student
+    /// A tutorial, a talk or a podcast: steps, key points and tools instead of decisions.
+    case video
+}
+
 /// Chosen once in the sheet for every file imported together.
 struct MediaImportOptions {
     var template = SummaryTemplateCatalog.auto
-    /// Lecture or work meeting, for someone who is both; nil decides from the title.
-    var profile: UserProfile?
+    /// Meeting, lecture or video notes; nil lets the pipeline decide (a link makes video
+    /// notes, a file is judged by its title).
+    var noteKind: NoteKind?
     /// A video from a link is kept, sound and picture joined, in `MediaImporter.videosFolder`;
     /// otherwise only its audio and screens stay. Settings → Import.
     var keepDownloadedVideo = false
@@ -285,8 +294,8 @@ final class MediaImporter: ObservableObject {
         if options.template != SummaryTemplateCatalog.auto {
             MeetingSidecar.writeTemplateChoice(options.template, for: stagedAudio)
         }
-        if let profile = options.profile {
-            MeetingSidecar.writeProfileChoice(profile, for: stagedAudio)
+        if let noteKind = options.noteKind {
+            MeetingSidecar.writeNoteKind(noteKind.rawValue, for: stagedAudio)
         }
         if let slides = draft.slidesURL {
             try SlideDeck.write(slides, intoSidecarOf: stagedAudio)

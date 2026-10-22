@@ -67,13 +67,18 @@ enum MeetingSidecar {
     }
 
     static func writeProfileChoice(_ choice: UserProfile?, for audioURL: URL) {
+        writeNoteKind(choice?.rawValue, for: audioURL)
+    }
+
+    /// "worker", "student" or "video" (see `NoteKind`); nil removes the choice.
+    static func writeNoteKind(_ choice: String?, for audioURL: URL) {
         let url = profileURL(for: audioURL)
         guard let choice else {
             try? FileManager.default.removeItem(at: url)
             return
         }
         do {
-            let data = try JSONSerialization.data(withJSONObject: ["profile": choice.rawValue])
+            let data = try JSONSerialization.data(withJSONObject: ["profile": choice])
             try data.write(to: url, options: .atomic)
         } catch {
             AppLog.append("Salvataggio tipo di nota non riuscito: \(error.localizedDescription)")

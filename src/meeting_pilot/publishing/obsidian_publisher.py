@@ -10,7 +10,7 @@ from ..artifacts import MeetingArtifacts, write_obsidian_receipt
 from ..slides.deck import slide_images, slides_pdf
 from ..config import Config
 from ..language import config_language, label
-from ..profiles import STUDENT, artifacts_profile
+from ..profiles import STUDENT, VIDEO, WORKER, artifacts_profile
 from .meeting_format import (
     action_items,
     decisions,
@@ -25,6 +25,8 @@ from .meeting_format import (
     present,
     source_name,
     transcript_turns,
+    video_steps,
+    video_tools,
     when_text,
 )
 
@@ -149,11 +151,11 @@ def _note_content(
         return label(lang, key)
 
     summary = artifacts.omlx_summary or {}
-    lecture = artifacts_profile(config, artifacts) == STUDENT
-    parts = ["---", *_frontmatter_lines(config, artifacts, title, date, lecture, slides), "---", "", f"# {title}"]
+    kind = artifacts_profile(config, artifacts)
+    parts = ["---", *_frontmatter_lines(config, artifacts, title, date, kind, slides), "---", "", f"# {title}"]
 
     if header_callout and _include(config, "overview"):
-        parts.extend(["", *_header_callout(artifacts, lang, lecture)])
+        parts.extend(["", *_header_callout(artifacts, lang, kind)])
 
     if _include(config, "summary"):
         parts.extend(["", f"## {t('summary')}", "", str(summary.get("summary") or artifacts.summary_markdown or t("no_summary")).strip()])
@@ -164,8 +166,10 @@ def _note_content(
     if artifacts.user_notes:
         parts.extend(["", f"## {t('my_notes')}", artifacts.user_notes])
 
-    if lecture:
+    if kind == STUDENT:
         parts.extend(_lecture_sections(config, summary, t))
+    elif kind == VIDEO:
+        parts.extend(_video_sections(config, summary, t))
     else:
         parts.extend(_meeting_sections(config, summary, t))
 
@@ -226,12 +230,39 @@ def _lecture_sections(config: Config, summary: dict[str, Any], t: Any) -> list[s
     return parts
 
 
+def _video_sections(config: Config, summary: dict[str, Any], t: Any) -> list[str]:
+    """What a viewer learns: the steps in order, then ideas, tools, tips and references.
+    A section the video has nothing for is left out rather than shown empty."""
+    parts: list[str] = []
+    steps = video_steps(summary.get("steps")) if _include(config, "steps") else []
+    if steps:
+        rows = [f"{index}. {step}" + (f" — {details}" if details else "") for index, (step, details) in enumerate(steps, 1)]
+        parts.extend(["", f"## {t('steps')}", "", *rows])
+
+    points = _plain_values(summary.get("key_points")) if _include(config, "key_points") else []
+    if points:
+        parts.extend(["", f"## {t('key_points')}", "", *(f"- {value}" for value in points)])
+
+    tools = video_tools(summary.get("tools")) if _include(config, "tools") else []
+    if tools:
+        parts.extend(["", f"## {t('tools')}", "", *(f"- **{name}**" + (f" — {use}" if use else "") for name, use in tools)])
+
+    tips = _plain_values(summary.get("tips")) if _include(config, "tips") else []
+    if tips:
+        parts.extend(["", f"> [!tip] {t('tips')}", *(f"> - {value}" for value in tips)])
+
+    references = _plain_values(summary.get("references")) if _include(config, "references") else []
+    if references:
+        parts.extend(["", f"## {t('references')}", "", *(f"- {value}" for value in references)])
+    return parts
+
+
 def _frontmatter_lines(
     config: Config,
     artifacts: MeetingArtifacts,
     title: str,
     date: str,
-    lecture: bool = False,
+    kind: str = WORKER,
     slides: str | None = None,
 ) -> list[str]:
     summary = artifacts.omlx_summary or {}
@@ -263,12 +294,15 @@ def _frontmatter_lines(
         lines.append("participants:")
         lines.extend(f'  - "{_yaml_escape(name)}"' for name in people)
 
-    tags = ["lecture" if lecture else "meeting", *(_tag(value) for value in (project, theme) if value)]
+    kind_tag = {STUDENT: "lecture", VIDEO: "video"}.get(kind, "meeting")
+    tags = [kind_tag, *(_tag(value) for value in (project, theme) if value)]
     lines.append("tags:")
     lines.extend(f"  - {tag}" for tag in dict.fromkeys(tag for tag in tags if tag))
 
-    if lecture:
+    if kind == STUDENT:
         lines.append('type: "study"')
+    elif kind == VIDEO:
+        lines.append('type: "video"')
     lines.extend([
         f'source: "{_yaml_escape(source_name(artifacts, config_language(config)))}"',
         'status: "Published"',
@@ -295,7 +329,7 @@ def _frontmatter_lines(
     return lines
 
 
-def _header_callout(artifacts: MeetingArtifacts, lang: str, lecture: bool = False) -> list[str]:
+def _header_callout(artifacts: MeetingArtifacts, lang: str, kind: str = WORKER) -> list[str]:
     metadata = artifacts.meeting_metadata or {}
     when = when_text(artifacts, lang)
     duration = duration_text(artifacts)
@@ -309,7 +343,7 @@ def _header_callout(artifacts: MeetingArtifacts, lang: str, lecture: bool = Fals
     tags = [
         f"**{label(lang, key)}:** {value}"
         for key, value in (
-            ("course" if lecture else "project", metadata.get("project") or artifacts.frontmatter.get("project")),
+            ({STUDENT: "course", VIDEO: "subject"}.get(kind, "project"), metadata.get("project") or artifacts.frontmatter.get("project")),
             ("theme", metadata.get("theme") or artifacts.frontmatter.get("theme")),
         )
         if value

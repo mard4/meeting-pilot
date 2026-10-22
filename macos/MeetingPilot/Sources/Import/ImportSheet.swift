@@ -102,9 +102,7 @@ struct MediaImportSheet: View {
                 }
                 .buttonStyle(MPSecondaryButtonStyle(compact: true))
 
-                if model.userProfile == .both {
-                    profileMenu
-                }
+                profileMenu
                 Menu {
                     ForEach(templateOptions) { option in
                         Button {
@@ -253,21 +251,28 @@ struct MediaImportSheet: View {
         }
     }
 
-    /// The same choice as in the live sidebar, for someone who both studies and works.
-    private static let profileOptions: [(choice: UserProfile?, title: String, symbol: String)] = [
-        (nil, "Dal titolo", "sparkles"),
-        (.worker, "Riunione di lavoro", "briefcase"),
-        (.student, "Lezione", "graduationcap"),
-    ]
+    /// Automatic lets the pipeline decide: a link makes video notes, a file is judged by its
+    /// title. Lectures are offered to someone who studies.
+    private var profileOptions: [(choice: NoteKind?, title: String, symbol: String)] {
+        var options: [(choice: NoteKind?, title: String, symbol: String)] = [
+            (nil, "Automatico", "sparkles"),
+            (.worker, "Riunione di lavoro", "briefcase"),
+        ]
+        if model.userProfile != .worker {
+            options.append((.student, "Lezione", "graduationcap"))
+        }
+        options.append((.video, "Video", "play.rectangle"))
+        return options
+    }
 
     private var profileMenu: some View {
-        let current = Self.profileOptions.first { $0.choice == options.profile } ?? Self.profileOptions[0]
+        let current = profileOptions.first { $0.choice == options.noteKind } ?? profileOptions[0]
         return Menu {
-            ForEach(Self.profileOptions, id: \.title) { option in
+            ForEach(profileOptions, id: \.title) { option in
                 Button {
-                    options.profile = option.choice
+                    options.noteKind = option.choice
                 } label: {
-                    if option.choice == options.profile {
+                    if option.choice == options.noteKind {
                         Label(localized(option.title), systemImage: "checkmark")
                     } else {
                         Label(localized(option.title), systemImage: option.symbol)

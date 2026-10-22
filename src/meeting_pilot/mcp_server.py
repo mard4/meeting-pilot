@@ -38,8 +38,8 @@ PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
 DEFAULT_TRANSCRIPT_CHARS = 40_000
 
 INSTRUCTIONS = (
-    "Meeting Pilot holds the meetings and lectures the user recorded or imported on this Mac: "
-    "summaries, decisions, action items, study notes, transcripts and slides. Use list_meetings "
+    "Meeting Pilot holds the meetings, lectures and videos the user recorded or imported on this Mac: "
+    "summaries, decisions, action items, study notes, the steps and tools of tutorials, transcripts and slides. Use list_meetings "
     "to browse by date or project, search_meetings to find what was said about something, "
     "get_meeting for one meeting in full and list_open_actions for the tasks still to do. "
     "Cite meetings by title and date."
@@ -73,7 +73,7 @@ class Meeting:
         if not self.session:
             # The page's frontmatter says what the session would have.
             front = self.page()[0]
-            summary = {"profile": "student"} if front.get("type") == "study" else {}
+            summary = {"profile": {"study": "student", "video": "video"}[front["type"]]} if front.get("type") in {"study", "video"} else {}
             metadata = {key: front[key] for key in ("source_url", "original_path") if front.get(key)}
             if metadata:
                 metadata["origin"] = "import"
@@ -292,7 +292,7 @@ TOOLS: dict[str, tuple[Callable[[MeetingCatalog, dict[str, Any]], dict[str, Any]
         list_meetings,
         {
             "title": "List meetings",
-            "description": "Meetings and lectures, newest first, with their id, title, date, project and kind. Filter by date, project or words in the title.",
+            "description": "Meetings, lectures and videos, newest first, with their id, title, date, project and kind (meeting, lecture or video). Filter by date, project or words in the title.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -327,8 +327,9 @@ TOOLS: dict[str, tuple[Callable[[MeetingCatalog, dict[str, Any]], dict[str, Any]
         {
             "title": "Get a meeting",
             "description": (
-                "One meeting in full: its notes (summary, decisions, action items, or for a lecture key concepts, "
-                "assignments and exam hints), participants, slides and transcript. Long transcripts come in parts: "
+                "One meeting in full: its notes (summary, decisions, action items; for a lecture key concepts, "
+                "assignments and exam hints; for a video steps, key points, tools and tips), "
+                "participants, slides and transcript. Long transcripts come in parts: "
                 "pass transcript_next_offset as transcript_offset for the next one."
             ),
             "inputSchema": {
@@ -510,6 +511,8 @@ def _page_tasks(notes: str) -> list[dict[str, Any]]:
 
 
 def _kind(summary: dict[str, Any]) -> str:
+    if summary.get("profile") == "video" or "steps" in summary or "key_points" in summary:
+        return "video"
     return "lecture" if summary.get("profile") == "student" or "key_concepts" in summary else "meeting"
 
 

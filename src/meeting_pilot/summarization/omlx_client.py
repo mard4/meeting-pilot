@@ -17,7 +17,7 @@ from .apple_intelligence_client import AppleIntelligenceUnavailable, summarize_w
 from .builtin_model import is_builtin, request_headers as builtin_request_headers, server as builtin_server
 from ..business_glossary import summary_instructions as business_glossary_instructions
 from ..language import config_language, language_name
-from ..profiles import STUDENT, resolve_profile
+from ..profiles import STUDENT, VIDEO, resolve_profile
 from .summary_templates import summary_guidance
 from ..tag_catalog import catalog_values
 
@@ -30,6 +30,12 @@ Never invent participants, decisions or deadlines: use null when they are missin
 STUDENT_SYSTEM_PROMPT = """You turn lecture transcripts into study notes.
 Reply with valid JSON only, no Markdown.
 Never invent deadlines, exam information or references: use null or an empty list when they are missing.
+"""
+
+VIDEO_SYSTEM_PROMPT = """You turn the transcript of a video (a tutorial, a talk, a podcast) into notes for someone who wants to learn from it.
+Reply with valid JSON only, no Markdown.
+It is not a meeting: never write decisions, action items, risks or open questions, and never call it a meeting.
+Never invent steps, settings, tools or references: use an empty list when the video has none.
 """
 
 PARTICIPANTS_RULE = "Only use calendar_metadata and the participant names identified from Teams for participants; do not treat generic labels such as Speaker 1 or SPEAKER_00 as participant names."
@@ -56,6 +62,39 @@ def _meeting_request(language: str) -> tuple[str, dict[str, Any]]:
         ],
         "open_questions": ["string"],
         "risks": ["string"],
+    }
+    return task, schema
+
+
+def _video_request(language: str) -> tuple[str, dict[str, Any]]:
+    task = (
+        f"Create notes for this video written entirely in {language}: title, tag, theme, summary, topics, steps, "
+        f"key points, tools, tips and references must all be in {language}, translating from the transcript language "
+        "when it differs. Keep names of people, software, products, settings and proper nouns as spoken. Generate a concise, "
+        "descriptive title of 3-8 words for what the video teaches or argues; never include the platform, channel or "
+        "presenter names, dates or filenames. The summary says in a few sentences what the video covers and what a viewer "
+        "comes away with, as a description of the video, never as a meeting. Steps are what the video shows how to do, in "
+        "order, as short instructions a viewer can follow, with the exact values, settings or commands shown in details; "
+        "a talk or a discussion that teaches no procedure has no steps. Key points are the ideas, explanations or claims "
+        "worth remembering. Tools are the software, plugins, devices, libraries, commands or files used, each with what it "
+        "is used for or the setting chosen. Tips are advice, shortcuts and mistakes to avoid that the presenter gives. "
+        "References are links, books, videos, channels or resources mentioned. For tag, compare with known_projects and "
+        "reuse a known one only when the video is clearly about it; otherwise give the subject area in 1-4 words. "
+        + PARTICIPANTS_RULE
+    )
+    schema = {
+        "title": "string",
+        "tag": "the subject area of the video, 1-4 words, without #",
+        "theme": "the video's main topic, 2-5 words",
+        "date": "ISO date/time string or null",
+        "participants": ["string"],
+        "summary": "string",
+        "topics": ["string"],
+        "steps": [{"step": "string", "details": "exact values, settings or commands shown, or null"}],
+        "key_points": ["string"],
+        "tools": [{"name": "string", "use": "what it is used for or the setting chosen, or null"}],
+        "tips": ["string"],
+        "references": ["string"],
     }
     return task, schema
 
@@ -92,7 +131,7 @@ def summarize_with_openai_compatible(
 
     profile = profile or resolve_profile(config, artifacts.session_dir, meeting_metadata or {}, artifacts.title)
     language = language_name(config_language(config))
-    task, schema = _lecture_request(language) if profile == STUDENT else _meeting_request(language)
+    task, schema = {STUDENT: _lecture_request, VIDEO: _video_request}.get(profile, _meeting_request)(language)
     user_prompt = {
         "task": task,
         "schema": schema,
@@ -102,7 +141,7 @@ def summarize_with_openai_compatible(
         "existing_summary": summary,
         "transcript": transcript[:120_000],
     }
-    system_prompt = STUDENT_SYSTEM_PROMPT if profile == STUDENT else SYSTEM_PROMPT
+    system_prompt = {STUDENT: STUDENT_SYSTEM_PROMPT, VIDEO: VIDEO_SYSTEM_PROMPT}.get(profile, SYSTEM_PROMPT)
     if config.summary_prompt:
         system_prompt += f"\nCustom instructions from the user:\n{config.summary_prompt}\n"
     guidance = summary_guidance(config, artifacts)
