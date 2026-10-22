@@ -906,3 +906,16 @@
 "Domande, idee e novità insieme agli altri utenti di Meeting Pilot." = "Vragen, ideeën en nieuws met andere Meeting Pilot-gebruikers.";
 "Unisciti" = "Deelnemen";
 "Unisciti al Discord" = "Word lid van de Discord";
+"Lezioni, podcast, video di YouTube o registrazioni fatte altrove diventano note come le tue riunioni." = "Colleges, podcasts, YouTube-video's of elders gemaakte opnames worden notities, net als je vergaderingen.";
+"Trascina qui i file, scegline altri o incolla un link di YouTube." = "Sleep bestanden hierheen, kies er meer of plak een YouTube-link.";
+"Incolla un link di YouTube" = "Plak een YouTube-link";
+"Non è un link a un video di YouTube." = "Dit is geen link naar een YouTube-video.";
+"Lettura del video…" = "Video lezen…";
+"Download di yt-dlp, serve una volta sola…" = "yt-dlp downloaden, maar één keer nodig…";
+"Download di yt-dlp non riuscito" = "yt-dlp downloaden mislukt";
+"YouTube non ha risposto come previsto" = "YouTube reageerde niet zoals verwacht";
+"Le dirette si possono importare solo quando sono finite." = "Livestreams kunnen pas worden geïmporteerd als ze zijn afgelopen.";
+"File dal Mac…" = "Bestanden van deze Mac…";
+"Link di YouTube…" = "YouTube-link…";
+"Importa link di YouTube…" = "YouTube-link importeren…";
+"Importa registrazioni, video di lezioni, podcast o un link di YouTube (⌘I)" = "Importeer opnames, collegevideo's, podcasts of een YouTube-link (⌘I)";

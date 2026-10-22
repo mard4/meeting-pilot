@@ -109,6 +109,14 @@ enum DebugSnapshots {
                 durationSeconds: 3_130, previouslyImportedAt: lecture
             ),
             MediaImportDraft(
+                sourceURL: URL(string: "https://www.youtube.com/watch?v=dQw4w9WgXcQ")!,
+                recordedAt: lecture, isVideo: true, durationSeconds: 2_710,
+                webVideo: WebVideo(
+                    id: "dQw4w9WgXcQ", pageURL: URL(string: "https://www.youtube.com/watch?v=dQw4w9WgXcQ")!,
+                    title: "MIT 6.006 - Lecture 3: Sorting", durationSeconds: 2_710
+                )
+            ),
+            MediaImportDraft(
                 sourceURL: URL(fileURLWithPath: "/Users/demo/Downloads/webinar.webm"),
                 recordedAt: lecture, problem: localized("Formato non supportato: convertilo in MP4, MOV, M4A o MP3.")
             ),

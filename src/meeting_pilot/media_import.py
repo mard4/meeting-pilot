@@ -7,7 +7,9 @@ The macOS app copies the audio into the inbox with a sidecar `recording.json` li
      "recorded_at": "2026-09-28T10:00:00", "duration_seconds": 5400.0,
      "title": "Lezione 3"}
 
-`title` is present only when the user typed one. An import is not a call, so it gets
+`title` is present only when the user typed one. A video imported from a pasted YouTube
+link also has `source_url`, its page; `original_name` is then the video's title and
+`original_path` the same link. An import is not a call, so it gets
 no calendar or Teams metadata, and its date is when it was recorded, not imported.
 """
 from __future__ import annotations
@@ -54,7 +56,7 @@ def import_metadata(info: dict[str, Any]) -> dict[str, Any]:
     duration = _seconds(info.get("duration_seconds"))
     if duration:
         metadata["duration_seconds"] = duration
-    for key in ("media_kind", "original_name", "original_path"):
+    for key in ("media_kind", "original_name", "original_path", "source_url"):
         value = _text(info.get(key))
         if value:
             metadata[key] = value
@@ -133,7 +135,9 @@ def extract_audio(video: Path, output: Path) -> Path:
 def use_file_name_as_title(artifacts: MeetingArtifacts) -> None:
     """Without a summary, an import is named after its file rather than its session."""
     metadata = artifacts.meeting_metadata or {}
-    original = Path(_text(metadata.get("original_name"))).stem
+    name = _text(metadata.get("original_name"))
+    # A web video's name is its title, where a dot is not an extension.
+    original = name if metadata.get("source_url") else Path(name).stem
     if is_import(metadata) and original and not artifacts.frontmatter.get("title"):
         artifacts.title = original
 

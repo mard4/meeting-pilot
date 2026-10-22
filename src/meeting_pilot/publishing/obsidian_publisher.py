@@ -284,7 +284,10 @@ def _frontmatter_lines(
         lines.append(f'language: "{_yaml_escape(str(language))}"')
     if artifacts.archived_audio_file:
         lines.append(f'audio_path: "{_yaml_escape(str(artifacts.archived_audio_file))}"')
-    if original_file(artifacts):
+    source_url = str(metadata.get("source_url") or "").strip()
+    if source_url:
+        lines.append(f'source_url: "{_yaml_escape(source_url)}"')
+    elif original_file(artifacts):
         lines.append(f'original_path: "{_yaml_escape(original_file(artifacts))}"')
     if slides:
         lines.append(f'slides: "{_yaml_escape(slides)}"')
