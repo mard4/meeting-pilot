@@ -944,7 +944,8 @@
 "Configurazione dei browser non riuscita" = "Browser konnten nicht eingerichtet werden";
 "Importazione da YouTube" = "Import von YouTube";
 "Importazione da YouTube non riuscita" = "Import von YouTube fehlgeschlagen";
-"chrome://extensions › Modalità sviluppatore › Carica estensione non pacchettizzata › questa cartella" = "chrome://extensions › Entwicklermodus › Entpackte Erweiterung laden › dieser Ordner";
 "I video di YouTube da Chrome, Edge, Brave o Arc, con un clic." = "YouTube-Videos aus Chrome, Edge, Brave oder Arc, mit einem Klick.";
 "Schermate del video" = "Bildschirme des Videos";
 "Una foto di ogni schermata del video accanto a ciò che viene detto, come le slide" = "Ein Bild jedes Bildschirms im Video neben dem Gesagten, wie Folien";
+"Installala dal Chrome Web Store, oppure: chrome://extensions › Modalità sviluppatore › Carica estensione non pacchettizzata › questa cartella" = "Füge sie aus dem Chrome Web Store hinzu, oder: chrome://extensions › Entwicklermodus › Entpackte Erweiterung laden › dieser Ordner";
+"Installa l'estensione dal Chrome Web Store" = "Erweiterung aus dem Chrome Web Store hinzufügen";

@@ -2,13 +2,18 @@ import AppKit
 import Security
 import SwiftUI
 
-/// Connects the browser extension (`browser/extension`, loaded unpacked for now) to the app.
-/// Setting up writes the native messaging manifest that lets Chromium browsers start
-/// `MeetingPilotBrowserHost` for that one extension, the token the host uses to ask the app
-/// to import, and a copy of the extension to load from Application Support.
+/// Connects the browser extension (`browser/extension`) to the app. Setting up writes the
+/// native messaging manifest that lets Chromium browsers start `MeetingPilotBrowserHost`
+/// for the extension, the token the host uses to ask the app to import, and a copy of the
+/// extension to load unpacked from Application Support.
 enum BrowserExtensionSetup {
-    /// Fixed by the public `key` in the extension's manifest.json.
-    static let extensionID = "blgkijnmbiefebagnjlieceagflahnin"
+    /// The extension as the Chrome Web Store publishes it (submitted for review 2026-10-22).
+    static let storeExtensionID = "ipnadmfmihedhmlppdjoldfnjpmjghen"
+    /// Loaded unpacked, fixed by the public `key` in the extension's manifest.json.
+    static let unpackedExtensionID = "blgkijnmbiefebagnjlieceagflahnin"
+    /// Both may connect: the store's and one loaded by hand from the folder.
+    static let extensionIDs = [storeExtensionID, unpackedExtensionID]
+    static let storeURL = URL(string: "https://chromewebstore.google.com/detail/\(storeExtensionID)")!
     static let hostName = "com.meetingpilot.browser"
 
     /// Each browser's folder under ~/Library/Application Support; NativeMessagingHosts goes in it.
@@ -62,7 +67,7 @@ enum BrowserExtensionSetup {
             "description": "Meeting Pilot",
             "path": host.path,
             "type": "stdio",
-            "allowed_origins": ["chrome-extension://\(extensionID)/"],
+            "allowed_origins": extensionIDs.map { "chrome-extension://\($0)/" },
         ]
     }
 
@@ -172,12 +177,17 @@ struct BrowserExtensionRow: View {
         SettingsLine(
             title: "Browser",
             detail: configured
-                ? "chrome://extensions › Modalità sviluppatore › Carica estensione non pacchettizzata › questa cartella"
+                ? "Installala dal Chrome Web Store, oppure: chrome://extensions › Modalità sviluppatore › Carica estensione non pacchettizzata › questa cartella"
                 : "I video di YouTube da Chrome, Edge, Brave o Arc, con un clic.",
             icon: SettingsIcon(symbol: "globe")
         ) {
             HStack(spacing: 6) {
                 if configured {
+                    Button(localized("Chrome Web Store")) {
+                        NSWorkspace.shared.open(BrowserExtensionSetup.storeURL)
+                    }
+                    .buttonStyle(CompactButtonStyle())
+                    .help(localized("Installa l'estensione dal Chrome Web Store"))
                     Button(localized("Mostra cartella")) {
                         NSWorkspace.shared.activateFileViewerSelecting([BrowserExtensionSetup.installedExtension(configRoot: model.configRoot)])
                     }

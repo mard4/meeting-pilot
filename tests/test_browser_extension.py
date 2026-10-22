@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 EXTENSION = ROOT / "browser" / "extension"
 APP_EXTENSION_ID = re.search(
-    r'extensionID = "([a-p]{32})"',
+    r'unpackedExtensionID = "([a-p]{32})"',
     (ROOT / "macos/MeetingPilot/Sources/App/BrowserExtension.swift").read_text(encoding="utf-8"),
 ).group(1)
 

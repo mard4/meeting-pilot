@@ -188,13 +188,14 @@ curl -fsSL https://raw.githubusercontent.com/mard4/meeting-pilot/main/macos/Meet
 <details>
 <summary><b>Browser extension (Chrome, Edge, Brave, Arc)</b></summary>
 
-Sends the YouTube video you're watching to Meeting Pilot with one click (toolbar button or right-click menu), which downloads, transcribes and summarizes it like any import. It isn't in the Chrome Web Store yet, so it's loaded by hand:
+Sends the YouTube video you're watching to Meeting Pilot with one click (toolbar button or right-click menu), which downloads, transcribes and summarizes it like any import, and shows how far it got.
 
-1. In Meeting Pilot open **Settings → Browser extension → Set up**. This connects the browsers you have and opens the extension's folder in the Finder.
-2. In the browser go to `chrome://extensions` (`edge://extensions`, `brave://extensions`…), turn on **Developer mode** and click **Load unpacked**.
-3. Choose the folder Meeting Pilot opened (`~/Library/Application Support/Meeting Pilot/Browser Extension`). You can drag it into the dialog.
+1. In Meeting Pilot open **Settings → Browser extension → Set up**. This connects the browsers you have.
+2. **[Add it from the Chrome Web Store](https://chromewebstore.google.com/detail/ipnadmfmihedhmlppdjoldfnjpmjghen)** (also for Edge, Brave and Arc). <sub>Waiting for Google's review: the link works once it is approved.</sub>
 
-Meeting Pilot updates the folder when the app updates; the browser picks the new version up at its next start. The extension can only talk to Meeting Pilot on your Mac and reads nothing but the tab you send. It has been submitted to the Chrome Web Store and is waiting for review.
+Until then, load it by hand: in `chrome://extensions` (`edge://extensions`, `brave://extensions`…) turn on **Developer mode**, click **Load unpacked** and choose the folder Meeting Pilot opened after Set up (`~/Library/Application Support/Meeting Pilot/Browser Extension`); you can drag it into the dialog. Meeting Pilot updates that folder when the app updates.
+
+The extension can only talk to Meeting Pilot on your Mac and reads nothing but the tab you send.
 
 </details>
 

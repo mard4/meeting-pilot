@@ -29,7 +29,10 @@ final class BrowserExtensionTests: XCTestCase {
         let payload = try JSONSerialization.jsonObject(with: Data(contentsOf: manifest)) as? [String: Any]
         XCTAssertEqual(payload?["path"] as? String, host.path)
         XCTAssertEqual(payload?["type"] as? String, "stdio")
-        XCTAssertEqual(payload?["allowed_origins"] as? [String], ["chrome-extension://blgkijnmbiefebagnjlieceagflahnin/"])
+        XCTAssertEqual(payload?["allowed_origins"] as? [String], [
+            "chrome-extension://ipnadmfmihedhmlppdjoldfnjpmjghen/",
+            "chrome-extension://blgkijnmbiefebagnjlieceagflahnin/",
+        ], "the Chrome Web Store's extension and one loaded unpacked")
         XCTAssertFalse(FileManager.default.fileExists(atPath: support.appendingPathComponent("Microsoft Edge").path), "no folder for a browser that is not installed")
     }
 
