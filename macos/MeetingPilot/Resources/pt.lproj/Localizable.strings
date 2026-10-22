@@ -906,3 +906,16 @@
 "Domande, idee e novità insieme agli altri utenti di Meeting Pilot." = "Perguntas, ideias e novidades com outros utilizadores do Meeting Pilot.";
 "Unisciti" = "Entrar";
 "Unisciti al Discord" = "Entrar no Discord";
+"Claude e altre app AI" = "Claude e outros apps de IA";
+"Collegato: riavvia Claude se è aperto, poi chiedigli delle tue riunioni." = "Conectado: reinicie o Claude se estiver aberto e pergunte sobre suas reuniões.";
+"Claude legge riunioni, lezioni, azioni e trascrizioni da questo Mac. Non può modificarle." = "O Claude lê reuniões, aulas, tarefas e transcrições deste Mac. Ele não pode alterá-las.";
+"Scollega" = "Desconectar";
+"Copia" = "Copiar";
+"Copiato" = "Copiado";
+"Copia il comando e incollalo nel Terminale." = "Copie o comando e cole no Terminal.";
+"Altre app MCP" = "Outros apps MCP";
+"Per Cursor, VS Code, LM Studio e le altre app che usano MCP: incolla la configurazione nelle loro impostazioni." = "Para Cursor, VS Code, LM Studio e outros apps que usam MCP: cole a configuração nos ajustes deles.";
+"Il file di configurazione di Claude non è JSON valido: correggilo o usa Copia per le altre app." = "O arquivo de configuração do Claude não é um JSON válido: corrija-o ou use Copiar para outros apps.";
+"Meeting Pilot collegato a Claude Desktop" = "Meeting Pilot conectado ao Claude Desktop";
+"Meeting Pilot scollegato da Claude Desktop" = "Meeting Pilot desconectado do Claude Desktop";
+"Configurazione di Claude Desktop non riuscita" = "Não foi possível configurar o Claude Desktop";

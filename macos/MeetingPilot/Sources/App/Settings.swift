@@ -274,6 +274,10 @@ struct SettingsOverviewView: View {
                 LaunchAtLoginCard()
             }
 
+            SettingsGroup(title: "Claude e altre app AI") {
+                MCPClientRows()
+            }
+
             SettingsGroup(title: "Aggiornamenti") {
                 UpdateRow()
                 SettingsDivider()

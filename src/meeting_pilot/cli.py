@@ -194,8 +194,16 @@ def _main() -> None:
     kb_mongodb.add_argument("--url-field", default="url")
     kb_mongodb.add_argument("--updated-field", default="updated_at")
 
+    subparsers.add_parser("mcp", help="Serve the meetings to Claude and other MCP clients over stdio.")
+
     args = parser.parse_args()
     config = Config.from_env()
+
+    if args.command == "mcp":
+        from .mcp_server import serve
+
+        serve(config)
+        return
 
     if args.command == "run-once":
         source = args.audio_file.expanduser()
@@ -450,7 +458,10 @@ def _env_path() -> Path:
     configured = os.environ.get("MEETING_PILOT_ENV_FILE")
     if configured:
         return Path(configured).expanduser()
-    return Path.cwd() / ".env"
+    local = Path.cwd() / ".env"
+    # An MCP client starts the CLI from its own folder, without the app's environment.
+    app = Path("~/Library/Application Support/Meeting Pilot/.env").expanduser()
+    return app if not local.exists() and app.exists() else local
 
 
 def _load_dotenv(path: Path) -> None:
