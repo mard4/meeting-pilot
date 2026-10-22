@@ -1709,12 +1709,61 @@ final class AppModel: ObservableObject {
     }
 
     /// The import sheet with nothing in it yet, for pasting a video link.
-    func requestLinkImport() {
+    func requestLinkImport(_ link: String? = nil) {
         if importRequest == nil {
-            importRequest = MediaImportRequest(urls: [], focusLink: true)
+            importRequest = MediaImportRequest(urls: [], focusLink: true, link: link)
         } else {
             importRequest?.focusLink = true
+            importRequest?.link = link
         }
+    }
+
+    /// `meetingpilot://import?url=…`, from the browser extension. With the token its native
+    /// host read from `browser-host-token` the video is imported straight away; without
+    /// it (a link on any web page) it only fills the import sheet, which asks first.
+    /// Returns false for a link that is not an import.
+    func handleImportURL(_ url: URL) -> Bool {
+        switch BrowserExtensionSetup.importAction(for: url, token: BrowserExtensionSetup.token(configRoot: configRoot)) {
+        case .notAnImport:
+            return false
+        case .importNow(let id, let url):
+            importLinkDirectly((id, url))
+        case .askFirst(let link):
+            requestLinkImport(link)
+            openMainWindow?()
+        }
+        return true
+    }
+
+    /// Opened by AppDelegate, for links that need the import sheet.
+    var openMainWindow: (() -> Void)?
+
+    /// What the import sheet does for a pasted link, with the default note type and template.
+    func importLinkDirectly(_ link: (id: String, url: URL)) {
+        let inbox = expandPath(recorderFolder.isEmpty ? defaultRecorderFolder(for: recorderMode) : recorderFolder)
+        let importer = importer
+        Task {
+            do {
+                let video = try await importer.webVideos.info(for: link)
+                await MainActor.run {
+                    Self.notify(title: localized("Importazione da YouTube"), body: video.title)
+                    importer.start([MediaImportInspector.draft(for: video, history: importer.history)], options: MediaImportOptions(), inbox: inbox)
+                }
+            } catch {
+                AppLog.append("Importazione dal browser non riuscita (\(link.url.absoluteString)): \(error.localizedDescription)")
+                await MainActor.run {
+                    self.statusMessage = error.localizedDescription
+                    Self.notify(title: localized("Importazione da YouTube non riuscita"), body: error.localizedDescription)
+                }
+            }
+        }
+    }
+
+    private static func notify(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }
 
     /// Adds to a sheet that is already open instead of replacing its files.

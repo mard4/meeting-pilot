@@ -213,6 +213,19 @@ xcrun swiftc \
   "$APP_SRC/Scripts/teams_window_id.swift" \
   -o "$MACOS/TeamsWindowID"
 
+# The browser extension's native messaging host, and the extension itself, which Settings →
+# Browser copies to Application Support for loading unpacked.
+xcrun swiftc \
+  -target "$SWIFT_TARGET" \
+  -O \
+  -parse-as-library \
+  -framework Foundation \
+  "$APP_SRC/Scripts/browser_host.swift" \
+  "$APP_SRC/Sources/Import/WebVideoLink.swift" \
+  -o "$MACOS/MeetingPilotBrowserHost"
+rm -rf "$RESOURCES/BrowserExtension"
+cp -R "$ROOT_DIR/browser/extension" "$RESOURCES/BrowserExtension"
+
 # A fresh clone has no build environment yet: bootstrap it with uv (required above).
 PYTHON_BIN="$ROOT_DIR/.venv311/bin/python"
 if [[ ! -x "$PYTHON_BIN" ]]; then
@@ -254,6 +267,8 @@ for required in \
   "$MACOS/AppleIntelligenceSummarizer" \
   "$MACOS/TeamsOCR" \
   "$MACOS/TeamsWindowID" \
+  "$MACOS/MeetingPilotBrowserHost" \
+  "$RESOURCES/BrowserExtension/manifest.json" \
   "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI"; do
   if [[ ! -f "$required" ]]; then
     echo "Build incompleta: manca $required" >&2
@@ -261,7 +276,7 @@ for required in \
   fi
 done
 
-chmod +x "$MACOS/MeetingPilot" "$MACOS/AppleTranscriber" "$MACOS/AppleIntelligenceSummarizer" "$MACOS/TeamsOCR" "$MACOS/TeamsWindowID" "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI" "$RESOURCES/FluidAudio/bin/fluidaudiocli" "$RESOURCES/LlamaCpp/bin/llama-server" "$RESOURCES/Office2Pdf/bin/office2pdf"
+chmod +x "$MACOS/MeetingPilot" "$MACOS/AppleTranscriber" "$MACOS/AppleIntelligenceSummarizer" "$MACOS/TeamsOCR" "$MACOS/TeamsWindowID" "$MACOS/MeetingPilotBrowserHost" "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI" "$RESOURCES/FluidAudio/bin/fluidaudiocli" "$RESOURCES/LlamaCpp/bin/llama-server" "$RESOURCES/Office2Pdf/bin/office2pdf"
 
 if [[ "$CODESIGN_IDENTITY" != "Developer ID Application:"* ]]; then
   # Ad hoc ("-") or a self-signed certificate. Everything but the PyInstaller CLI gets the
@@ -277,6 +292,7 @@ if [[ "$CODESIGN_IDENTITY" != "Developer ID Application:"* ]]; then
   local_sign --deep "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI"
   hardened_sign "$MACOS/TeamsOCR"
   hardened_sign "$MACOS/TeamsWindowID"
+  hardened_sign "$MACOS/MeetingPilotBrowserHost"
   hardened_sign "$MACOS/AppleTranscriber"
   hardened_sign "$MACOS/AppleIntelligenceSummarizer"
   hardened_sign "$RESOURCES/FluidAudio/bin/fluidaudiocli"
@@ -309,6 +325,7 @@ else
   developer_sign --entitlements "$CLI_ENTITLEMENTS" "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI"
   developer_sign "$MACOS/TeamsOCR"
   developer_sign "$MACOS/TeamsWindowID"
+  developer_sign "$MACOS/MeetingPilotBrowserHost"
   developer_sign "$MACOS/AppleTranscriber"
   developer_sign "$MACOS/AppleIntelligenceSummarizer"
   developer_sign "$RESOURCES/FluidAudio/bin/fluidaudiocli"
