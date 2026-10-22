@@ -35,3 +35,5 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Lets test modules import shared helpers from each other (from tests.x import ...).
+pythonpath = ["."]
