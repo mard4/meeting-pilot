@@ -152,6 +152,23 @@ def test_note_says_the_recording_was_imported_and_where_the_original_is(tmp_path
     assert "date: 2026-09-28" in note
 
 
+def test_youtube_video_is_named_after_its_title_and_links_to_its_page(tmp_path: Path, monkeypatch) -> None:
+    config = _config(tmp_path, monkeypatch)
+    video = {
+        **LECTURE,
+        "original_name": "Lecture 3.2: Entropy",
+        "original_path": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "source_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    }
+    _run(config, _import_into_inbox(config, video), monkeypatch)
+
+    note = _journal_note(tmp_path)
+    assert 'title: "Lecture 3.2: Entropy"' in note, "a dot in a video title is not an extension"
+    assert 'source: "YouTube"' in note
+    assert 'source_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"' in note
+    assert "original_path" not in note
+
+
 def test_meeting_recordings_still_come_from_teams(tmp_path: Path, monkeypatch) -> None:
     config = _config(tmp_path, monkeypatch)
     monkeypatch.setattr(

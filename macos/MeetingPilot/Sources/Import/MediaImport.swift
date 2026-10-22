@@ -19,19 +19,26 @@ struct MediaImportDraft: Identifiable, Equatable {
     var problem: String?
     /// The slides shown in it, placed next to the transcript.
     var slidesURL: URL?
+    /// Set for a pasted link: `sourceURL` is then the video's page, downloaded on import.
+    var webVideo: WebVideo?
 
-    var fileName: String { sourceURL.lastPathComponent }
+    var fileName: String { webVideo?.title ?? sourceURL.lastPathComponent }
 
     /// Also the name of the file in the inbox when no title is typed.
-    var suggestedTitle: String { sourceURL.deletingPathExtension().lastPathComponent }
+    var suggestedTitle: String { webVideo?.title ?? sourceURL.deletingPathExtension().lastPathComponent }
+
+    /// The key in `MediaImportHistory`.
+    var fingerprint: String? { webVideo?.fingerprint ?? MediaImportHistory.fingerprint(of: sourceURL) }
 
     var canImport: Bool { problem == nil }
 }
 
-/// Opened by "Importa", a dropped file, or the menu bar; the sheet reads the files.
+/// Opened by "Importa", a dropped file, or the menu bar; the sheet reads the files and links.
 struct MediaImportRequest: Identifiable, Equatable {
     let id = UUID()
     var urls: [URL]
+    /// Opened to paste a video link: the link field gets the focus.
+    var focusLink = false
 }
 
 /// Chosen once in the sheet for every file imported together.
@@ -100,6 +107,17 @@ enum MediaImportInspector {
         }
         return draft
     }
+
+    /// A pasted video link, read with yt-dlp. Like a downloaded file it is dated now: when
+    /// it was uploaded rarely says when the user watched or attended it.
+    static func draft(for video: WebVideo, history: MediaImportHistory) -> MediaImportDraft {
+        var draft = MediaImportDraft(sourceURL: video.pageURL, recordedAt: Date())
+        draft.webVideo = video
+        draft.isVideo = true
+        draft.durationSeconds = video.durationSeconds
+        draft.previouslyImportedAt = history.importDate(for: video.fingerprint)
+        return draft
+    }
 }
 
 /// Files already imported, by content, so importing the same lecture twice asks first.
@@ -161,13 +179,15 @@ final class MediaImportHistory {
 final class MediaImporter: ObservableObject {
     @Published private(set) var jobs: [MediaImportJob] = []
     let history: MediaImportHistory
+    let webVideos: WebVideoDownloader
     var onStatusMessage: ((String) -> Void)?
     var onImported: (() -> Void)?
     private var queue: [(draft: MediaImportDraft, options: MediaImportOptions, inbox: URL, jobID: UUID)] = []
     private var running = false
 
-    init(historyURL: URL) {
+    init(historyURL: URL, toolsFolder: URL) {
         history = MediaImportHistory(url: historyURL)
+        webVideos = WebVideoDownloader(folder: toolsFolder)
     }
 
     var isImporting: Bool { jobs.contains { $0.failure == nil } }
@@ -256,7 +276,16 @@ final class MediaImporter: ObservableObject {
             try SlideDeck.write(slides, intoSidecarOf: stagedAudio)
         }
 
-        if copyAsIs {
+        if let video = draft.webVideo {
+            let downloads = staging.appendingPathComponent("download", isDirectory: true)
+            try fileManager.createDirectory(at: downloads, withIntermediateDirectories: true)
+            let downloaded = try await webVideos.download(video, into: downloads, progress: progress)
+            if downloaded.pathExtension.lowercased() == "m4a" {
+                try fileManager.moveItem(at: downloaded, to: stagedAudio)
+            } else {
+                try await Self.exportAudio(from: downloaded, to: stagedAudio, progress: progress)
+            }
+        } else if copyAsIs {
             // A clone on APFS: instant, and no extra space until one of them changes.
             try fileManager.copyItem(at: draft.sourceURL, to: stagedAudio)
         } else {
@@ -267,7 +296,7 @@ final class MediaImporter: ObservableObject {
         let finalAudio = inbox.appendingPathComponent(fileName)
         try fileManager.moveItem(at: MeetingSidecar.directory(for: stagedAudio), to: MeetingSidecar.directory(for: finalAudio))
         try fileManager.moveItem(at: stagedAudio, to: finalAudio)
-        if let fingerprint = MediaImportHistory.fingerprint(of: draft.sourceURL) {
+        if let fingerprint = draft.fingerprint {
             history.record(fingerprint)
         }
     }
@@ -276,9 +305,12 @@ final class MediaImporter: ObservableObject {
         var info: [String: Any] = [
             "media_kind": draft.isVideo ? "video" : "audio",
             "original_name": SlideDeck.jsonSafe(draft.fileName),
-            "original_path": SlideDeck.jsonSafe(draft.sourceURL.path),
+            "original_path": SlideDeck.jsonSafe(draft.webVideo == nil ? draft.sourceURL.path : draft.sourceURL.absoluteString),
             "recorded_at": localTimestamp(draft.recordedAt),
         ]
+        if let video = draft.webVideo {
+            info["source_url"] = video.pageURL.absoluteString
+        }
         if let duration = draft.durationSeconds, duration.isFinite {
             info["duration_seconds"] = duration
         }

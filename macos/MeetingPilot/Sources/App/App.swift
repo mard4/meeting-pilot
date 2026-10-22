@@ -32,6 +32,10 @@ struct MeetingPilotApp: App {
                     appDelegate.importFiles()
                 }
                 .keyboardShortcut("i", modifiers: .command)
+                Button(localized("Importa link di YouTube…")) {
+                    appDelegate.importLink()
+                }
+                .keyboardShortcut("i", modifiers: [.command, .shift])
             }
             CommandGroup(before: .windowList) {
                 HideFromScreenSharingCommand()
@@ -236,6 +240,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         DispatchQueue.main.async { [weak self] in
             self?.model.chooseFilesToImport()
         }
+    }
+
+    func importLink() {
+        showMainWindow()
+        model.requestLinkImport()
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {

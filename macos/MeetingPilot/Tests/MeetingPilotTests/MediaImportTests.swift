@@ -58,6 +58,57 @@ final class MediaImportTests: XCTestCase {
 
     /// Slide text with half a surrogate pair, as PDFKit can return it, made JSONSerialization
     /// fail the whole import; the lone half becomes U+FFFD and the rest is kept.
+    func testYouTubeLinksInEveryFormPointAtTheSameVideo() {
+        let links = [
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "https://youtube.com/watch?v=dQw4w9WgXcQ&t=42s&list=PL123",
+            "youtube.com/watch?feature=share&v=dQw4w9WgXcQ",
+            "https://m.youtube.com/watch?v=dQw4w9WgXcQ",
+            "https://music.youtube.com/watch?v=dQw4w9WgXcQ",
+            "https://youtu.be/dQw4w9WgXcQ?si=abc",
+            "  https://www.youtube.com/shorts/dQw4w9WgXcQ\n",
+            "https://www.youtube.com/live/dQw4w9WgXcQ?feature=shared",
+            "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+        ]
+        for link in links {
+            let parsed = WebVideoLink.youtube(link)
+            XCTAssertEqual(parsed?.id, "dQw4w9WgXcQ", link)
+            XCTAssertEqual(parsed?.url.absoluteString, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", link)
+        }
+    }
+
+    func testOnlySingleYouTubeVideosAreAccepted() {
+        for link in [
+            "",
+            "https://www.youtube.com/playlist?list=PL123",
+            "https://www.youtube.com/@channel",
+            "https://vimeo.com/123456789",
+            "https://www.youtube.com/watch?v=short",
+            "https://notyoutube.com/watch?v=dQw4w9WgXcQ",
+            "guarda https://youtu.be/dQw4w9WgXcQ",
+        ] {
+            XCTAssertNil(WebVideoLink.youtube(link), link)
+        }
+    }
+
+    func testAYouTubeVideoIsImportedAsAVideoWithItsTitleAndLink() {
+        let link = WebVideoLink.youtube("https://youtu.be/dQw4w9WgXcQ")!
+        let video = WebVideo(id: link.id, pageURL: link.url, title: "Lecture 3.2: Entropy", durationSeconds: 3600)
+        let history = MediaImportHistory(url: folder.appendingPathComponent("imported-media.json"))
+        history.record(video.fingerprint)
+        let draft = MediaImportInspector.draft(for: video, history: history)
+        XCTAssertTrue(draft.isVideo)
+        XCTAssertNotNil(draft.previouslyImportedAt)
+        XCTAssertEqual(draft.suggestedTitle, "Lecture 3.2: Entropy")
+
+        let info = MediaImporter.importInfo(for: draft)
+        XCTAssertEqual(info["media_kind"] as? String, "video")
+        XCTAssertEqual(info["original_name"] as? String, "Lecture 3.2: Entropy")
+        XCTAssertEqual(info["source_url"] as? String, "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        XCTAssertEqual(info["original_path"] as? String, "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        XCTAssertEqual(info["duration_seconds"] as? Double, 3600)
+    }
+
     func testTextWithALoneSurrogateStillWritesAsJSON() throws {
         let broken = NSString(characters: [0x0041, 0xD835, 0x0042], length: 3) as String
         XCTAssertThrowsError(try JSONSerialization.data(withJSONObject: ["text": broken]))
@@ -103,7 +154,7 @@ final class MediaImportTests: XCTestCase {
         try XCTSkipUnless(FileManager.default.fileExists(atPath: source.path))
         let inbox = folder.appendingPathComponent("inbox")
         try FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
-        let importer = MediaImporter(historyURL: folder.appendingPathComponent("imported-media.json"))
+        let importer = MediaImporter(historyURL: folder.appendingPathComponent("imported-media.json"), toolsFolder: folder.appendingPathComponent("Tools"))
 
         var draft = await MediaImportInspector.draft(for: source, history: importer.history)
         XCTAssertNil(draft.problem)

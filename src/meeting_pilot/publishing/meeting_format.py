@@ -104,8 +104,9 @@ def participants(artifacts: MeetingArtifacts) -> list[str]:
 
 def source_name(artifacts: MeetingArtifacts, lang: str) -> str:
     """Where the recording came from: a Teams call, or a file the user imported."""
-    if (artifacts.meeting_metadata or {}).get("origin") == "import":
-        return label(lang, "imported_file")
+    metadata = artifacts.meeting_metadata or {}
+    if metadata.get("origin") == "import":
+        return "YouTube" if metadata.get("source_url") else label(lang, "imported_file")
     return "Teams"
 
 

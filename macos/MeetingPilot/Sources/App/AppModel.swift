@@ -223,7 +223,10 @@ final class AppModel: ObservableObject {
         self.watcher = WatcherController(cli: cli)
         self.recording = RecordingController(cli: cli)
         self.notion = NotionConnection(envURL: envURL)
-        self.importer = MediaImporter(historyURL: configRoot.appendingPathComponent("imported-media.json"))
+        self.importer = MediaImporter(
+            historyURL: configRoot.appendingPathComponent("imported-media.json"),
+            toolsFolder: configRoot.appendingPathComponent("Tools", isDirectory: true)
+        )
         let glossaryURL = configRoot.appendingPathComponent("business-glossary.txt")
         self.businessGlossary = (try? String(contentsOf: glossaryURL, encoding: .utf8)) ?? ""
         self.runningAppPath = Bundle.main.bundleURL.path
@@ -1640,6 +1643,15 @@ final class AppModel: ObservableObject {
         panel.prompt = localized("Scegli")
         panel.message = localized("Scegli le slide mostrate durante la registrazione o i tuoi appunti (PDF, PowerPoint, Word, testo).")
         return panel.runModal() == .OK ? panel.url : nil
+    }
+
+    /// The import sheet with nothing in it yet, for pasting a video link.
+    func requestLinkImport() {
+        if importRequest == nil {
+            importRequest = MediaImportRequest(urls: [], focusLink: true)
+        } else {
+            importRequest?.focusLink = true
+        }
     }
 
     /// Adds to a sheet that is already open instead of replacing its files.
