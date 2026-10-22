@@ -125,13 +125,26 @@ final class WebVideoDownloader {
     /// which the transcribers read as it is, otherwise the MP4 video, whose audio the
     /// importer extracts. Neither needs ffmpeg.
     func download(_ video: WebVideo, into folder: URL, progress: @escaping (Double) async -> Void) async throws -> URL {
+        try await fetch(video, format: "bestaudio[ext=m4a]/best[ext=mp4]", name: "audio", into: folder, progress: progress)
+    }
+
+    /// The picture alone, for the screens: YouTube keeps it apart from the sound, and the two
+    /// never need joining to read frames. H.264 in MP4 is what AVFoundation decodes on
+    /// every Mac (VP9 and AV1 in WebM it does not); 720p reads slides and most code.
+    func downloadPicture(_ video: WebVideo, into folder: URL, progress: @escaping (Double) async -> Void) async throws -> URL {
+        try await fetch(video, format: Self.pictureFormat, name: "picture", into: folder, progress: progress)
+    }
+
+    static let pictureFormat = "bestvideo[ext=mp4][vcodec^=avc1][height<=720]/bestvideo[ext=mp4][vcodec^=avc1]"
+
+    private func fetch(_ video: WebVideo, format: String, name: String, into folder: URL, progress: @escaping (Double) async -> Void) async throws -> URL {
         let tool = try await tool()
         let arguments = [
-            "--format", "bestaudio[ext=m4a]/best[ext=mp4]",
+            "--format", format,
             "--no-playlist", "--no-part", "--no-mtime", "--newline", "--progress",
             "--progress-template", "download:MPPROGRESS %(progress.downloaded_bytes)s %(progress.total_bytes)s %(progress.total_bytes_estimate)s",
             "--print", "after_move:filepath",
-            "--output", folder.appendingPathComponent("video.%(ext)s").path,
+            "--output", folder.appendingPathComponent("\(name).%(ext)s").path,
             video.pageURL.absoluteString,
         ]
         var file: URL?

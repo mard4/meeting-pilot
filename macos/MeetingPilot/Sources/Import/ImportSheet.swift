@@ -238,7 +238,9 @@ struct MediaImportSheet: View {
         Task {
             do {
                 let video = try await downloader.info(for: parsed)
-                drafts.append(MediaImportInspector.draft(for: video, history: history))
+                var draft = MediaImportInspector.draft(for: video, history: history)
+                draft.wantsScreens = model.videoScreensByDefault
+                drafts.append(draft)
                 sortDrafts()
             } catch {
                 requested.removeAll { $0 == parsed.url }
@@ -299,7 +301,8 @@ struct MediaImportSheet: View {
         let history = model.importer.history
         for url in media {
             Task {
-                let draft = await MediaImportInspector.draft(for: url, history: history)
+                var draft = await MediaImportInspector.draft(for: url, history: history)
+                draft.wantsScreens = model.videoScreensByDefault
                 drafts.append(draft)
                 sortDrafts()
                 loading -= 1

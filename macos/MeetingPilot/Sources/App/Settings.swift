@@ -278,6 +278,10 @@ struct SettingsOverviewView: View {
                 MCPClientRows()
             }
 
+            SettingsGroup(title: "Importazione") {
+                VideoImportRows()
+            }
+
             SettingsGroup(title: "Estensione del browser") {
                 BrowserExtensionRow()
             }
@@ -600,6 +604,35 @@ struct AutomaticUpdateChecksRow: View {
             .labelsHidden()
             .toggleStyle(.switch)
             .tint(MeetingPilotDesign.accent)
+        }
+    }
+}
+
+/// Settings → Import.
+struct VideoImportRows: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        SettingsLine(
+            title: "Schermate dei video",
+            detail: "Una foto di ogni schermata accanto a ciò che viene detto. Si può togliere per ogni video.",
+            icon: SettingsIcon(symbol: "rectangle.stack")
+        ) {
+            Toggle("", isOn: $model.videoScreensByDefault)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .tint(MeetingPilotDesign.accent)
+        }
+        SettingsDivider()
+        SettingsLine(
+            title: "Tieni i video scaricati",
+            detail: "I video da YouTube restano in Filmati › Meeting Pilot e la nota li apre. Spento: restano solo audio e schermate.",
+            icon: SettingsIcon(symbol: "film")
+        ) {
+            Toggle("", isOn: $model.keepDownloadedVideos)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .tint(MeetingPilotDesign.accent)
         }
     }
 }

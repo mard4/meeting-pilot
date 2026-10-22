@@ -115,4 +115,22 @@ final class VideoScreensTests: XCTestCase {
         XCTAssertFalse(draft.capturesScreens)
         XCTAssertFalse(MediaImportDraft(sourceURL: URL(fileURLWithPath: "/tmp/Podcast.mp3"), recordedAt: Date()).capturesScreens)
     }
+
+    func testAVideoFromALinkGetsScreensToo() {
+        let link = WebVideoLink.youtube("https://youtu.be/dQw4w9WgXcQ")!
+        let video = WebVideo(id: link.id, pageURL: link.url, title: "Tutorial", durationSeconds: 600)
+        let history = MediaImportHistory(url: FileManager.default.temporaryDirectory.appendingPathComponent("h-\(UUID().uuidString).json"))
+        XCTAssertTrue(MediaImportInspector.draft(for: video, history: history).capturesScreens)
+    }
+
+    func testAKeptVideoIsNamedAfterItsTitleWithoutReplacingAnother() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("KeptVideos-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let first = MediaImporter.keptVideoURL(title: "Lecture 3: Entropy / part 1", in: folder)
+        XCTAssertEqual(first.lastPathComponent, "Lecture 3- Entropy - part 1.mp4")
+        try Data().write(to: first)
+        XCTAssertEqual(MediaImporter.keptVideoURL(title: "Lecture 3: Entropy / part 1", in: folder).lastPathComponent, "Lecture 3- Entropy - part 1 2.mp4")
+        XCTAssertEqual(MediaImporter.keptVideoURL(title: "   ", in: folder).lastPathComponent, "Video.mp4")
+    }
 }

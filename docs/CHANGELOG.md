@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- Videos imported from YouTube get the pictures of their screens too, as videos from the Mac do since 0.5.1, from the import sheet and from the browser extension. Meeting Pilot downloads the picture next to the sound, at up to 720p, takes the screens and then deletes it.
+- Settings → Import: "Video screens" sets whether a video starts with its screens on (it still can be turned off per video), and "Keep downloaded videos" keeps a video from YouTube, picture and sound together, in Movies › Meeting Pilot, where its note links it. It is off by default: then only the audio and the screens stay.
+
 ## [0.5.1] - 2026-10-22
 
 ### Added

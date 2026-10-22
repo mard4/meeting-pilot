@@ -1,6 +1,6 @@
 # Screens from videos: plan
 
-Status: plan agreed, 2026-10-22 (decisions in §8). Phase 1 built on `feature/video-screens`.
+Status: plan agreed, 2026-10-22 (decisions in §8). Phase 1 released in 0.5.1; phase 2 (YouTube) built on `feature/video-screens-youtube`.
 
 ## 1. What it is for
 
@@ -80,6 +80,9 @@ there is still no ffmpeg:
   on every Mac; VP9 and AV1 WebM are not. 720p reads slides and most code; a one-hour
   tutorial is roughly 150–300 MB.
 - The download shows in the import progress as a second part, after the audio.
+- AVFoundation reads these video-only streams (fragmented MP4) as **twice as long** as they
+  are: the frames sit at the right times, with nothing after the real end. The sound's
+  length is used instead, both to stop taking screens and to cut a kept video.
 - **The video is deleted** once the screens are taken, unless Settings → Import → "Keep
   downloaded videos" is on (off by default). Then AVFoundation puts the video stream and
   the audio together into one playable `.mp4` (`AVMutableComposition`, exported as

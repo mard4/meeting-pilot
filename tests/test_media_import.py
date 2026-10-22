@@ -169,6 +169,21 @@ def test_youtube_video_is_named_after_its_title_and_links_to_its_page(tmp_path: 
     assert "original_path" not in note
 
 
+def test_a_kept_youtube_video_links_both_its_page_and_its_file(tmp_path: Path, monkeypatch) -> None:
+    config = _config(tmp_path, monkeypatch)
+    video = {
+        **LECTURE,
+        "original_name": "Ableton Extensions",
+        "original_path": "/Users/studente/Movies/Meeting Pilot/Ableton Extensions.mp4",
+        "source_url": "https://www.youtube.com/watch?v=LiXtOHsJZ6k",
+    }
+    _run(config, _import_into_inbox(config, video), monkeypatch)
+
+    note = _journal_note(tmp_path)
+    assert 'source_url: "https://www.youtube.com/watch?v=LiXtOHsJZ6k"' in note
+    assert 'original_path: "/Users/studente/Movies/Meeting Pilot/Ableton Extensions.mp4"' in note
+
+
 def test_meeting_recordings_still_come_from_teams(tmp_path: Path, monkeypatch) -> None:
     config = _config(tmp_path, monkeypatch)
     monkeypatch.setattr(

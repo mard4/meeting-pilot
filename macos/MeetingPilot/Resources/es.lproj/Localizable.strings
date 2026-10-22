@@ -949,3 +949,7 @@
 "Una foto di ogni schermata del video accanto a ciò che viene detto, come le slide" = "Una imagen de cada pantalla del vídeo junto a lo que se dijo, como las diapositivas";
 "Installala dal Chrome Web Store, oppure: chrome://extensions › Modalità sviluppatore › Carica estensione non pacchettizzata › questa cartella" = "Añádela desde Chrome Web Store, o: chrome://extensions › Modo de desarrollador › Cargar descomprimida › esta carpeta";
 "Installa l'estensione dal Chrome Web Store" = "Añadir la extensión desde Chrome Web Store";
+"Schermate dei video" = "Pantallas de los vídeos";
+"Una foto di ogni schermata accanto a ciò che viene detto. Si può togliere per ogni video." = "Una imagen de cada pantalla junto a lo que se dijo. Se puede desactivar en cada vídeo.";
+"Tieni i video scaricati" = "Conservar los vídeos descargados";
+"I video da YouTube restano in Filmati › Meeting Pilot e la nota li apre. Spento: restano solo audio e schermate." = "Los vídeos de YouTube se quedan en Películas › Meeting Pilot y la nota los abre. Desactivado: solo quedan el audio y las pantallas.";

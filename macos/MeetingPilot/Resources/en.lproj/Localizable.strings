@@ -949,3 +949,7 @@
 "Una foto di ogni schermata del video accanto a ciò che viene detto, come le slide" = "A picture of each screen in the video next to what was said, like slides";
 "Installala dal Chrome Web Store, oppure: chrome://extensions › Modalità sviluppatore › Carica estensione non pacchettizzata › questa cartella" = "Add it from the Chrome Web Store, or: chrome://extensions › Developer mode › Load unpacked › this folder";
 "Installa l'estensione dal Chrome Web Store" = "Add the extension from the Chrome Web Store";
+"Schermate dei video" = "Video screens";
+"Una foto di ogni schermata accanto a ciò che viene detto. Si può togliere per ogni video." = "A picture of each screen next to what was said. It can be turned off per video.";
+"Tieni i video scaricati" = "Keep downloaded videos";
+"I video da YouTube restano in Filmati › Meeting Pilot e la nota li apre. Spento: restano solo audio e schermate." = "YouTube videos stay in Movies › Meeting Pilot and the note opens them. Off: only the audio and screens stay.";

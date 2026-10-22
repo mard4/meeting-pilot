@@ -287,7 +287,8 @@ def _frontmatter_lines(
     source_url = str(metadata.get("source_url") or "").strip()
     if source_url:
         lines.append(f'source_url: "{_yaml_escape(source_url)}"')
-    elif original_file(artifacts):
+    # A video from a link has a file only when the user keeps downloaded videos.
+    if original_file(artifacts) and original_file(artifacts) != source_url:
         lines.append(f'original_path: "{_yaml_escape(original_file(artifacts))}"')
     if slides:
         lines.append(f'slides: "{_yaml_escape(slides)}"')
