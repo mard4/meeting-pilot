@@ -239,6 +239,21 @@ struct JournalBrowser: View {
             refreshDocuments()
         }
         .onChange(of: reloadToken) { _, _ in refreshDocuments() }
+        .onChange(of: model.diaryPageRequest) { _, _ in
+            // A page published after the list was read is not in it yet.
+            if !showRequestedPage() { refreshDocuments() }
+        }
+    }
+
+    /// The page an icon in Overview asked for, if the list has it.
+    @discardableResult
+    private func showRequestedPage() -> Bool {
+        guard let requested = model.diaryPageRequest?.standardizedFileURL.path,
+              let document = documents.first(where: { $0.url.standardizedFileURL.path == requested })
+        else { return false }
+        model.diaryPageRequest = nil
+        select(document)
+        return true
     }
 
     private func refreshDocuments() {
@@ -257,6 +272,9 @@ struct JournalBrowser: View {
                         self.documentText = ""
                     }
                 }
+                if self.showRequestedPage() { return }
+                // A page that is not in the Diary any more is not kept for later.
+                self.model.diaryPageRequest = nil
                 if self.selectedDocument == nil, let newest = loadedDocuments.first {
                     self.select(newest)
                 }

@@ -307,9 +307,7 @@ private struct MeetingRow: View {
             HStack(spacing: 6) {
                 ForEach(meeting.publicationTargets.prefix(3)) { target in
                     Button {
-                        if let url = target.actionURL {
-                            NSWorkspace.shared.open(url)
-                        }
+                        model.openPublication(target)
                     } label: {
                         BundledAssetIcon(
                             name: target.service.assetName,

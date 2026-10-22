@@ -169,7 +169,10 @@ enum MeetingPublicationService: String {
 
 struct MeetingPublicationTarget: Identifiable {
     let service: MeetingPublicationService
+    /// The page: a Notion link, or the Markdown file of a Diary or Obsidian note.
     let actionURL: URL?
+    /// The Apple Notes note, which has no URL of its own.
+    var noteID: String? = nil
 
     var id: String {
         "\(service.rawValue)::\(actionURL?.absoluteString ?? "none")"

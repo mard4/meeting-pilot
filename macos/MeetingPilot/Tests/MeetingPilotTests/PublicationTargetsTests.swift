@@ -21,3 +21,23 @@ final class PublicationTargetsTests: XCTestCase {
         XCTAssertEqual(parsePublicationTargets(["PUBLISH_TARGETS": "", "PUBLISH_TARGETS_EXPLICIT": "true"]), [])
     }
 }
+
+final class PublicationLinksTests: XCTestCase {
+    func testObsidianOpensANoteByItsPathEvenWithSpacesAndAccents() {
+        let note = URL(fileURLWithPath: "/Users/demo/Vault/Meeting Pilot/2026-10-09 - Perché è così.md")
+        let url = AppModel.obsidianURL(for: note)
+        XCTAssertEqual(url?.scheme, "obsidian")
+        XCTAssertEqual(url?.host, "open")
+        let path = URLComponents(url: url!, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "path" }?.value
+        XCTAssertEqual(path, note.path)
+    }
+
+    func testAppleNotesTargetKeepsTheNoteFromItsReceipt() {
+        let targets = meetingPublicationTargets(
+            notionReceipt: [:], journalReceipt: [:], obsidianReceipt: [:],
+            appleNotesReceipt: ["note_id": "x-coredata://ABC/ICNote/p42\n"], configuredTargets: []
+        )
+        XCTAssertEqual(targets.first?.service, .appleNotes)
+        XCTAssertEqual(targets.first?.noteID, "x-coredata://ABC/ICNote/p42")
+    }
+}
