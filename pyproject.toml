@@ -1,6 +1,6 @@
 [project]
 name = "meeting-pilot"
-version = "0.4.0"
+version = "0.5.1"
 description = "Automatic Teams meeting post-processing with on-device transcription, summaries, and publishing."
 readme = "README.md"
 license = {text = "MIT"}
@@ -35,3 +35,5 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Lets test modules import shared helpers from each other (from tests.x import ...).
+pythonpath = ["."]

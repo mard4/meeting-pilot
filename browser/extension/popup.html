@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 15V4"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/><path d="M4 14v4.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.3 2.7 2.7L16.2 9.4"/></symbol>
+    <symbol id="i-again" viewBox="0 0 24 24"><path d="M20 11.5A8 8 0 1 0 17.7 17"/><path d="M20 5v6.5h-6.5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5 21.5 20h-19z"/><path d="M12 10v4.5"/><path d="M12 17.3v.2"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.7 3.8 5.7 3.8 9s-1.2 6.3-3.8 9c-2.6-2.7-3.8-5.7-3.8-9S9.4 5.7 12 3z"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9.5 6 6 6-6 6"/></symbol>
+    <symbol id="i-tick" viewBox="0 0 24 24"><path d="m6.5 12.5 3.6 3.6L17.5 8.7"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/><path d="M12 8.2V12l2.6 1.6"/></symbol>
+    <symbol id="i-bang" viewBox="0 0 24 24"><path d="M12 6.5v7"/><path d="M12 17.3v.2"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="m10 9.2 5 2.8-5 2.8z"/></symbol>
+  </svg>
+
+  <header>
+    <img class="logo" src="icons/icon-48.png" width="34" height="34" alt="">
+    <div>
+      <div class="name" data-i18n="extensionName"></div>
+      <div id="connection" class="connection"><span class="dot"></span><span id="connection-text"></span></div>
+    </div>
+  </header>
+
+  <main>
+    <figure id="video" class="video" hidden>
+      <img id="thumb" alt="">
+      <figcaption id="video-title"></figcaption>
+    </figure>
+
+    <div id="not-video" class="empty" hidden>
+      <svg><use href="#i-play"/></svg>
+      <p data-i18n="notAVideo"></p>
+    </div>
+
+    <button id="send" class="send" hidden>
+      <svg><use href="#i-send"/></svg>
+      <span data-i18n="sendToApp"></span>
+    </button>
+
+    <ol id="pipeline" class="pipeline" hidden aria-live="polite">
+      <li data-step="download"><span class="ring"><svg><use href="#i-tick"/></svg></span><span data-i18n="stepDownload"></span></li>
+      <li data-step="transcribe"><span class="ring"><svg><use href="#i-tick"/></svg></span><span data-i18n="stepTranscribe"></span></li>
+      <li data-step="summarize"><span class="ring"><svg><use href="#i-tick"/></svg></span><span data-i18n="stepSummarize"></span></li>
+      <li data-step="publish"><span class="ring"><svg><use href="#i-tick"/></svg></span><span data-i18n="stepPublish"></span></li>
+    </ol>
+    <button id="again-pipeline" class="ghost center" data-i18n="importAgain" hidden></button>
+
+    <div id="result" class="result" hidden aria-live="polite">
+      <svg id="result-icon"><use href="#i-check"/></svg>
+      <div class="result-text">
+        <strong id="result-word"></strong>
+        <span id="result-detail"></span>
+      </div>
+    </div>
+
+    <div id="setup" class="setup" hidden>
+      <ol class="path">
+        <li><svg><use href="#i-gear"/></svg><span data-i18n="setupSettings"></span></li>
+        <li><svg><use href="#i-globe"/></svg><span data-i18n="setupBrowser"></span></li>
+        <li><svg><use href="#i-check"/></svg><span data-i18n="setupButton"></span></li>
+      </ol>
+      <button id="fallback" class="ghost" data-i18n="openInApp" hidden></button>
+    </div>
+  </main>
+
+  <script src="common.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

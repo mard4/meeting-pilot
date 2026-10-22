@@ -223,7 +223,10 @@ final class AppModel: ObservableObject {
         self.watcher = WatcherController(cli: cli)
         self.recording = RecordingController(cli: cli)
         self.notion = NotionConnection(envURL: envURL)
-        self.importer = MediaImporter(historyURL: configRoot.appendingPathComponent("imported-media.json"))
+        self.importer = MediaImporter(
+            historyURL: configRoot.appendingPathComponent("imported-media.json"),
+            toolsFolder: configRoot.appendingPathComponent("Tools", isDirectory: true)
+        )
         let glossaryURL = configRoot.appendingPathComponent("business-glossary.txt")
         self.businessGlossary = (try? String(contentsOf: glossaryURL, encoding: .utf8)) ?? ""
         self.runningAppPath = Bundle.main.bundleURL.path
@@ -1570,6 +1573,69 @@ final class AppModel: ObservableObject {
         openDiaryWindow?()
     }
 
+    /// A Diary page the Diary window should show once it has read its pages.
+    @Published var diaryPageRequest: URL?
+
+    /// Opens a published meeting where it was published. Diary and Obsidian notes are
+    /// Markdown files, which macOS would open in whatever app owns `.md` (often Xcode or
+    /// a text editor), so each gets its own app instead.
+    func openPublication(_ target: MeetingPublicationTarget) {
+        guard let url = target.actionURL else { return }
+        switch target.service {
+        case .journal:
+            guard FileManager.default.fileExists(atPath: url.path) else {
+                statusMessage = localized("La pagina del Diario non c'è più") + ": " + url.lastPathComponent
+                showDiaryWindow()
+                return
+            }
+            diaryPageRequest = url
+            showDiaryWindow()
+        case .obsidian:
+            guard FileManager.default.fileExists(atPath: url.path) else {
+                statusMessage = localized("La nota di Obsidian non c'è più") + ": " + url.lastPathComponent
+                return
+            }
+            if let obsidian = Self.obsidianURL(for: url),
+               NSWorkspace.shared.urlForApplication(toOpen: obsidian) != nil {
+                NSWorkspace.shared.open(obsidian)
+            } else {
+                NSWorkspace.shared.open(url)
+            }
+        case .appleNotes:
+            if let noteID = target.noteID, Self.showAppleNote(noteID) { return }
+            NSWorkspace.shared.open(url)
+        case .notion:
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    /// `obsidian://open?path=` opens a note by its absolute path, in whichever vault holds it.
+    static func obsidianURL(for note: URL) -> URL? {
+        var components = URLComponents()
+        components.scheme = "obsidian"
+        components.host = "open"
+        components.queryItems = [URLQueryItem(name: "path", value: note.path)]
+        return components.url
+    }
+
+    /// Shows the note the pipeline created; false when Notes no longer has it.
+    private static func showAppleNote(_ noteID: String) -> Bool {
+        let escaped = noteID.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+        let source = """
+        tell application "Notes"
+            show note id "\(escaped)"
+            activate
+        end tell
+        """
+        var error: NSDictionary?
+        NSAppleScript(source: source)?.executeAndReturnError(&error)
+        if let error {
+            AppLog.append("Apertura nota di Apple Notes non riuscita: \(error)")
+            return false
+        }
+        return true
+    }
+
     func togglePublicationTarget(_ target: String) {
         var updated = publicationTargets
         if updated.contains(target) {
@@ -1640,6 +1706,64 @@ final class AppModel: ObservableObject {
         panel.prompt = localized("Scegli")
         panel.message = localized("Scegli le slide mostrate durante la registrazione o i tuoi appunti (PDF, PowerPoint, Word, testo).")
         return panel.runModal() == .OK ? panel.url : nil
+    }
+
+    /// The import sheet with nothing in it yet, for pasting a video link.
+    func requestLinkImport(_ link: String? = nil) {
+        if importRequest == nil {
+            importRequest = MediaImportRequest(urls: [], focusLink: true, link: link)
+        } else {
+            importRequest?.focusLink = true
+            importRequest?.link = link
+        }
+    }
+
+    /// `meetingpilot://import?url=…`, from the browser extension. With the token its native
+    /// host read from `browser-host-token` the video is imported straight away; without
+    /// it (a link on any web page) it only fills the import sheet, which asks first.
+    /// Returns false for a link that is not an import.
+    func handleImportURL(_ url: URL) -> Bool {
+        switch BrowserExtensionSetup.importAction(for: url, token: BrowserExtensionSetup.token(configRoot: configRoot)) {
+        case .notAnImport:
+            return false
+        case .importNow(let id, let url):
+            importLinkDirectly((id, url))
+        case .askFirst(let link):
+            requestLinkImport(link)
+            openMainWindow?()
+        }
+        return true
+    }
+
+    /// Opened by AppDelegate, for links that need the import sheet.
+    var openMainWindow: (() -> Void)?
+
+    /// What the import sheet does for a pasted link, with the default note type and template.
+    func importLinkDirectly(_ link: (id: String, url: URL)) {
+        let inbox = expandPath(recorderFolder.isEmpty ? defaultRecorderFolder(for: recorderMode) : recorderFolder)
+        let importer = importer
+        Task {
+            do {
+                let video = try await importer.webVideos.info(for: link)
+                await MainActor.run {
+                    Self.notify(title: localized("Importazione da YouTube"), body: video.title)
+                    importer.start([MediaImportInspector.draft(for: video, history: importer.history)], options: MediaImportOptions(), inbox: inbox)
+                }
+            } catch {
+                AppLog.append("Importazione dal browser non riuscita (\(link.url.absoluteString)): \(error.localizedDescription)")
+                await MainActor.run {
+                    self.statusMessage = error.localizedDescription
+                    Self.notify(title: localized("Importazione da YouTube non riuscita"), body: error.localizedDescription)
+                }
+            }
+        }
+    }
+
+    private static func notify(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }
 
     /// Adds to a sheet that is already open instead of replacing its files.

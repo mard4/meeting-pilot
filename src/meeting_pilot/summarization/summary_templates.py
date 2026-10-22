@@ -196,6 +196,6 @@ def summary_guidance(config: object, artifacts: object) -> str:
             "it in its slide field, or null when no slide does. When a task or reference comes from a "
             "slide, add its number as (slide N). Summarize what was said: use slide text that was not "
             "discussed only to complete a point that was.\n"
-            f"Slides:\n{slide_outline(slides, compact=compact)}"
+            f"Slides:\n{slide_outline(slides, compact=compact, spread=bool(getattr(artifacts, 'slide_screens', None)))}"
         )
     return "\n\n".join(parts)

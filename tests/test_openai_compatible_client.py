@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import io
 import json
 import tempfile
+import urllib.error
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -10,7 +12,7 @@ from unittest.mock import MagicMock, patch
 import certifi
 
 from meeting_pilot.artifacts import MeetingArtifacts
-from meeting_pilot.summarization.omlx_client import summarize_with_openai_compatible
+from meeting_pilot.summarization.omlx_client import post_chat_request, summarize_with_openai_compatible
 from meeting_pilot.tag_catalog import add_catalog_value
 
 
@@ -146,3 +148,30 @@ class OllamaRuntimeTests(unittest.TestCase):
 
         self.assertGreaterEqual(body["options"]["num_ctx"] * 3, len("parola " * 20_000))
         self.assertLessEqual(body["options"]["num_ctx"], 65536)
+
+
+class ChatRequestErrorTests(unittest.TestCase):
+    @staticmethod
+    def _http_error(message: str) -> urllib.error.HTTPError:
+        body = io.BytesIO(json.dumps({"error": {"message": message}}).encode())
+        return urllib.error.HTTPError("https://api.example.test/v1/chat/completions", 400, "Bad Request", {}, body)
+
+    def test_resends_without_temperature_when_the_model_rejects_it(self) -> None:
+        response = MagicMock()
+        response.read.return_value = b'{"choices": []}'
+        response.__enter__.return_value = response
+        rejection = self._http_error("Unsupported value: 'temperature' does not support 0.2 with this model.")
+        with patch("urllib.request.urlopen", side_effect=[rejection, response]) as urlopen:
+            post_chat_request("https://api.example.test/v1/chat/completions", {"model": "m", "temperature": 0.2}, {}, 30)
+
+        bodies = [json.loads(call.args[0].data.decode()) for call in urlopen.call_args_list]
+        self.assertEqual(bodies, [{"model": "m", "temperature": 0.2}, {"model": "m"}])
+
+    def test_keeps_the_provider_reason_in_the_error(self) -> None:
+        rejection = self._http_error("This model's maximum context length is 128000 tokens.")
+        with patch("urllib.request.urlopen", side_effect=rejection):
+            with self.assertRaises(RuntimeError) as raised:
+                post_chat_request("https://api.example.test/v1/chat/completions", {"model": "m"}, {}, 30)
+
+        self.assertIn("maximum context length", str(raised.exception))
+        self.assertIsInstance(raised.exception.__cause__, urllib.error.HTTPError)

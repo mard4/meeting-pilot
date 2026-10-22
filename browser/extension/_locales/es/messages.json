@@ -1,0 +1,74 @@
+{
+  "extensionName": {
+    "message": "Meeting Pilot"
+  },
+  "extensionDescription": {
+    "message": "Envía el vídeo que estás viendo a Meeting Pilot en tu Mac, que lo transcribe y lo resume."
+  },
+  "sendToApp": {
+    "message": "Enviar a Meeting Pilot"
+  },
+  "sendLinkToApp": {
+    "message": "Enviar enlace a Meeting Pilot"
+  },
+  "queued": {
+    "message": "Enviado"
+  },
+  "alreadyImportedShort": {
+    "message": "Ya importado"
+  },
+  "importAgain": {
+    "message": "Otra vez"
+  },
+  "notAVideo": {
+    "message": "Abre un vídeo de YouTube"
+  },
+  "notSent": {
+    "message": "No enviado"
+  },
+  "statusReady": {
+    "message": "Conectado a tu Mac"
+  },
+  "statusMissing": {
+    "message": "Configurar en tu Mac"
+  },
+  "setupSettings": {
+    "message": "Ajustes"
+  },
+  "setupBrowser": {
+    "message": "Navegador"
+  },
+  "setupButton": {
+    "message": "Configurar"
+  },
+  "openInApp": {
+    "message": "Abrir en Meeting Pilot"
+  },
+  "error_host_missing": {
+    "message": "Configura la app en tu Mac"
+  },
+  "error_not_a_video": {
+    "message": "No es un vídeo de YouTube"
+  },
+  "error_not_configured": {
+    "message": "Configura la app en tu Mac"
+  },
+  "error_app_unavailable": {
+    "message": "Meeting Pilot no responde"
+  },
+  "error_unknown": {
+    "message": "Vuelve a intentarlo en un momento"
+  },
+  "stepDownload": {
+    "message": "Audio"
+  },
+  "stepTranscribe": {
+    "message": "Transcribe"
+  },
+  "stepSummarize": {
+    "message": "Resumen"
+  },
+  "stepPublish": {
+    "message": "Publica"
+  }
+}

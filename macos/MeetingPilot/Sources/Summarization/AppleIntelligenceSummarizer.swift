@@ -48,6 +48,13 @@ enum AppleIntelligenceSummarizerError: LocalizedError {
                 : detail
         }
     }
+
+    /// An answer that ran out of room: past the context, or cut at `maximumResponseTokens`
+    /// so its JSON could not be decoded. A smaller request can still succeed.
+    static func isOverflow(_ error: Error) -> Bool {
+        let name = Mirror(reflecting: error).children.first?.label ?? String(describing: error)
+        return ["exceededContextWindowSize", "contextSizeExceeded", "decodingFailure"].contains(name)
+    }
 }
 
 /// The on-device model reads its instructions, the prompt, the output schema and its
@@ -55,9 +62,15 @@ enum AppleIntelligenceSummarizerError: LocalizedError {
 /// high, so the helper builds with any macOS 26 SDK: `tokenCount(for:)` needs 26.4.
 enum ContextBudget {
     static let tokens = 4_096
-    /// Room kept for the model's answer.
+    /// Room kept for the model's answer. The schemas cap their lists so an answer fits;
+    /// one that still overruns it is stopped there and the request is retried smaller.
     static let extractAnswerTokens = 900
     static let finalAnswerTokens = 1_300
+
+    @available(macOS 26.0, *)
+    static func options(answerTokens: Int) -> GenerationOptions {
+        GenerationOptions(maximumResponseTokens: answerTokens)
+    }
 
     /// About three characters per token, or one for each Chinese, Japanese or Korean character.
     static func estimate(_ text: String) -> Int {
@@ -240,18 +253,45 @@ struct AppleIntelligenceSummarizer {
         let plan = try SummaryPlan(input, transcript: transcript)
         var partialNotes: [String] = []
         for (index, chunk) in plan.chunks.enumerated() {
+            partialNotes += try await extract(chunk, index: index, plan: plan, model: model)
+        }
+        // A final answer that runs out of room gets more of it: the extracts are condensed
+        // to half their room, then to a quarter.
+        var budget = plan.extractsBudget
+        while true {
+            let condensed = try await condense(partialNotes, toTokens: budget, schema: plan.chunkSchema, model: model, lecture: plan.lecture)
+            do {
+                let response = try await LanguageModelSession(model: model, instructions: plan.finalInstructions).respond(
+                    to: plan.finalPrompt("[" + condensed.joined(separator: ",") + "]"),
+                    schema: plan.finalSchema,
+                    options: ContextBudget.options(answerTokens: ContextBudget.finalAnswerTokens + plan.extractsBudget - budget)
+                )
+                return response.content.jsonString
+            } catch where AppleIntelligenceSummarizerError.isOverflow(error) && budget > plan.extractsBudget / 4 {
+                partialNotes = condensed
+                budget /= 2
+            }
+        }
+    }
+
+    /// Notes for one transcript part. A part whose notes overrun the answer's room is
+    /// split in two, down to parts of about 1,000 characters.
+    @available(macOS 26.0, *)
+    static func extract(_ chunk: String, index: Int, plan: SummaryPlan, model: SystemLanguageModel) async throws -> [String] {
+        do {
             let response = try await LanguageModelSession(model: model, instructions: plan.extractInstructions).respond(
                 to: plan.extractPrompt(chunk, index: index),
-                schema: plan.chunkSchema
+                schema: plan.chunkSchema,
+                options: ContextBudget.options(answerTokens: ContextBudget.extractAnswerTokens)
             )
-            partialNotes.append(response.content.jsonString)
+            return [response.content.jsonString]
+        } catch where AppleIntelligenceSummarizerError.isOverflow(error) && chunk.count > 2_000 {
+            var notes: [String] = []
+            for half in splitText(chunk, maximumCharacters: chunk.count / 2 + 1) {
+                notes += try await extract(half, index: index, plan: plan, model: model)
+            }
+            return notes
         }
-        let condensed = try await condense(partialNotes, toTokens: plan.extractsBudget, schema: plan.chunkSchema, model: model, lecture: plan.lecture)
-        let response = try await LanguageModelSession(model: model, instructions: plan.finalInstructions).respond(
-            to: plan.finalPrompt("[" + condensed.joined(separator: ",") + "]"),
-            schema: plan.finalSchema
-        )
-        return response.content.jsonString
     }
 
     /// Every request the summary makes, sized to the model's context.
@@ -370,13 +410,23 @@ struct AppleIntelligenceSummarizer {
             let groups = mergeGroups(notes, toTokens: groupBudget)
             // An estimated token is about three characters, and a word about six.
             let words = max(60, tokens / groups.count / 2)
+            // A group whose merge overruns the answer's room is merged in two halves.
+            func merge(_ group: [String]) async throws -> [String] {
+                do {
+                    let response = try await LanguageModelSession(model: model, instructions: instructions(words: words)).respond(
+                        to: "[" + group.joined(separator: ",") + "]",
+                        schema: schema,
+                        options: ContextBudget.options(answerTokens: ContextBudget.extractAnswerTokens)
+                    )
+                    return [response.content.jsonString]
+                } catch where AppleIntelligenceSummarizerError.isOverflow(error) && group.count > 1 {
+                    let middle = group.count / 2
+                    return try await merge(Array(group[..<middle])) + merge(Array(group[middle...]))
+                }
+            }
             var merged: [String] = []
             for group in groups {
-                let response = try await LanguageModelSession(model: model, instructions: instructions(words: words)).respond(
-                    to: "[" + group.joined(separator: ",") + "]",
-                    schema: schema
-                )
-                merged.append(response.content.jsonString)
+                merged += try await merge(group)
             }
             notes = merged
         }
@@ -400,20 +450,25 @@ struct AppleIntelligenceSummarizer {
         return groups
     }
 
+    /// Lists are capped so an answer fits the room kept for it.
+    @available(macOS 26.0, *)
+    static func strings(_ string: DynamicGenerationSchema, _ limit: Int) -> DynamicGenerationSchema {
+        DynamicGenerationSchema(arrayOf: string, maximumElements: limit)
+    }
+
     @available(macOS 26.0, *)
     static func makeChunkSchema() throws -> GenerationSchema {
         let string = DynamicGenerationSchema(type: String.self)
-        let strings = DynamicGenerationSchema(arrayOf: string)
         let root = DynamicGenerationSchema(
             name: "ChunkNotes",
             description: "Faithful concise notes extracted from one or more transcript parts",
             properties: [
                 .init(name: "summary", description: "Concise factual summary", schema: string),
-                .init(name: "topics", schema: strings),
-                .init(name: "decisions", schema: strings),
-                .init(name: "action_items", schema: strings),
-                .init(name: "open_questions", schema: strings),
-                .init(name: "risks", schema: strings),
+                .init(name: "topics", schema: strings(string, 6)),
+                .init(name: "decisions", schema: strings(string, 6)),
+                .init(name: "action_items", schema: strings(string, 8)),
+                .init(name: "open_questions", schema: strings(string, 5)),
+                .init(name: "risks", schema: strings(string, 5)),
             ]
         )
         return try GenerationSchema(root: root, dependencies: [])
@@ -422,7 +477,6 @@ struct AppleIntelligenceSummarizer {
     @available(macOS 26.0, *)
     static func makeMeetingSchema() throws -> GenerationSchema {
         let string = DynamicGenerationSchema(type: String.self)
-        let strings = DynamicGenerationSchema(arrayOf: string)
         let decision = DynamicGenerationSchema(
             name: "MeetingDecision",
             properties: [
@@ -439,8 +493,8 @@ struct AppleIntelligenceSummarizer {
                 .init(name: "status", description: "Always the exact string open", schema: string),
             ]
         )
-        let decisions = DynamicGenerationSchema(arrayOf: .init(referenceTo: "MeetingDecision"))
-        let actions = DynamicGenerationSchema(arrayOf: .init(referenceTo: "MeetingActionItem"))
+        let decisions = DynamicGenerationSchema(arrayOf: .init(referenceTo: "MeetingDecision"), maximumElements: 10)
+        let actions = DynamicGenerationSchema(arrayOf: .init(referenceTo: "MeetingActionItem"), maximumElements: 12)
         let root = DynamicGenerationSchema(
             name: "StructuredMeetingNotes",
             properties: [
@@ -448,13 +502,13 @@ struct AppleIntelligenceSummarizer {
                 .init(name: "tag", description: "Concise reusable meeting label without #", schema: string, isOptional: true),
                 .init(name: "theme", description: "Concise meeting theme of 2-5 words", schema: string, isOptional: true),
                 .init(name: "date", description: "ISO date/time", schema: string, isOptional: true),
-                .init(name: "participants", schema: strings),
+                .init(name: "participants", schema: strings(string, 15)),
                 .init(name: "summary", schema: string),
-                .init(name: "topics", schema: strings),
+                .init(name: "topics", schema: strings(string, 8)),
                 .init(name: "decisions", schema: decisions),
                 .init(name: "action_items", schema: actions),
-                .init(name: "open_questions", schema: strings),
-                .init(name: "risks", schema: strings),
+                .init(name: "open_questions", schema: strings(string, 6)),
+                .init(name: "risks", schema: strings(string, 6)),
             ]
         )
         return try GenerationSchema(root: root, dependencies: [decision, action])
@@ -463,17 +517,16 @@ struct AppleIntelligenceSummarizer {
     @available(macOS 26.0, *)
     static func makeLectureChunkSchema() throws -> GenerationSchema {
         let string = DynamicGenerationSchema(type: String.self)
-        let strings = DynamicGenerationSchema(arrayOf: string)
         let root = DynamicGenerationSchema(
             name: "ChunkStudyNotes",
             description: "Faithful concise study notes extracted from one or more lecture transcript parts",
             properties: [
                 .init(name: "summary", description: "Concise factual summary", schema: string),
-                .init(name: "topics", schema: strings),
-                .init(name: "key_concepts", description: "Term followed by its explanation", schema: strings),
-                .init(name: "assignments", description: "Announced homework, readings and deadlines", schema: strings),
-                .init(name: "exam_hints", schema: strings),
-                .init(name: "references", schema: strings),
+                .init(name: "topics", schema: strings(string, 6)),
+                .init(name: "key_concepts", description: "Term followed by its explanation", schema: strings(string, 8)),
+                .init(name: "assignments", description: "Announced homework, readings and deadlines", schema: strings(string, 5)),
+                .init(name: "exam_hints", schema: strings(string, 5)),
+                .init(name: "references", schema: strings(string, 5)),
             ]
         )
         return try GenerationSchema(root: root, dependencies: [])
@@ -485,7 +538,6 @@ struct AppleIntelligenceSummarizer {
     @available(macOS 26.0, *)
     static func makeLectureSchema() throws -> GenerationSchema {
         let string = DynamicGenerationSchema(type: String.self)
-        let strings = DynamicGenerationSchema(arrayOf: string)
         let concept = DynamicGenerationSchema(
             name: "KeyConcept",
             properties: [
@@ -500,8 +552,8 @@ struct AppleIntelligenceSummarizer {
                 .init(name: "due_date", schema: string, isOptional: true),
             ]
         )
-        let concepts = DynamicGenerationSchema(arrayOf: .init(referenceTo: "KeyConcept"))
-        let assignments = DynamicGenerationSchema(arrayOf: .init(referenceTo: "Assignment"))
+        let concepts = DynamicGenerationSchema(arrayOf: .init(referenceTo: "KeyConcept"), maximumElements: 10)
+        let assignments = DynamicGenerationSchema(arrayOf: .init(referenceTo: "Assignment"), maximumElements: 6)
         let root = DynamicGenerationSchema(
             name: "StructuredStudyNotes",
             properties: [
@@ -509,14 +561,14 @@ struct AppleIntelligenceSummarizer {
                 .init(name: "tag", description: "The course, without #", schema: string, isOptional: true),
                 .init(name: "theme", description: "The lecture's main topic, 2-5 words", schema: string, isOptional: true),
                 .init(name: "date", description: "ISO date/time", schema: string, isOptional: true),
-                .init(name: "participants", schema: strings),
+                .init(name: "participants", schema: strings(string, 10)),
                 .init(name: "summary", schema: string),
-                .init(name: "topics", schema: strings),
+                .init(name: "topics", schema: strings(string, 8)),
                 .init(name: "key_concepts", schema: concepts),
                 .init(name: "assignments", schema: assignments),
-                .init(name: "exam_hints", schema: strings),
-                .init(name: "review_questions", schema: strings),
-                .init(name: "references", schema: strings),
+                .init(name: "exam_hints", schema: strings(string, 6)),
+                .init(name: "review_questions", schema: strings(string, 6)),
+                .init(name: "references", schema: strings(string, 8)),
             ]
         )
         return try GenerationSchema(root: root, dependencies: [concept, assignment])

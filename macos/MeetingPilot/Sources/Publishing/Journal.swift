@@ -239,6 +239,21 @@ struct JournalBrowser: View {
             refreshDocuments()
         }
         .onChange(of: reloadToken) { _, _ in refreshDocuments() }
+        .onChange(of: model.diaryPageRequest) { _, _ in
+            // A page published after the list was read is not in it yet.
+            if !showRequestedPage() { refreshDocuments() }
+        }
+    }
+
+    /// The page an icon in Overview asked for, if the list has it.
+    @discardableResult
+    private func showRequestedPage() -> Bool {
+        guard let requested = model.diaryPageRequest?.standardizedFileURL.path,
+              let document = documents.first(where: { $0.url.standardizedFileURL.path == requested })
+        else { return false }
+        model.diaryPageRequest = nil
+        select(document)
+        return true
     }
 
     private func refreshDocuments() {
@@ -257,6 +272,9 @@ struct JournalBrowser: View {
                         self.documentText = ""
                     }
                 }
+                if self.showRequestedPage() { return }
+                // A page that is not in the Diary any more is not kept for later.
+                self.model.diaryPageRequest = nil
                 if self.selectedDocument == nil, let newest = loadedDocuments.first {
                     self.select(newest)
                 }
@@ -692,9 +710,13 @@ struct MarkdownReader: View {
                     index += 1
                 }
                 if header.kind == "slide", let page = slideNumber(header.title) {
-                    // Obsidian copies of the page link each part to its slide: `[[slides.pdf#page=3|…]]`.
+                    // Obsidian copies of the page head each part with its slide's picture and a
+                    // link to it: `![[Slides/…/slide-3.jpg|480]]`, `[[slides.pdf#page=3|…]]`.
                     let turns = content
-                        .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("[[") }
+                        .filter { line in
+                            let trimmed = line.trimmingCharacters(in: .whitespaces)
+                            return !trimmed.hasPrefix("[[") && !trimmed.hasPrefix("![[")
+                        }
                         .map { $0.replacingOccurrences(of: "**", with: "") }
                     let title = header.title.components(separatedBy: " · ").dropFirst().joined(separator: " · ")
                     elements.append(.slideTranscript(

@@ -137,6 +137,30 @@ fi
 mkdir -p "$RESOURCES/LlamaCpp/bin"
 cp "$LLAMA_SERVER_BIN" "$RESOURCES/LlamaCpp/bin/llama-server"
 
+# PowerPoint slides become `slides.pdf`, which the Diary, Obsidian and Notion show: office2pdf
+# from a pinned commit, one binary that links only system libraries, never opens the network
+# and starts no other process. Its fonts are embedded, so decks render the same on every Mac.
+OFFICE2PDF_REF="${OFFICE2PDF_REF:-7893fe96341a11504abba6428cf2614b3821c733}"  # office2pdf 0.9.1
+OFFICE2PDF_SOURCE="${OFFICE2PDF_SOURCE:-$HOME/Library/Application Support/Meeting Pilot/Office2PdfRuntime/source}"
+OFFICE2PDF_RUST_TARGET="$([[ "$TARGET_ARCH" == "arm64" ]] && echo aarch64-apple-darwin || echo "$TARGET_ARCH-apple-darwin")"
+OFFICE2PDF_BIN="$OFFICE2PDF_SOURCE/target/$OFFICE2PDF_RUST_TARGET/release/office2pdf"
+if [[ ! -d "$OFFICE2PDF_SOURCE/.git" ]]; then
+  git clone --quiet --filter=blob:none https://github.com/developer0hye/office2pdf "$OFFICE2PDF_SOURCE"
+fi
+if [[ "$(git -C "$OFFICE2PDF_SOURCE" rev-parse HEAD)" != "$OFFICE2PDF_REF"* || ! -x "$OFFICE2PDF_BIN" ]]; then
+  if ! command -v cargo >/dev/null; then
+    echo "cargo non trovato: serve per compilare office2pdf (brew install rust)." >&2
+    exit 1
+  fi
+  git -C "$OFFICE2PDF_SOURCE" fetch --quiet origin "$OFFICE2PDF_REF"
+  git -C "$OFFICE2PDF_SOURCE" checkout --quiet "$OFFICE2PDF_REF"
+  MACOSX_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET" cargo build --quiet --release --locked \
+    --manifest-path "$OFFICE2PDF_SOURCE/Cargo.toml" -p office2pdf-cli --target "$OFFICE2PDF_RUST_TARGET"
+fi
+mkdir -p "$RESOURCES/Office2Pdf/bin"
+cp "$OFFICE2PDF_BIN" "$RESOURCES/Office2Pdf/bin/office2pdf"
+strip "$RESOURCES/Office2Pdf/bin/office2pdf"
+
 UV_BIN="${MEETING_PILOT_UV_BIN:-$(command -v uv || true)}"
 if [[ -z "$UV_BIN" || ! -x "$UV_BIN" ]]; then
   echo "uv non trovato. Installalo sul Mac di build o imposta MEETING_PILOT_UV_BIN." >&2
@@ -189,6 +213,19 @@ xcrun swiftc \
   "$APP_SRC/Scripts/teams_window_id.swift" \
   -o "$MACOS/TeamsWindowID"
 
+# The browser extension's native messaging host, and the extension itself, which Settings →
+# Browser copies to Application Support for loading unpacked.
+xcrun swiftc \
+  -target "$SWIFT_TARGET" \
+  -O \
+  -parse-as-library \
+  -framework Foundation \
+  "$APP_SRC/Scripts/browser_host.swift" \
+  "$APP_SRC/Sources/Import/WebVideoLink.swift" \
+  -o "$MACOS/MeetingPilotBrowserHost"
+rm -rf "$RESOURCES/BrowserExtension"
+cp -R "$ROOT_DIR/browser/extension" "$RESOURCES/BrowserExtension"
+
 # A fresh clone has no build environment yet: bootstrap it with uv (required above).
 PYTHON_BIN="$ROOT_DIR/.venv311/bin/python"
 if [[ ! -x "$PYTHON_BIN" ]]; then
@@ -230,6 +267,8 @@ for required in \
   "$MACOS/AppleIntelligenceSummarizer" \
   "$MACOS/TeamsOCR" \
   "$MACOS/TeamsWindowID" \
+  "$MACOS/MeetingPilotBrowserHost" \
+  "$RESOURCES/BrowserExtension/manifest.json" \
   "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI"; do
   if [[ ! -f "$required" ]]; then
     echo "Build incompleta: manca $required" >&2
@@ -237,7 +276,7 @@ for required in \
   fi
 done
 
-chmod +x "$MACOS/MeetingPilot" "$MACOS/AppleTranscriber" "$MACOS/AppleIntelligenceSummarizer" "$MACOS/TeamsOCR" "$MACOS/TeamsWindowID" "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI" "$RESOURCES/FluidAudio/bin/fluidaudiocli" "$RESOURCES/LlamaCpp/bin/llama-server"
+chmod +x "$MACOS/MeetingPilot" "$MACOS/AppleTranscriber" "$MACOS/AppleIntelligenceSummarizer" "$MACOS/TeamsOCR" "$MACOS/TeamsWindowID" "$MACOS/MeetingPilotBrowserHost" "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI" "$RESOURCES/FluidAudio/bin/fluidaudiocli" "$RESOURCES/LlamaCpp/bin/llama-server" "$RESOURCES/Office2Pdf/bin/office2pdf"
 
 if [[ "$CODESIGN_IDENTITY" != "Developer ID Application:"* ]]; then
   # Ad hoc ("-") or a self-signed certificate. Everything but the PyInstaller CLI gets the
@@ -253,10 +292,12 @@ if [[ "$CODESIGN_IDENTITY" != "Developer ID Application:"* ]]; then
   local_sign --deep "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI"
   hardened_sign "$MACOS/TeamsOCR"
   hardened_sign "$MACOS/TeamsWindowID"
+  hardened_sign "$MACOS/MeetingPilotBrowserHost"
   hardened_sign "$MACOS/AppleTranscriber"
   hardened_sign "$MACOS/AppleIntelligenceSummarizer"
   hardened_sign "$RESOURCES/FluidAudio/bin/fluidaudiocli"
   hardened_sign "$RESOURCES/LlamaCpp/bin/llama-server"
+  hardened_sign "$RESOURCES/Office2Pdf/bin/office2pdf"
   # Signing the bundle last seals the helpers without re-signing them (no --deep), so
   # they keep their own flags; the entitlements are what the hardened runtime requires
   # for the microphone and Apple Events.
@@ -284,10 +325,12 @@ else
   developer_sign --entitlements "$CLI_ENTITLEMENTS" "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI"
   developer_sign "$MACOS/TeamsOCR"
   developer_sign "$MACOS/TeamsWindowID"
+  developer_sign "$MACOS/MeetingPilotBrowserHost"
   developer_sign "$MACOS/AppleTranscriber"
   developer_sign "$MACOS/AppleIntelligenceSummarizer"
   developer_sign "$RESOURCES/FluidAudio/bin/fluidaudiocli"
   developer_sign "$RESOURCES/LlamaCpp/bin/llama-server"
+  developer_sign "$RESOURCES/Office2Pdf/bin/office2pdf"
   # Signing the bundle last seals the helpers without re-signing them (no --deep),
   # so the CLI keeps its own entitlements.
   developer_sign --entitlements "$APP_ENTITLEMENTS" "$APP_DIR"

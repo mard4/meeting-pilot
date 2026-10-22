@@ -1,0 +1,12 @@
+# Read by gitleaks on its own (see .github/workflows/secret-scan.yml): the default rules,
+# with one known false positive left out.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "The browser extension's public key. It fixes the extension's ID so the app's native messaging host can allow it, and is public by design; the private key was never kept."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^browser/extension/manifest\.json$''']
+regexTarget = "line"
+regexes = ['''^\s*"key": "[A-Za-z0-9+/=]+",?\s*$''']

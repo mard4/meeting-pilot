@@ -222,11 +222,25 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 20) {
                 MPPageHeader(title: "Panoramica", eyebrow: dateEyebrow) {
                     HStack(spacing: 8) {
-                        Button { model.chooseFilesToImport() } label: {
+                        Menu {
+                            Button {
+                                model.chooseFilesToImport()
+                            } label: {
+                                Label(localized("File dal Mac…"), systemImage: "folder")
+                            }
+                            Button {
+                                model.requestLinkImport()
+                            } label: {
+                                Label(localized("Link di YouTube…"), systemImage: "link")
+                            }
+                        } label: {
                             Label(localized("Importa"), systemImage: "square.and.arrow.down")
                         }
+                        .menuStyle(.button)
+                        .menuIndicator(.hidden)
                         .buttonStyle(MPSecondaryButtonStyle())
-                        .help("Importa registrazioni, video di lezioni o podcast (⌘I)")
+                        .fixedSize()
+                        .help("Importa registrazioni, video di lezioni, podcast o un link di YouTube (⌘I)")
                         RecordingControls()
                     }
                 }

@@ -4,6 +4,28 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.1] - 2026-10-22
+
+### Added
+- Import a YouTube video by pasting its link: the Import button now offers "Files from this Mac…" and "YouTube Link…" (also ⇧⌘I), and the import sheet has a field for the link, filled in when one is already copied. The video's title and length are shown before importing, and its audio is downloaded and transcribed like any imported recording, with slides if you add them. The download uses yt-dlp: the copy installed with Homebrew if there is one, otherwise Meeting Pilot downloads it once (about 37 MB) and keeps it up to date. The note shows YouTube as its source with a link to the video. Live streams can be imported once they have ended.
+- Claude and other AI apps can read your meetings and lectures through MCP: summaries, decisions, action items, study notes, slides and transcripts, searched by what was said, by date or by project, plus the open actions across meetings. They can only read, never change anything. Connect Claude Desktop with one click in Settings → Claude and other AI apps, or copy the command for Claude Code or the configuration for Cursor, VS Code, LM Studio and other MCP apps.
+- A browser extension for Chrome, Edge, Brave and Arc sends the YouTube video you're watching to Meeting Pilot with one click, from its toolbar button or the right-click menu, and Meeting Pilot imports it right away. It says when a video was already imported, with the option to import it again. It isn't in the Chrome Web Store yet: set it up in Settings → Browser extension, then load the folder Meeting Pilot opens with "Load unpacked" in `chrome://extensions`. Each release also has it as a zip.
+
+- A video imported from the Mac (a tutorial, a screen recording, a recorded lecture) gets a picture of each screen it shows, next to what was said while it was on screen, the way slides are shown: in the Diary, Obsidian and Notion, and in the summary. Meeting Pilot looks for the moments the screen changes and stays still, keeps the complete picture (code fully typed, every bullet shown), and leaves out the speaker on camera, so a video of someone talking gets none. It's on for every video and can be turned off per video in the import sheet; adding slides turns it off. Videos from YouTube get screens in a later version.
+
+### Fixed
+- The Diary, Obsidian and Apple Notes icons next to a meeting in Overview open its note again: the Diary window shows that meeting's page, Obsidian opens the note, and Apple Notes shows it. They used to open the Markdown file in whatever app macOS uses for it (often Xcode or a text editor), or just Notes; only Notion worked.
+
+## [0.5.0] - 2026-10-19
+
+### Added
+- PowerPoint slides (`.pptx`) are shown as pictures, like a PDF: Meeting Pilot turns the deck into a PDF on the Mac, when importing a recording or adding slides later, with a converter built into the app (no Office, Keynote or LibreOffice needed, nothing sent online). The Diary shows the slides next to the transcript, and Obsidian and Notion get them too. If a deck cannot be converted, its text is still used as before. LibreOffice Impress decks (`.odp`) are still read as text only.
+- Obsidian and Notion show each slide next to what was said while it was on screen, as the Diary does. In Obsidian each part of the transcript by slide opens with the slide's picture and a link to its page in the PDF; in Notion each slide's toggle holds the picture and the transcript side by side. Meetings already published get the pictures when slides are added again.
+
+### Fixed
+- Apple Intelligence summaries of long meetings (about an hour or more) no longer stop with "Exceeded model context window size": the answer is kept within the model's limits, and a part that is still too long is summarized again in smaller pieces.
+- Cloud summaries no longer fail with "Bad Request" on models that refuse a custom temperature, such as recent GPT-5 models: the request is sent again without it. Errors from the provider now include the reason it gave.
+
 ## [0.4.0] - 2026-10-19
 
 ### Added

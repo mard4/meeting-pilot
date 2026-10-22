@@ -13,6 +13,11 @@ struct MediaImportSheet: View {
     @State private var loading = 0
     @State private var options = MediaImportOptions()
     @State private var dropTargeted = false
+    @State private var link = ""
+    @State private var linkProblem: String?
+    /// What is happening to the links being read, shown while `loading` counts them.
+    @State private var linkStatus: String?
+    @FocusState private var linkFocused: Bool
 
     /// `drafts` lets the debug snapshots show the sheet without reading real files.
     init(drafts: [MediaImportDraft] = []) {
@@ -36,7 +41,7 @@ struct MediaImportSheet: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(localized("Importa registrazioni"))
                         .font(.mpDisplay(18))
-                    Text(localized("Lezioni, podcast o registrazioni fatte altrove diventano note come le tue riunioni."))
+                    Text(localized("Lezioni, podcast, video di YouTube o registrazioni fatte altrove diventano note come le tue riunioni."))
                         .font(MPFont.callout())
                         .foregroundStyle(MeetingPilotDesign.textDimColor)
                         .fixedSize(horizontal: false, vertical: true)
@@ -47,6 +52,7 @@ struct MediaImportSheet: View {
                 VStack(spacing: 10) {
                     ForEach($drafts) { $draft in
                         MediaImportRow(draft: $draft, chooseSlides: model.chooseSlidesPDF) {
+                            requested.removeAll { $0 == draft.sourceURL }
                             drafts.removeAll { $0.id == draft.id }
                         }
                     }
@@ -64,7 +70,7 @@ struct MediaImportSheet: View {
                     if loading > 0 {
                         HStack(spacing: 10) {
                             ProgressView().controlSize(.small)
-                            Text(localized("Lettura dei file…"))
+                            Text(linkStatus ?? localized("Lettura dei file…"))
                                 .font(MPFont.callout())
                                 .foregroundStyle(MeetingPilotDesign.textDimColor)
                             Spacer()
@@ -72,7 +78,7 @@ struct MediaImportSheet: View {
                         .padding(12)
                     }
                     if drafts.isEmpty && loading == 0 {
-                        Text(localized("Trascina qui i file o scegline altri."))
+                        Text(localized("Trascina qui i file, scegline altri o incolla un link di YouTube."))
                             .font(MPFont.callout())
                             .foregroundStyle(MeetingPilotDesign.textFaintColor)
                             .frame(maxWidth: .infinity, minHeight: 80)
@@ -85,6 +91,8 @@ struct MediaImportSheet: View {
                     .strokeBorder(MeetingPilotDesign.accent, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
                     .opacity(dropTargeted ? 1 : 0)
             )
+
+            linkField
 
             HStack(spacing: 10) {
                 Button {
@@ -154,11 +162,92 @@ struct MediaImportSheet: View {
         .background(MeetingPilotBackdrop())
         .foregroundStyle(MeetingPilotDesign.textColor)
         .tint(MeetingPilotDesign.accent)
-        .onAppear { load(model.importRequest?.urls ?? []) }
+        .onAppear {
+            load(model.importRequest?.urls ?? [])
+            if model.importRequest?.focusLink == true { focusLinkField() }
+        }
         .onChange(of: model.importRequest?.urls ?? []) { _, urls in load(urls) }
+        .onChange(of: model.importRequest?.focusLink ?? false) { _, focus in
+            if focus { focusLinkField() }
+        }
+        .onChange(of: model.importRequest?.link) { _, link in
+            if link != nil { focusLinkField() }
+        }
         .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in
             loadDroppedFiles(providers) { model.requestImport($0) }
             return true
+        }
+    }
+
+    private var linkField: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: "link")
+                    .foregroundStyle(MeetingPilotDesign.textDimColor)
+                TextField(localized("Incolla un link di YouTube"), text: $link)
+                    .textFieldStyle(DarkTextFieldStyle())
+                    .focused($linkFocused)
+                    .onSubmit(addLink)
+                    .onChange(of: link) { _, _ in linkProblem = nil }
+                Button(localized("Aggiungi")) {
+                    addLink()
+                }
+                .buttonStyle(MPSecondaryButtonStyle(compact: true))
+                .disabled(link.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            if let linkProblem {
+                Label(linkProblem, systemImage: "exclamationmark.triangle")
+                    .font(MPFont.caption())
+                    .foregroundStyle(MeetingPilotDesign.warning)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    /// A YouTube link already copied is put in the field, ready to add.
+    private func focusLinkField() {
+        if let requested = model.importRequest?.link, !requested.isEmpty {
+            link = requested
+            model.importRequest?.link = nil
+        }
+        if link.isEmpty, let copied = NSPasteboard.general.string(forType: .string), WebVideoLink.youtube(copied) != nil {
+            link = copied.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        DispatchQueue.main.async { linkFocused = true }
+    }
+
+    /// Reads the video's title and length; yt-dlp is downloaded first on a Mac without it.
+    private func addLink() {
+        guard let parsed = WebVideoLink.youtube(link) else {
+            linkProblem = localized("Non è un link a un video di YouTube.")
+            return
+        }
+        guard !requested.contains(parsed.url) else {
+            link = ""
+            return
+        }
+        link = ""
+        linkProblem = nil
+        requested.append(parsed.url)
+        loading += 1
+        let downloader = model.importer.webVideos
+        let history = model.importer.history
+        linkStatus = downloader.toolInstalled
+            ? localized("Lettura del video…")
+            : localized("Download di yt-dlp, serve una volta sola…")
+        Task {
+            do {
+                let video = try await downloader.info(for: parsed)
+                drafts.append(MediaImportInspector.draft(for: video, history: history))
+                sortDrafts()
+            } catch {
+                requested.removeAll { $0 == parsed.url }
+                AppLog.append("Lettura del link non riuscita (\(parsed.url.absoluteString)): \(error.localizedDescription)")
+                linkProblem = error.localizedDescription
+            }
+            loading -= 1
+            if loading == 0 { linkStatus = nil }
+            attachPendingSlides()
         }
     }
 
@@ -212,11 +301,16 @@ struct MediaImportSheet: View {
             Task {
                 let draft = await MediaImportInspector.draft(for: url, history: history)
                 drafts.append(draft)
-                drafts.sort { (requested.firstIndex(of: $0.sourceURL) ?? 0) < (requested.firstIndex(of: $1.sourceURL) ?? 0) }
+                sortDrafts()
                 loading -= 1
                 attachPendingSlides()
             }
         }
+    }
+
+    /// In the order the files were chosen and the links pasted.
+    private func sortDrafts() {
+        drafts.sort { (requested.firstIndex(of: $0.sourceURL) ?? 0) < (requested.firstIndex(of: $1.sourceURL) ?? 0) }
     }
 
     private func attachPendingSlides() {
@@ -239,7 +333,7 @@ private struct MediaImportRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: draft.isVideo ? "film" : "waveform")
+            Image(systemName: draft.webVideo != nil ? "play.rectangle" : draft.isVideo ? "film" : "waveform")
                 .font(MPFont.body(.medium))
                 .foregroundStyle(draft.canImport ? MeetingPilotDesign.accent : MeetingPilotDesign.warning)
                 .frame(width: 32, height: 32)
@@ -327,6 +421,18 @@ private extension MediaImportRow {
                 .buttonStyle(.plain)
                 .foregroundStyle(MeetingPilotDesign.accent)
                 .help(localized("Le slide vengono affiancate alla trascrizione e guidano la sintesi"))
+                if draft.canCaptureScreens {
+                    Button {
+                        draft.wantsScreens.toggle()
+                    } label: {
+                        Label(localized("Schermate del video"), systemImage: draft.wantsScreens ? "checkmark.rectangle.stack.fill" : "rectangle.stack")
+                            .font(MPFont.caption(.medium))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(draft.wantsScreens ? MeetingPilotDesign.accent : MeetingPilotDesign.textFaintColor)
+                    .padding(.leading, 8)
+                    .help(localized("Una foto di ogni schermata del video accanto a ciò che viene detto, come le slide"))
+                }
             }
             Spacer(minLength: 0)
         }
