@@ -1,0 +1,70 @@
+{
+  "extensionName": {
+    "message": "Meeting Pilot"
+  },
+  "extensionDescription": {
+    "message": "Stuur de video die je bekijkt naar Meeting Pilot op je Mac, dat hem transcribeert en samenvat."
+  },
+  "sendToApp": {
+    "message": "Naar Meeting Pilot sturen"
+  },
+  "sendLinkToApp": {
+    "message": "Link naar Meeting Pilot sturen"
+  },
+  "queued": {
+    "message": "Verstuurd"
+  },
+  "alreadyImportedShort": {
+    "message": "Al geïmporteerd"
+  },
+  "importedOn": {
+    "message": "op $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1"
+      }
+    }
+  },
+  "importAgain": {
+    "message": "Opnieuw"
+  },
+  "notAVideo": {
+    "message": "Open een YouTube-video"
+  },
+  "notSent": {
+    "message": "Niet verstuurd"
+  },
+  "statusReady": {
+    "message": "Verbonden met je Mac"
+  },
+  "statusMissing": {
+    "message": "Instellen op je Mac"
+  },
+  "setupSettings": {
+    "message": "Instellingen"
+  },
+  "setupBrowser": {
+    "message": "Browser"
+  },
+  "setupButton": {
+    "message": "Instellen"
+  },
+  "openInApp": {
+    "message": "Openen in Meeting Pilot"
+  },
+  "error_host_missing": {
+    "message": "Stel de app in op je Mac"
+  },
+  "error_not_a_video": {
+    "message": "Geen YouTube-video"
+  },
+  "error_not_configured": {
+    "message": "Stel de app in op je Mac"
+  },
+  "error_app_unavailable": {
+    "message": "Meeting Pilot reageert niet"
+  },
+  "error_unknown": {
+    "message": "Probeer het zo opnieuw"
+  }
+}

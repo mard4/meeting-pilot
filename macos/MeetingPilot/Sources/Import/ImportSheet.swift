@@ -170,6 +170,9 @@ struct MediaImportSheet: View {
         .onChange(of: model.importRequest?.focusLink ?? false) { _, focus in
             if focus { focusLinkField() }
         }
+        .onChange(of: model.importRequest?.link) { _, link in
+            if link != nil { focusLinkField() }
+        }
         .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in
             loadDroppedFiles(providers) { model.requestImport($0) }
             return true
@@ -203,6 +206,10 @@ struct MediaImportSheet: View {
 
     /// A YouTube link already copied is put in the field, ready to add.
     private func focusLinkField() {
+        if let requested = model.importRequest?.link, !requested.isEmpty {
+            link = requested
+            model.importRequest?.link = nil
+        }
         if link.isEmpty, let copied = NSPasteboard.general.string(forType: .string), WebVideoLink.youtube(copied) != nil {
             link = copied.trimmingCharacters(in: .whitespacesAndNewlines)
         }

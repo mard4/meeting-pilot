@@ -155,6 +155,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         model.refresh()
         model.startAutoRefresh()
         model.openDiaryWindow = { [weak self] in self?.showDiaryWindow() }
+        model.openMainWindow = { [weak self] in self?.showMainWindow() }
+        BrowserExtensionSetup.refreshIfConfigured(configRoot: model.configRoot, projectRoot: model.projectRoot)
 #if DEBUG
         // Marketing recording of the chat: no detection, watcher or permission prompts.
         let demoChat = ProcessInfo.processInfo.environment["MEETING_PILOT_DEMO_CHAT"].map { !$0.isEmpty } ?? false
@@ -227,7 +229,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
-        urls.forEach { model.notion.handleOAuthCallback($0) }
+        // A browser import runs in the background; the Notion callback brings the window up.
+        let others = urls.filter { !model.handleImportURL($0) }
+        guard !others.isEmpty else { return }
+        others.forEach { model.notion.handleOAuthCallback($0) }
         DispatchQueue.main.async { [weak self] in
             self?.showMainWindow()
         }

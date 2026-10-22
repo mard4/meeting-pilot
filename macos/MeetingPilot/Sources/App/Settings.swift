@@ -278,6 +278,10 @@ struct SettingsOverviewView: View {
                 MCPClientRows()
             }
 
+            SettingsGroup(title: "Estensione del browser") {
+                BrowserExtensionRow()
+            }
+
             SettingsGroup(title: "Aggiornamenti") {
                 UpdateRow()
                 SettingsDivider()

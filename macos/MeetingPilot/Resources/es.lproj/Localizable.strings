@@ -934,3 +934,15 @@
 "Configurazione di Claude Desktop non riuscita" = "No se pudo configurar Claude Desktop";
 "La pagina del Diario non c'è più" = "La página del Diario ya no está";
 "La nota di Obsidian non c'è più" = "La nota de Obsidian ya no está";
+"Estensione del browser" = "Extensión del navegador";
+"Browser" = "Navegador";
+"Configura" = "Configurar";
+"Mostra cartella" = "Mostrar carpeta";
+"Browser scollegati da Meeting Pilot" = "Navegadores desconectados de Meeting Pilot";
+"Nessun browser Chromium trovato: installane uno e riprova." = "No se encontró ningún navegador Chromium: instala uno y vuelve a intentarlo.";
+"Browser configurati" = "Navegadores configurados";
+"Configurazione dei browser non riuscita" = "No se pudieron configurar los navegadores";
+"Importazione da YouTube" = "Importando de YouTube";
+"Importazione da YouTube non riuscita" = "No se pudo importar de YouTube";
+"chrome://extensions › Modalità sviluppatore › Carica estensione non pacchettizzata › questa cartella" = "chrome://extensions › Modo de desarrollador › Cargar descomprimida › esta carpeta";
+"I video di YouTube da Chrome, Edge, Brave o Arc, con un clic." = "Vídeos de YouTube desde Chrome, Edge, Brave o Arc, con un clic.";

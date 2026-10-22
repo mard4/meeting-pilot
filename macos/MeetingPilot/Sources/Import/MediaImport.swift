@@ -39,6 +39,8 @@ struct MediaImportRequest: Identifiable, Equatable {
     var urls: [URL]
     /// Opened to paste a video link: the link field gets the focus.
     var focusLink = false
+    /// A link to put in that field, from a `meetingpilot://import` link the app cannot trust.
+    var link: String?
 }
 
 /// Chosen once in the sheet for every file imported together.
