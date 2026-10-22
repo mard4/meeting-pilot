@@ -919,3 +919,16 @@
 "Link di YouTube…" = "YouTube-link…";
 "Importa link di YouTube…" = "YouTube-link importeren…";
 "Importa registrazioni, video di lezioni, podcast o un link di YouTube (⌘I)" = "Importeer opnames, collegevideo's, podcasts of een YouTube-link (⌘I)";
+"Claude e altre app AI" = "Claude en andere AI-apps";
+"Collegato: riavvia Claude se è aperto, poi chiedigli delle tue riunioni." = "Verbonden: herstart Claude als het open is en vraag het dan naar je vergaderingen.";
+"Claude legge riunioni, lezioni, azioni e trascrizioni da questo Mac. Non può modificarle." = "Claude leest vergaderingen, colleges, acties en transcripties van deze Mac. Wijzigen kan het ze niet.";
+"Scollega" = "Loskoppelen";
+"Copia" = "Kopieer";
+"Copiato" = "Gekopieerd";
+"Copia il comando e incollalo nel Terminale." = "Kopieer de opdracht en plak die in Terminal.";
+"Altre app MCP" = "Andere MCP-apps";
+"Per Cursor, VS Code, LM Studio e le altre app che usano MCP: incolla la configurazione nelle loro impostazioni." = "Voor Cursor, VS Code, LM Studio en andere apps met MCP: plak de configuratie in hun instellingen.";
+"Il file di configurazione di Claude non è JSON valido: correggilo o usa Copia per le altre app." = "Het configuratiebestand van Claude is geen geldige JSON: herstel het of gebruik Kopieer voor andere apps.";
+"Meeting Pilot collegato a Claude Desktop" = "Meeting Pilot verbonden met Claude Desktop";
+"Meeting Pilot scollegato da Claude Desktop" = "Meeting Pilot losgekoppeld van Claude Desktop";
+"Configurazione di Claude Desktop non riuscita" = "Claude Desktop instellen mislukt";
