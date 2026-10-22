@@ -21,6 +21,8 @@ struct MediaImportDraft: Identifiable, Equatable {
     var slidesURL: URL?
     /// Set for a pasted link: `sourceURL` is then the video's page, downloaded on import.
     var webVideo: WebVideo?
+    /// A picture of each screen the video shows, placed like slides (see `VideoScreens`).
+    var wantsScreens = true
 
     var fileName: String { webVideo?.title ?? sourceURL.lastPathComponent }
 
@@ -31,6 +33,12 @@ struct MediaImportDraft: Identifiable, Equatable {
     var fingerprint: String? { webVideo?.fingerprint ?? MediaImportHistory.fingerprint(of: sourceURL) }
 
     var canImport: Bool { problem == nil }
+
+    /// Slides from the author beat pictures of them; a video from a link has only its
+    /// audio downloaded for now.
+    var canCaptureScreens: Bool { isVideo && webVideo == nil && slidesURL == nil }
+
+    var capturesScreens: Bool { canCaptureScreens && wantsScreens }
 }
 
 /// Opened by "Importa", a dropped file, or the menu bar; the sheet reads the files and links.
@@ -290,6 +298,10 @@ final class MediaImporter: ObservableObject {
         } else if copyAsIs {
             // A clone on APFS: instant, and no extra space until one of them changes.
             try fileManager.copyItem(at: draft.sourceURL, to: stagedAudio)
+        } else if draft.capturesScreens {
+            // The soundtrack is most of the time; the screens take the rest of the bar.
+            try await Self.exportAudio(from: draft.sourceURL, to: stagedAudio) { await progress($0 * 0.6) }
+            await captureScreens(of: draft, for: stagedAudio) { await progress(0.6 + $0 * 0.4) }
         } else {
             try await Self.exportAudio(from: draft.sourceURL, to: stagedAudio, progress: progress)
         }
@@ -300,6 +312,18 @@ final class MediaImporter: ObservableObject {
         try fileManager.moveItem(at: stagedAudio, to: finalAudio)
         if let fingerprint = draft.fingerprint {
             history.record(fingerprint)
+        }
+    }
+
+    /// A video whose screens cannot be read still imports, without them.
+    private func captureScreens(of draft: MediaImportDraft, for stagedAudio: URL, progress: @escaping (Double) async -> Void) async {
+        let folder = MeetingSidecar.slidesDirectory(for: stagedAudio)
+        do {
+            let count = try await VideoScreens.capture(from: draft.sourceURL, into: folder, progress: progress)
+            AppLog.append("Schermate del video \(draft.fileName): \(count)")
+        } catch {
+            try? FileManager.default.removeItem(at: folder)
+            AppLog.append("Schermate del video non riuscite (\(draft.fileName)): \(error.localizedDescription)")
         }
     }
 

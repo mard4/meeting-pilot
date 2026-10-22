@@ -27,6 +27,8 @@ class MeetingArtifacts:
     # by the slide shown meanwhile (slides.alignment.SlideSection); empty without slides.
     slides: list[Any] = field(default_factory=list)
     slide_sections: list[Any] = field(default_factory=list)
+    # When the slides are screens of an imported video: when each was visible (slides.deck.Screen).
+    slide_screens: list[Any] = field(default_factory=list)
 
 
 def collect_artifacts(session_dir: Path, audio_file: Path) -> MeetingArtifacts:

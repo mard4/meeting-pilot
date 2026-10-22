@@ -421,6 +421,18 @@ private extension MediaImportRow {
                 .buttonStyle(.plain)
                 .foregroundStyle(MeetingPilotDesign.accent)
                 .help(localized("Le slide vengono affiancate alla trascrizione e guidano la sintesi"))
+                if draft.canCaptureScreens {
+                    Button {
+                        draft.wantsScreens.toggle()
+                    } label: {
+                        Label(localized("Schermate del video"), systemImage: draft.wantsScreens ? "checkmark.rectangle.stack.fill" : "rectangle.stack")
+                            .font(MPFont.caption(.medium))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(draft.wantsScreens ? MeetingPilotDesign.accent : MeetingPilotDesign.textFaintColor)
+                    .padding(.leading, 8)
+                    .help(localized("Una foto di ogni schermata del video accanto a ciò che viene detto, come le slide"))
+                }
             }
             Spacer(minLength: 0)
         }

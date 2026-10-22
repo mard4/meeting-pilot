@@ -946,3 +946,5 @@
 "Importazione da YouTube non riuscita" = "Couldn't import from YouTube";
 "chrome://extensions › Modalità sviluppatore › Carica estensione non pacchettizzata › questa cartella" = "chrome://extensions › Developer mode › Load unpacked › this folder";
 "I video di YouTube da Chrome, Edge, Brave o Arc, con un clic." = "YouTube videos from Chrome, Edge, Brave or Arc, in one click.";
+"Schermate del video" = "Video screens";
+"Una foto di ogni schermata del video accanto a ciò che viene detto, come le slide" = "A picture of each screen in the video next to what was said, like slides";

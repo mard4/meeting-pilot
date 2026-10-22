@@ -19,7 +19,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .deck import Slide
+from bisect import bisect_right
+
+from .deck import Screen, Slide
 
 ALIGNMENT_NAME = "slide_alignment.json"
 # Words of transcript on each side of a sentence scored with it: enough to recognize a
@@ -102,6 +104,64 @@ def align_transcript(
             sections.append(SlideSection(page=slide.page, title=slide.title, start=unit.start))
         sections[-1].units.append(unit)
     return sections
+
+
+def align_by_time(slides: list[Slide], units: list[TranscriptUnit], screens: list[Screen]) -> list[SlideSection]:
+    """The screens of a video, in order, each with what was said while it was visible.
+    Their times are known, so nothing is guessed from words; a screen nobody spoke over
+    keeps its section, with its picture and no lines."""
+    pages = {slide.page for slide in slides}
+    # A screen's first line of text is often a menu or a tab, so it is named by its moment.
+    sections = [
+        SlideSection(page=screen.page, title=video_time(screen.start), start=screen.start)
+        for screen in screens
+        if screen.page in pages
+    ]
+    if not sections:
+        return []
+    starts = [section.start or 0.0 for section in sections]
+    when = 0.0
+    for unit in units:
+        if unit.start is not None:
+            when = unit.start
+        sections[max(bisect_right(starts, when) - 1, 0)].units.append(unit)
+    return sections
+
+
+def video_time(seconds: float) -> str:
+    """1:05 or 1:02:05."""
+    total = int(seconds)
+    hours, rest = divmod(total, 3600)
+    minutes, secs = divmod(rest, 60)
+    return f"{hours}:{minutes:02d}:{secs:02d}" if hours else f"{minutes}:{secs:02d}"
+
+
+def retime_units(units: list[TranscriptUnit], word_starts: list[float]) -> None:
+    """Each unit's start from the word timings, by its place in the transcript. Segments are
+    too coarse for screens: with one speaker Apple's transcriber returns a single segment
+    for minutes of speech. The transcript and the timed words are the same speech, so a
+    unit a third of the way through the words starts where the third word-third does."""
+    total = sum(unit.words for unit in units)
+    if not word_starts or not total:
+        return
+    offset = 0
+    for unit in units:
+        unit.start = word_starts[min(offset * len(word_starts) // total, len(word_starts) - 1)]
+        offset += unit.words
+
+
+def word_starts(session_dir: Path) -> list[float]:
+    """When each word was said, from the transcriber's word timings in the session."""
+    for path in (session_dir / "apple_transcriber" / "mixed.words.json", session_dir / "fluidaudio_asr.json"):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        starts = [_number(word.get("startTime")) for word in payload.get("wordTimings") or [] if isinstance(word, dict)]
+        starts = [start for start in starts if start is not None]
+        if starts:
+            return starts
+    return []
 
 
 def transcript_units(transcript: str, segments: list[dict[str, Any]] | None = None) -> list[TranscriptUnit]:

@@ -104,6 +104,10 @@ enum DebugSnapshots {
                 slidesURL: URL(fileURLWithPath: "/Users/demo/Lezioni/Analisi 2 - Lezione 7 slide.pdf")
             ),
             MediaImportDraft(
+                sourceURL: URL(fileURLWithPath: "/Users/demo/Tutorial/Ableton Extensions - Getting started.mov"),
+                recordedAt: lecture, isVideo: true, durationSeconds: 1_901
+            ),
+            MediaImportDraft(
                 sourceURL: URL(fileURLWithPath: "/Users/demo/Podcast/Episodio 42 - Product discovery.mp3"),
                 title: "Product discovery con Teresa", recordedAt: lecture.addingTimeInterval(-86_400 * 9),
                 durationSeconds: 3_130, previouslyImportedAt: lecture
