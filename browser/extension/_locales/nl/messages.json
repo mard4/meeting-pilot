@@ -17,14 +17,6 @@
   "alreadyImportedShort": {
     "message": "Al geïmporteerd"
   },
-  "importedOn": {
-    "message": "op $WHEN$",
-    "placeholders": {
-      "when": {
-        "content": "$1"
-      }
-    }
-  },
   "importAgain": {
     "message": "Opnieuw"
   },
@@ -66,5 +58,17 @@
   },
   "error_unknown": {
     "message": "Probeer het zo opnieuw"
+  },
+  "stepDownload": {
+    "message": "Download"
+  },
+  "stepTranscribe": {
+    "message": "Transcribeert"
+  },
+  "stepSummarize": {
+    "message": "Samenvatting"
+  },
+  "stepPublish": {
+    "message": "Publiceert"
   }
 }

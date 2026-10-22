@@ -17,14 +17,6 @@
   "alreadyImportedShort": {
     "message": "Déjà importée"
   },
-  "importedOn": {
-    "message": "le $WHEN$",
-    "placeholders": {
-      "when": {
-        "content": "$1"
-      }
-    }
-  },
   "importAgain": {
     "message": "Encore"
   },
@@ -66,5 +58,17 @@
   },
   "error_unknown": {
     "message": "Réessayez dans un instant"
+  },
+  "stepDownload": {
+    "message": "Télécharge"
+  },
+  "stepTranscribe": {
+    "message": "Transcrit"
+  },
+  "stepSummarize": {
+    "message": "Résumé"
+  },
+  "stepPublish": {
+    "message": "Publie"
   }
 }

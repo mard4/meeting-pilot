@@ -77,6 +77,141 @@ func openInApp(_ url: URL) -> Bool {
     return process.terminationStatus == 0
 }
 
+// MARK: - Where an imported video is in the pipeline
+
+/// The pipeline's folders, as `.env` names them (see `config.py`).
+struct PipelineFolders {
+    let inbox: URL
+    let processing: URL
+    let done: URL
+    let failed: URL
+    let diary: URL
+    /// The watcher's record of every inbox file it handled: `{"<key>": {"path", "status"}}`.
+    let processedSources: URL
+
+    init() {
+        var values: [String: String] = [:]
+        let env = (try? String(contentsOf: configDirectory.appendingPathComponent(".env"), encoding: .utf8)) ?? ""
+        for line in env.split(whereSeparator: \.isNewline) {
+            let parts = line.split(separator: "=", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+            guard parts.count == 2, !parts[0].hasPrefix("#") else { continue }
+            values[parts[0]] = parts[1].trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+        }
+        func path(_ key: String, _ fallback: String) -> URL {
+            let value = values[key].flatMap { $0.isEmpty ? nil : $0 } ?? fallback
+            return URL(fileURLWithPath: (value as NSString).expandingTildeInPath, isDirectory: true)
+        }
+        let root = path("MEETINGS_ROOT", "~/TeamsMeetings").path
+        inbox = path("INBOX_AUDIO_DIR", "\(root)/inbox_audio")
+        processing = path("PROCESSING_DIR", "\(root)/processing")
+        done = path("DONE_DIR", "\(root)/done")
+        failed = path("FAILED_DIR", "\(root)/failed")
+        diary = path("JOURNAL_ROOT", configDirectory.appendingPathComponent("Diary").path)
+        processedSources = URL(fileURLWithPath: (values["PROCESSED_SOURCES_FILE"].flatMap { $0.isEmpty ? nil : $0 }.map { ($0 as NSString).expandingTildeInPath }) ?? "\(root)/processed_sources.json")
+    }
+}
+
+func children(of folder: URL) -> [URL] {
+    (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
+}
+
+func sourceURL(inJSON file: URL) -> String? {
+    guard let data = try? Data(contentsOf: file),
+          let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    else { return nil }
+    return payload["source_url"] as? String
+}
+
+/// A sidecar folder (`… .meetingpilot`) whose `recording.json` imported this video.
+func sidecarImports(_ url: String, in folder: URL) -> Bool {
+    children(of: folder).contains { item in
+        item.pathExtension == "meetingpilot" && sourceURL(inJSON: item.appendingPathComponent("recording.json")) == url
+    }
+}
+
+/// The audio in the inbox that imported this video. The sidecar outlives its audio there,
+/// and the watcher may keep the audio after handling it.
+func inboxAudio(for url: String, in inbox: URL) -> URL? {
+    let items = children(of: inbox)
+    for sidecar in items where sidecar.pathExtension == "meetingpilot" {
+        guard sourceURL(inJSON: sidecar.appendingPathComponent("recording.json")) == url else { continue }
+        let stem = sidecar.deletingPathExtension().lastPathComponent
+        if let audio = items.first(where: { $0.pathExtension != "meetingpilot" && $0.deletingPathExtension().lastPathComponent == stem }) {
+            return audio
+        }
+    }
+    return nil
+}
+
+/// What the watcher wrote for this inbox file in `processed_sources.json`: "processed",
+/// "failed", or nil when it has not handled it yet.
+func watcherStatus(of audio: URL, in record: URL) -> String? {
+    guard let data = try? Data(contentsOf: record),
+          let entries = try? JSONSerialization.jsonObject(with: data) as? [String: [String: Any]]
+    else { return nil }
+    let path = audio.standardizedFileURL.path
+    return entries.values.first { ($0["path"] as? String).map { URL(fileURLWithPath: $0).standardizedFileURL.path } == path }?["status"] as? String
+}
+
+func session(for url: String, in folder: URL) -> URL? {
+    children(of: folder).first { sourceURL(inJSON: $0.appendingPathComponent("meeting_metadata.json")) == url }
+}
+
+/// The step a session got to: its transcript is a top-level .txt, its summary omlx_summary.json.
+func step(of session: URL) -> String {
+    let files = children(of: session).map(\.lastPathComponent)
+    if files.contains("omlx_summary.json") { return "publish" }
+    if files.contains(where: { $0.hasSuffix(".txt") }) { return "summarize" }
+    return "transcribe"
+}
+
+/// A Diary page whose frontmatter links the video: the session may be gone once published.
+func diaryHasNote(for url: String, in diary: URL) -> Bool {
+    guard let pages = FileManager.default.enumerator(at: diary, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) else { return false }
+    let needle = "source_url: \"\(url)\""
+    for case let page as URL in pages where page.pathExtension == "md" {
+        if let text = try? String(contentsOf: page, encoding: .utf8), text.contains(needle) { return true }
+    }
+    return false
+}
+
+/// `step` is download, transcribe, summarize or publish; `state` is active, queued, failed or done.
+func pipelineStatus(of link: (id: String, url: URL)) -> [String: Any] {
+    let url = link.url.absoluteString
+    let folders = PipelineFolders()
+    let staging = folders.inbox.appendingPathComponent(".importing", isDirectory: true)
+    // From the surest sign to the least: a download or a session at work says what is
+    // happening now, a finished one what happened, the inbox only what is waiting.
+    if children(of: staging).contains(where: { sidecarImports(url, in: $0) }) {
+        return ["step": "download", "state": "active"]
+    }
+    if let session = session(for: url, in: folders.processing) {
+        return ["step": step(of: session), "state": "active"]
+    }
+    if let session = session(for: url, in: folders.failed) {
+        return ["step": step(of: session), "state": "failed"]
+    }
+    if session(for: url, in: folders.done) != nil || diaryHasNote(for: url, in: folders.diary) {
+        return ["step": "publish", "state": "done"]
+    }
+    if let audio = inboxAudio(for: url, in: folders.inbox) {
+        switch watcherStatus(of: audio, in: folders.processedSources) {
+        case "processed":
+            return ["step": "publish", "state": "done"]
+        case "failed":
+            // Its session, which said at which step, may be gone: the first one is the safe guess.
+            return ["step": "transcribe", "state": "failed"]
+        default:
+            return ["step": "transcribe", "state": "queued"]
+        }
+    }
+    // Imported, but no session left and no Diary page: published to Notion or Obsidian only.
+    if importDate(of: "youtube:\(link.id)") != nil {
+        return ["step": "publish", "state": "done"]
+    }
+    return ["state": "none"]
+}
+
 @main
 enum BrowserHost {
     static func main() {
@@ -98,6 +233,13 @@ enum BrowserHost {
             components.queryItems = [URLQueryItem(name: "url", value: link.url.absoluteString), URLQueryItem(name: "token", value: token)]
             guard let url = components.url, openInApp(url) else { fail("app_unavailable") }
             reply(["ok": true, "status": "queued"])
+
+        case "status":
+            guard let link = WebVideoLink.youtube(message["url"] as? String ?? "") else { fail("not_a_video") }
+            var status = pipelineStatus(of: link)
+            status["ok"] = true
+            if let date = importDate(of: "youtube:\(link.id)") { status["imported_at"] = date }
+            reply(status)
 
         default:
             fail("unknown_type")
