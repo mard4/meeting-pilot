@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.1] - 2026-10-22
+
+### Added
+- Import a YouTube video by pasting its link: the Import button now offers "Files from this Mac…" and "YouTube Link…" (also ⇧⌘I), and the import sheet has a field for the link, filled in when one is already copied. The video's title and length are shown before importing, and its audio is downloaded and transcribed like any imported recording, with slides if you add them. The download uses yt-dlp: the copy installed with Homebrew if there is one, otherwise Meeting Pilot downloads it once (about 37 MB) and keeps it up to date. The note shows YouTube as its source with a link to the video. Live streams can be imported once they have ended.
+- Claude and other AI apps can read your meetings and lectures through MCP: summaries, decisions, action items, study notes, slides and transcripts, searched by what was said, by date or by project, plus the open actions across meetings. They can only read, never change anything. Connect Claude Desktop with one click in Settings → Claude and other AI apps, or copy the command for Claude Code or the configuration for Cursor, VS Code, LM Studio and other MCP apps.
+
 ## [0.5.0] - 2026-10-19
 
 ### Added
