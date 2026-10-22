@@ -1573,6 +1573,69 @@ final class AppModel: ObservableObject {
         openDiaryWindow?()
     }
 
+    /// A Diary page the Diary window should show once it has read its pages.
+    @Published var diaryPageRequest: URL?
+
+    /// Opens a published meeting where it was published. Diary and Obsidian notes are
+    /// Markdown files, which macOS would open in whatever app owns `.md` (often Xcode or
+    /// a text editor), so each gets its own app instead.
+    func openPublication(_ target: MeetingPublicationTarget) {
+        guard let url = target.actionURL else { return }
+        switch target.service {
+        case .journal:
+            guard FileManager.default.fileExists(atPath: url.path) else {
+                statusMessage = localized("La pagina del Diario non c'è più") + ": " + url.lastPathComponent
+                showDiaryWindow()
+                return
+            }
+            diaryPageRequest = url
+            showDiaryWindow()
+        case .obsidian:
+            guard FileManager.default.fileExists(atPath: url.path) else {
+                statusMessage = localized("La nota di Obsidian non c'è più") + ": " + url.lastPathComponent
+                return
+            }
+            if let obsidian = Self.obsidianURL(for: url),
+               NSWorkspace.shared.urlForApplication(toOpen: obsidian) != nil {
+                NSWorkspace.shared.open(obsidian)
+            } else {
+                NSWorkspace.shared.open(url)
+            }
+        case .appleNotes:
+            if let noteID = target.noteID, Self.showAppleNote(noteID) { return }
+            NSWorkspace.shared.open(url)
+        case .notion:
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    /// `obsidian://open?path=` opens a note by its absolute path, in whichever vault holds it.
+    static func obsidianURL(for note: URL) -> URL? {
+        var components = URLComponents()
+        components.scheme = "obsidian"
+        components.host = "open"
+        components.queryItems = [URLQueryItem(name: "path", value: note.path)]
+        return components.url
+    }
+
+    /// Shows the note the pipeline created; false when Notes no longer has it.
+    private static func showAppleNote(_ noteID: String) -> Bool {
+        let escaped = noteID.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+        let source = """
+        tell application "Notes"
+            show note id "\(escaped)"
+            activate
+        end tell
+        """
+        var error: NSDictionary?
+        NSAppleScript(source: source)?.executeAndReturnError(&error)
+        if let error {
+            AppLog.append("Apertura nota di Apple Notes non riuscita: \(error)")
+            return false
+        }
+        return true
+    }
+
     func togglePublicationTarget(_ target: String) {
         var updated = publicationTargets
         if updated.contains(target) {

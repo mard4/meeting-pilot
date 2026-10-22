@@ -127,7 +127,8 @@ func meetingPublicationTargets(
         let primary = URL(fileURLWithPath: "/System/Applications/Notes.app")
         let fallback = URL(fileURLWithPath: "/Applications/Notes.app")
         let notesURL = FileManager.default.fileExists(atPath: primary.path) ? primary : fallback
-        targets.append(MeetingPublicationTarget(service: .appleNotes, actionURL: notesURL))
+        let noteID = (appleNotesReceipt["note_id"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        targets.append(MeetingPublicationTarget(service: .appleNotes, actionURL: notesURL, noteID: noteID?.isEmpty == false ? noteID : nil))
     }
 
     let services = Set(targets.map(\.service))
