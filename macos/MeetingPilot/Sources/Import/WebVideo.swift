@@ -131,8 +131,18 @@ final class WebVideoDownloader {
     /// The picture alone, for the screens: YouTube keeps it apart from the sound, and the two
     /// never need joining to read frames. H.264 in MP4 is what AVFoundation decodes on
     /// every Mac (VP9 and AV1 in WebM it does not); 720p reads slides and most code.
+    /// YouTube sometimes refuses the picture-only stream ("HTTP Error 403: Forbidden") while
+    /// it serves the sound, and serves it again with freshly signed links a moment later; a
+    /// second run of yt-dlp asks for those. It writes to its own file: a refused download can
+    /// leave part of the first one, which yt-dlp would try to resume.
     func downloadPicture(_ video: WebVideo, into folder: URL, progress: @escaping (Double) async -> Void) async throws -> URL {
-        try await fetch(video, format: Self.pictureFormat, name: "picture", into: folder, progress: progress)
+        do {
+            return try await fetch(video, format: Self.pictureFormat, name: "picture", into: folder, progress: progress)
+        } catch {
+            AppLog.append("Download del video per le schermate rifiutato (\(video.title)): \(error.localizedDescription). Riprovo.")
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            return try await fetch(video, format: Self.pictureFormat, name: "picture-retry", into: folder, progress: progress)
+        }
     }
 
     static let pictureFormat = "bestvideo[ext=mp4][vcodec^=avc1][height<=720]/bestvideo[ext=mp4][vcodec^=avc1]"
