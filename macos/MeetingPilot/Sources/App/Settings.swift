@@ -274,10 +274,6 @@ struct SettingsOverviewView: View {
                 LaunchAtLoginCard()
             }
 
-            SettingsGroup(title: "Claude e altre app AI") {
-                MCPClientRows()
-            }
-
             SettingsGroup(title: "Estensione del browser") {
                 BrowserExtensionRow()
             }
@@ -286,6 +282,10 @@ struct SettingsOverviewView: View {
                 UpdateRow()
                 SettingsDivider()
                 AutomaticUpdateChecksRow()
+            }
+
+            SettingsGroup(title: "MCP") {
+                MCPClientRows()
             }
 
             SettingsGroup(title: "Community") {

@@ -933,6 +933,12 @@
 "Meeting Pilot collegato a Claude Desktop" = "Meeting Pilot connecté à Claude Desktop";
 "Meeting Pilot scollegato da Claude Desktop" = "Meeting Pilot déconnecté de Claude Desktop";
 "Configurazione di Claude Desktop non riuscita" = "Impossible de configurer Claude Desktop";
+"MCP" = "MCP";
+"Collegato: riavvia Codex se è aperto, poi chiedigli delle tue riunioni." = "Connecté : redémarrez Codex s'il est ouvert, puis interrogez-le sur vos réunions.";
+"Codex legge riunioni, lezioni, azioni e trascrizioni da questo Mac. Non può modificarle." = "Codex lit les réunions, cours, actions et transcriptions de ce Mac. Il ne peut pas les modifier.";
+"Meeting Pilot collegato a Codex" = "Meeting Pilot connecté à Codex";
+"Meeting Pilot scollegato da Codex" = "Meeting Pilot déconnecté de Codex";
+"Configurazione di Codex non riuscita" = "Impossible de configurer Codex";
 "La pagina del Diario non c'è più" = "La page du Journal n'existe plus";
 "La nota di Obsidian non c'è più" = "La note Obsidian n'existe plus";
 "Estensione del browser" = "Extension du navigateur";
