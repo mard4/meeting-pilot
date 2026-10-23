@@ -59,4 +59,49 @@ final class MCPClientSetupTests: XCTestCase {
         XCTAssertTrue(command.hasPrefix("claude mcp add --scope user meeting-pilot --env MEETING_PILOT_ENV_FILE='/Users/demo/Library/Application Support/Meeting Pilot/.env' -- '"))
         XCTAssertTrue(command.hasSuffix("' mcp"))
     }
+
+    func testConnectingCodexKeepsTheRestOfItsConfigAndDisconnectingRemovesOnlyMeetingPilot() throws {
+        let url = folder.appendingPathComponent("config.toml")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let original = """
+        model = "gpt-5"
+
+        [mcp_servers.other]
+        command = "/bin/other"
+
+        [mcp_servers."meeting-pilot"]
+        command = "/old/MeetingPilotCLI"
+
+        [mcp_servers."meeting-pilot".env]
+        OLD = "1"
+
+        [profiles.work]
+        model = "o3"
+        """
+        try original.write(to: url, atomically: true, encoding: .utf8)
+
+        XCTAssertFalse(MCPClientSetup.isConnectedToCodex(cli: cli, config: url))
+        try MCPClientSetup.setCodex(connected: true, cli: cli, config: url)
+        XCTAssertTrue(MCPClientSetup.isConnectedToCodex(cli: cli, config: url))
+        let connected = try String(contentsOf: url, encoding: .utf8)
+        XCTAssertFalse(connected.contains("/old/MeetingPilotCLI"))
+        XCTAssertFalse(connected.contains("OLD"))
+        XCTAssertTrue(connected.contains("[mcp_servers.other]\ncommand = \"/bin/other\""))
+        XCTAssertTrue(connected.contains("[profiles.work]\nmodel = \"o3\""))
+        XCTAssertTrue(connected.contains("env = { MEETING_PILOT_ENV_FILE = \"/Users/demo/Library/Application Support/Meeting Pilot/.env\" }"))
+
+        try MCPClientSetup.setCodex(connected: false, cli: cli, config: url)
+        XCTAssertFalse(MCPClientSetup.isConnectedToCodex(cli: cli, config: url))
+        let disconnected = try String(contentsOf: url, encoding: .utf8)
+        XCTAssertFalse(disconnected.contains("meeting-pilot"))
+        XCTAssertTrue(disconnected.hasPrefix("model = \"gpt-5\"\n\n[mcp_servers.other]"))
+        XCTAssertTrue(disconnected.hasSuffix("[profiles.work]\nmodel = \"o3\"\n"))
+    }
+
+    func testConnectingCodexCreatesItsConfigWhenThereIsNone() throws {
+        let url = folder.appendingPathComponent(".codex/config.toml")
+        try MCPClientSetup.setCodex(connected: true, cli: cli, config: url)
+        XCTAssertTrue(MCPClientSetup.isConnectedToCodex(cli: cli, config: url))
+        XCTAssertTrue(try String(contentsOf: url, encoding: .utf8).hasPrefix("[mcp_servers.meeting-pilot]\n"))
+    }
 }
