@@ -11,6 +11,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Videos imported from YouTube get the pictures of their screens too, as videos from the Mac do since 0.5.1, from the import sheet and from the browser extension. Meeting Pilot downloads the picture next to the sound, at up to 720p, takes the screens and then deletes it.
 - Settings → Import: "Video screens" sets whether a video starts with its screens on (it still can be turned off per video), and "Keep downloaded videos" keeps a video from YouTube, picture and sound together, in Movies › Meeting Pilot, where its note links it. It is off by default: then only the audio and the screens stay.
 
+## [0.5.2] - 2026-10-23
+
+### Fixed
+- If the folder `~/Library/Application Support/Meeting Pilot` is deleted while the app is open, Meeting Pilot creates it again with its settings file, instead of failing to save the configuration every few seconds. Summaries with Apple Intelligence failed meanwhile, because the processing fell back to a local summary server that isn't running; it now restarts with the restored settings, and stops with a clear message if the settings file is missing.
+- ⌘, and Meeting Pilot → Settings open the Settings section of the main window. They used to open an empty window, which macOS could also bring back by itself after a relaunch, so it seemed to appear at random.
+
 ## [0.5.1] - 2026-10-22
 
 ### Added
