@@ -36,6 +36,7 @@ from .pipeline import attach_slides_later, process_audio, retry_from_transcript,
 from .platforms.teams.teams_scraper import capture_teams_runtime_metadata
 from .watcher import _source_key, mark_processed, watch
 from .language import config_language, label, resolve_output_language
+from .log_lines import StampedStream
 
 
 def main() -> None:
@@ -223,6 +224,9 @@ def _main() -> None:
         return
 
     if args.command == "watch":
+        # The app sends both to its log files: each line gets the time it was written.
+        sys.stdout = StampedStream(sys.stdout)
+        sys.stderr = StampedStream(sys.stderr)
         watch(config, lambda audio_file: process_audio(config, audio_file, dry_run=args.dry_run))
         return
 

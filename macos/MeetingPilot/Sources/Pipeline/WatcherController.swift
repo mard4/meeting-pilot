@@ -31,10 +31,12 @@ final class WatcherController: ObservableObject {
     }
 
     /// The watcher reads .env only at startup, so settings changes need a restart to apply.
-    func restartIfRunning(completion: ((Bool) -> Void)? = nil) {
+    /// A restart stops whatever it is doing, a summary included, so each one is logged.
+    func restartIfRunning(reason: String, completion: ((Bool) -> Void)? = nil) {
         queue.async {
             let running = isWatcherProcessRunning()
             if running {
+                AppLog.append("Riavvio elaborazione: \(reason)")
                 stopWatcherProcesses()
                 self.launchProcess()
             }

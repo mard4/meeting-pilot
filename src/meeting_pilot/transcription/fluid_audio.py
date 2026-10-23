@@ -7,6 +7,7 @@ from pathlib import Path
 
 from ..config import Config
 from ..language import config_language, label
+from ..log_lines import stamped
 from ..platforms.teams.speaker_names import name_speakers_from_teams
 
 # The CLI defaults to streaming diarization, built for live audio in 10-second chunks,
@@ -55,7 +56,7 @@ def run_fluid_audio(config: Config, audio_file: Path) -> None:
         )
     except FileNotFoundError as exc:
         log_file.write_text(
-            f"$ {' '.join(command)}\n\nFluidAudio executable not found: {config.fluid_audio_cmd}\n",
+            stamped(f"$ {' '.join(command)}\n\nFluidAudio executable not found: {config.fluid_audio_cmd}\n"),
             encoding="utf-8",
         )
         raise RuntimeError(
@@ -65,7 +66,7 @@ def run_fluid_audio(config: Config, audio_file: Path) -> None:
 
     output = result.stdout or ""
     if result.returncode != 0:
-        log_file.write_text("$ " + " ".join(command) + "\n\n" + output, encoding="utf-8")
+        log_file.write_text(stamped("$ " + " ".join(command) + "\n\n" + output), encoding="utf-8")
         raise RuntimeError(f"FluidAudio failed with exit code {result.returncode}. See {log_file}")
 
     try:
@@ -82,8 +83,10 @@ def run_fluid_audio(config: Config, audio_file: Path) -> None:
 
     diarization_output = diarization_result.stdout or ""
     log_file.write_text(
-        "$ " + " ".join(command) + "\n\n" + output
-        + "\n\n$ " + " ".join(diarization_command) + "\n\n" + diarization_output,
+        stamped(
+            "$ " + " ".join(command) + "\n\n" + output
+            + "\n\n$ " + " ".join(diarization_command) + "\n\n" + diarization_output
+        ),
         encoding="utf-8",
     )
     if diarization_result.returncode != 0:
@@ -167,7 +170,7 @@ def _run_fluid_audio_on_tracks(config: Config, audio_file: Path) -> bool:
         and run([config.fluid_audio_cmd, "process", str(them_track), "--output", str(diarization_file), *DIARIZATION_OPTIONS])
         and run([config.fluid_audio_cmd, "transcribe", str(me_track), "--output-json", str(me_asr_file)])
     )
-    (session / "fluidaudio_command.log").write_text("\n\n".join(log), encoding="utf-8")
+    (session / "fluidaudio_command.log").write_text(stamped("\n\n".join(log)), encoding="utf-8")
     if not succeeded:
         print("Separate-track transcription failed; transcribing the mixed recording instead.")
         return False

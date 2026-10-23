@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ..config import Config
+from ..log_lines import stamped
 
 
 AUDIO_EXTENSIONS = {".wav", ".m4a", ".mp3", ".aac", ".flac", ".ogg", ".opus", ".mp4"}
@@ -92,7 +93,7 @@ def validate_audio_file(audio_file: Path) -> None:
 
 def _raise_invalid_audio(audio_file: Path, message: str) -> None:
     try:
-        (audio_file.parent / "audio_validation.log").write_text(message + "\n", encoding="utf-8")
+        (audio_file.parent / "audio_validation.log").write_text(stamped(message + "\n"), encoding="utf-8")
     except OSError:
         pass
     raise RuntimeError(message)
