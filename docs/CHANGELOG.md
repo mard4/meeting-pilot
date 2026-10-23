@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- Video notes: a video imported from YouTube, from the import sheet or the browser extension, is summarized as a video instead of a meeting. Its note has a summary of what the video covers, the steps it shows in order with their exact settings, key points, tools and settings, tips and references, and no decisions, action items, open questions or risks, which a tutorial used to get made up. The Diary, Obsidian, Notion (with "Video" in the Type column), Apple Notes and the MCP server show them. A file imported from the Mac keeps becoming a meeting or a lecture as before; "Video" can be chosen for it, or for any import, in the import sheet's note type menu, now shown to everyone.
+- Videos imported from YouTube get the pictures of their screens too, as videos from the Mac do since 0.5.1, from the import sheet and from the browser extension. Meeting Pilot downloads the picture next to the sound, at up to 720p, takes the screens and then deletes it.
+- Settings → Import: "Video screens" sets whether a video starts with its screens on (it still can be turned off per video), and "Keep downloaded videos" keeps a video from YouTube, picture and sound together, in Movies › Meeting Pilot, where its note links it. It is off by default: then only the audio and the screens stay.
+
 ## [0.5.2] - 2026-10-23
 
 ### Fixed

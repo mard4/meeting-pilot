@@ -160,12 +160,22 @@ enum VideoScreens {
     // MARK: - Reading the video
 
     /// Writes the deck into `folder` and returns how many screens it has; 0 when the
-    /// video shows none worth keeping, and then nothing is written.
+    /// video shows none worth keeping, and then nothing is written. `knownDuration` caps the
+    /// video's own: AVFoundation reads YouTube's video-only streams (fragmented MP4) as
+    /// twice as long as they are, with the frames at the right times and nothing after.
     @discardableResult
-    static func capture(from video: URL, into folder: URL, progress: @escaping (Double) async -> Void = { _ in }) async throws -> Int {
+    static func capture(
+        from video: URL,
+        into folder: URL,
+        knownDuration: Double? = nil,
+        progress: @escaping (Double) async -> Void = { _ in }
+    ) async throws -> Int {
         let asset = AVURLAsset(url: video)
         guard try await !asset.loadTracks(withMediaType: .video).isEmpty else { return 0 }
-        let duration = try await asset.load(.duration).seconds
+        var duration = try await asset.load(.duration).seconds
+        if let knownDuration, knownDuration.isFinite, knownDuration > 0 {
+            duration = min(duration, knownDuration)
+        }
         guard duration.isFinite, duration > minScreenSeconds * Double(minScreens) else { return 0 }
 
         let frames = try await sample(asset, duration: duration) { await progress($0 * 0.7) }

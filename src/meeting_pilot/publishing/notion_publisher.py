@@ -9,7 +9,7 @@ from ..config import Config
 from ..language import config_language, label
 from ..slides.deck import slide_images, slides_pdf
 from .obsidian_publisher import _sanitize_filename
-from ..profiles import STUDENT, WORKER, artifacts_profile, user_profile
+from ..profiles import STUDENT, VIDEO, WORKER, artifacts_profile, user_profile
 from .meeting_format import (
     action_items,
     decisions,
@@ -20,6 +20,8 @@ from .meeting_format import (
     participants,
     source_name,
     transcript_turns,
+    video_steps,
+    video_tools,
     when_text,
 )
 
@@ -185,10 +187,11 @@ def _build_properties(
         properties["Participants"] = {"rich_text": [_rich_text(participants_text)]}
     if metadata.get("url") or frontmatter.get("url"):
         properties["URL"] = {"url": str(metadata.get("url") or frontmatter.get("url"))}
-    # Work and study notes share one table; the column only appears once the user studies.
-    if user_profile(config) != WORKER:
-        lecture = artifacts_profile(config, artifacts) == STUDENT
-        properties["Type"] = {"select": {"name": "Study" if lecture else "Work"}}
+    # Work, study and video notes share one table; the column appears once the user
+    # studies or imports a video.
+    kind = artifacts_profile(config, artifacts)
+    if user_profile(config) != WORKER or kind == VIDEO:
+        properties["Type"] = {"select": {"name": {STUDENT: "Study", VIDEO: "Video"}.get(kind, "Work")}}
     properties.update({
         "Source": {"select": {"name": source_name(artifacts, config_language(config))}},
         "Status": {"select": {"name": "Pubblicato"}},
@@ -342,8 +345,11 @@ def _build_blocks(
     if artifacts.user_notes:
         blocks.append(_titled_callout("📝", t("my_notes"), "purple_background", _paragraphs(artifacts.user_notes)))
 
-    if artifacts_profile(config, artifacts) == STUDENT:
+    kind = artifacts_profile(config, artifacts)
+    if kind == STUDENT:
         blocks.extend(_lecture_blocks(config, summary, lang))
+    elif kind == VIDEO:
+        blocks.extend(_video_blocks(summary, lang))
     else:
         blocks.extend(_meeting_blocks(config, summary, lang))
 
@@ -412,6 +418,48 @@ def _lecture_blocks(config: Config, summary: dict[str, Any], lang: str) -> list[
     if config.notion_include_review_questions and _values(summary.get("review_questions")):
         callouts.append(_list_callout("❓", t("review_questions"), summary.get("review_questions"), "yellow_background"))
     if config.notion_include_references and _values(summary.get("references")):
+        callouts.append(_list_callout("📚", t("references"), summary.get("references"), "gray_background"))
+    if callouts:
+        blocks.append(_divider())
+        blocks.extend(callouts)
+    return blocks
+
+
+def _video_blocks(summary: dict[str, Any], lang: str) -> list[dict[str, Any]]:
+    """Steps as a numbered list, the way a viewer follows them; a section the video has
+    nothing for is left out."""
+    def t(key: str) -> str:
+        return label(lang, key)
+
+    blocks: list[dict[str, Any]] = []
+    steps = video_steps(summary.get("steps"))
+    if steps:
+        blocks.append(_divider())
+        blocks.extend(_heading("🪜 " + t("steps"), level=3))
+        for step, details in steps[: MAX_CHILDREN - 1]:
+            rich_text = [_text(step[:MAX_TEXT], bold=bool(details))]
+            if details:
+                rich_text.append(_text(f" — {details}"[:MAX_TEXT]))
+            blocks.append({"object": "block", "type": "numbered_list_item", "numbered_list_item": {"rich_text": rich_text}})
+    points = _values(summary.get("key_points"))
+    if points:
+        blocks.append(_divider())
+        blocks.extend(_heading("💡 " + t("key_points"), level=3))
+        blocks.extend(_bulleted(point) for point in points[: MAX_CHILDREN - 1])
+    tools = video_tools(summary.get("tools"))
+    if tools:
+        blocks.append(_divider())
+        blocks.extend(_heading("🧰 " + t("tools"), level=3))
+        for name, use in tools[: MAX_CHILDREN - 1]:
+            rich_text = [_text(name[:MAX_TEXT], bold=True)]
+            if use:
+                rich_text.append(_text(f" — {use}"[:MAX_TEXT]))
+            blocks.append(_bullet_rich(rich_text))
+
+    callouts = []
+    if _values(summary.get("tips")):
+        callouts.append(_list_callout("💬", t("tips"), summary.get("tips"), "green_background"))
+    if _values(summary.get("references")):
         callouts.append(_list_callout("📚", t("references"), summary.get("references"), "gray_background"))
     if callouts:
         blocks.append(_divider())

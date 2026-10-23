@@ -259,7 +259,7 @@ struct AppleIntelligenceSummarizer {
         // to half their room, then to a quarter.
         var budget = plan.extractsBudget
         while true {
-            let condensed = try await condense(partialNotes, toTokens: budget, schema: plan.chunkSchema, model: model, lecture: plan.lecture)
+            let condensed = try await condense(partialNotes, toTokens: budget, schema: plan.chunkSchema, model: model, kind: plan.kind)
             do {
                 let response = try await LanguageModelSession(model: model, instructions: plan.finalInstructions).respond(
                     to: plan.finalPrompt("[" + condensed.joined(separator: ",") + "]"),
@@ -294,10 +294,24 @@ struct AppleIntelligenceSummarizer {
         }
     }
 
+    /// The kind of notes, from the input's profile (see `profiles.py`): "student" is a
+    /// lecture, "video" a video imported from a link, anything else a meeting.
+    enum NoteKind {
+        case meeting, lecture, video
+
+        init(profile: String?) {
+            switch profile {
+            case "student": self = .lecture
+            case "video": self = .video
+            default: self = .meeting
+            }
+        }
+    }
+
     /// Every request the summary makes, sized to the model's context.
     @available(macOS 26.0, *)
     struct SummaryPlan {
-        let lecture: Bool
+        let kind: NoteKind
         let chunkSchema: GenerationSchema
         let finalSchema: GenerationSchema
         let extractInstructions: String
@@ -309,17 +323,27 @@ struct AppleIntelligenceSummarizer {
         let existingSummary: String
 
         init(_ input: SummarizerInput, transcript: PreparedTranscript) throws {
-            lecture = input.profile == "student"
-            chunkSchema = try lecture ? makeLectureChunkSchema() : makeChunkSchema()
-            finalSchema = try lecture ? makeLectureSchema() : makeMeetingSchema()
+            kind = NoteKind(profile: input.profile)
+            switch kind {
+            case .lecture:
+                chunkSchema = try makeLectureChunkSchema()
+                finalSchema = try makeLectureSchema()
+            case .video:
+                chunkSchema = try makeVideoChunkSchema()
+                finalSchema = try makeVideoSchema()
+            case .meeting:
+                chunkSchema = try makeChunkSchema()
+                finalSchema = try makeMeetingSchema()
+            }
             let localeInstruction = transcript.translatedFrom.map {
                 "The transcript was machine-translated to \(transcript.languageName) from \($0); names may be transliterated."
             } ?? "The transcript is in \(transcript.languageName)."
             let language = input.outputLanguage ?? "Italian"
             let languageInstruction = "Write every field in \(language), translating from the transcript language when it differs; keep names of people, products and proper nouns as spoken."
-            let finalTask = lecture
-                ? "Create structured study notes for a lecture using only the supplied extracts and metadata. Never invent information. Create a concise descriptive title of 3-8 words for what the lecture covered; never include platform names, attendee names, email addresses, dates, times, or technical recording filenames. known_projects lists the user's courses: use the course as tag, reusing a known course only when the lecture is clearly about it; otherwise propose a concise new course name. Participants may only come from calendar_metadata and the participant names identified from Teams; generic labels such as Speaker 1 or SPEAKER_00 are not names. Key concepts are the terms, definitions, formulas and methods the lecture explains, each with a short faithful explanation. Assignments are homework, readings, projects and exam or submission dates that were announced; use nil when a deadline is unknown. Exam hints are only what the lecturer said will be examined or stressed as especially important. Review questions are 3-6 questions a student can answer from this lecture alone. References are books, chapters, pages, slides, papers or links that were mentioned. Provide the theme as the lecture's main topic in 2-5 words."
-                : "Create structured meeting notes using only the supplied extracts and metadata. Never invent information. Create a concise descriptive title of 3-8 words for the meeting subject; never include platform names, attendee names, email addresses, dates, times, or technical recording filenames. Choose the project tag by analysing the conversation and comparing it with known_projects: reuse a known project only when it is clearly relevant; otherwise propose a concise new project tag. Participants may only come from calendar_metadata and the participant names identified from Teams; generic labels such as Speaker 1 or SPEAKER_00 are not names. Use nil when a date, owner, or deadline is unknown. Every action item status must be exactly \"open\". Provide one concise reusable tag and one concise theme of 2-5 words when the meeting has a clear subject."
+            let lectureTask = "Create structured study notes for a lecture using only the supplied extracts and metadata. Never invent information. Create a concise descriptive title of 3-8 words for what the lecture covered; never include platform names, attendee names, email addresses, dates, times, or technical recording filenames. known_projects lists the user's courses: use the course as tag, reusing a known course only when the lecture is clearly about it; otherwise propose a concise new course name. Participants may only come from calendar_metadata and the participant names identified from Teams; generic labels such as Speaker 1 or SPEAKER_00 are not names. Key concepts are the terms, definitions, formulas and methods the lecture explains, each with a short faithful explanation. Assignments are homework, readings, projects and exam or submission dates that were announced; use nil when a deadline is unknown. Exam hints are only what the lecturer said will be examined or stressed as especially important. Review questions are 3-6 questions a student can answer from this lecture alone. References are books, chapters, pages, slides, papers or links that were mentioned. Provide the theme as the lecture's main topic in 2-5 words."
+            let meetingTask = "Create structured meeting notes using only the supplied extracts and metadata. Never invent information. Create a concise descriptive title of 3-8 words for the meeting subject; never include platform names, attendee names, email addresses, dates, times, or technical recording filenames. Choose the project tag by analysing the conversation and comparing it with known_projects: reuse a known project only when it is clearly relevant; otherwise propose a concise new project tag. Participants may only come from calendar_metadata and the participant names identified from Teams; generic labels such as Speaker 1 or SPEAKER_00 are not names. Use nil when a date, owner, or deadline is unknown. Every action item status must be exactly \"open\". Provide one concise reusable tag and one concise theme of 2-5 words when the meeting has a clear subject."
+            let videoTask = "Create notes for a video (a tutorial, a talk or a podcast) for someone who wants to learn from it, using only the supplied extracts and metadata. It is not a meeting: never call it one. Never invent steps, settings, tools or references. Create a concise descriptive title of 3-8 words for what the video teaches or argues; never include platform, channel or presenter names, dates, or filenames. The summary says in a few sentences what the video covers and what a viewer comes away with. Steps are what the video shows how to do, in order, as short instructions a viewer can follow, with the exact values, settings or commands in details; a talk that teaches no procedure has no steps. Key points are the ideas, explanations or claims worth remembering. Tools are the software, plugins, devices, libraries, commands or files used, each with what it is used for or the setting chosen. Tips are advice, shortcuts and mistakes to avoid given in the video. References are links, books, videos, channels or resources mentioned. For tag, reuse an entry of known_projects only when the video is clearly about it; otherwise give the subject area in 1-4 words. Provide the theme as the video's main topic in 2-5 words."
+            let finalTask = kind == .lecture ? lectureTask : kind == .video ? videoTask : meetingTask
 
             // The final request is the tightest. What its fixed parts leave is shared out:
             // the user's instructions (notes, slides, template) at most 30%, the metadata
@@ -340,9 +364,15 @@ struct AppleIntelligenceSummarizer {
                 \(finalTask) \(languageInstruction)
                 \(customInstructionText)
                 """
-            let task = lecture
-                ? "Extract faithful study notes from a lecture transcript. Never invent definitions, dates, deadlines, exam information, or references."
-                : "Extract faithful operational notes from a meeting transcript. Never invent names, dates, decisions, owners, deadlines, questions, or risks."
+            let task: String
+            switch kind {
+            case .lecture:
+                task = "Extract faithful study notes from a lecture transcript. Never invent definitions, dates, deadlines, exam information, or references."
+            case .video:
+                task = "Extract faithful notes from the transcript of a video, a tutorial, talk or podcast, not a meeting: the steps shown in order with their exact settings, the key points, the tools used, tips and references. Never invent steps, values, tools or references."
+            case .meeting:
+                task = "Extract faithful operational notes from a meeting transcript. Never invent names, dates, decisions, owners, deadlines, questions, or risks."
+            }
             extractInstructions = """
                 \(localeInstruction)
                 \(task) Keep the result concise. \(languageInstruction)
@@ -389,13 +419,16 @@ struct AppleIntelligenceSummarizer {
 
     /// Merges extracts, as many per request as fit, until all of them fit `tokens`.
     @available(macOS 26.0, *)
-    static func condense(_ notes: [String], toTokens tokens: Int, schema: GenerationSchema, model: SystemLanguageModel, lecture: Bool) async throws -> [String] {
-        let preserved = lecture
-            ? "key concepts, assignments, exam hints, references"
-            : "decisions, action items, open questions, risks"
+    static func condense(_ notes: [String], toTokens tokens: Int, schema: GenerationSchema, model: SystemLanguageModel, kind: NoteKind) async throws -> [String] {
+        let (name, preserved): (String, String)
+        switch kind {
+        case .lecture: (name, preserved) = ("lecture", "key concepts, assignments, exam hints, references")
+        case .video: (name, preserved) = ("video", "steps in their order, key points, tools and settings, tips, references")
+        case .meeting: (name, preserved) = ("meeting", "decisions, action items, open questions, risks")
+        }
         func instructions(words: Int) -> String {
             """
-            Merge \(lecture ? "lecture" : "meeting")-note extracts without adding facts. Preserve \(preserved), and meaningful topics. Remove only duplication and keep the result under \(words) words.
+            Merge \(name)-note extracts without adding facts. Preserve \(preserved), and meaningful topics. Remove only duplication and keep the result under \(words) words.
             """
         }
         let groupBudget = ContextBudget.tokens
@@ -572,6 +605,65 @@ struct AppleIntelligenceSummarizer {
             ]
         )
         return try GenerationSchema(root: root, dependencies: [concept, assignment])
+    }
+
+    @available(macOS 26.0, *)
+    static func makeVideoChunkSchema() throws -> GenerationSchema {
+        let string = DynamicGenerationSchema(type: String.self)
+        let root = DynamicGenerationSchema(
+            name: "ChunkVideoNotes",
+            description: "Faithful concise notes extracted from one or more parts of a video's transcript",
+            properties: [
+                .init(name: "summary", description: "Concise factual summary of what this part shows", schema: string),
+                .init(name: "topics", schema: strings(string, 6)),
+                .init(name: "steps", description: "Steps shown, in order, each with its exact settings", schema: strings(string, 10)),
+                .init(name: "key_points", schema: strings(string, 6)),
+                .init(name: "tools", description: "Tool followed by what it is used for or its setting", schema: strings(string, 8)),
+                .init(name: "tips", schema: strings(string, 5)),
+                .init(name: "references", schema: strings(string, 5)),
+            ]
+        )
+        return try GenerationSchema(root: root, dependencies: [])
+    }
+
+    /// Notes for a video from a link (a tutorial, a talk, a podcast): the title, tag, theme,
+    /// summary and topics every note has, then steps, key points, tools, tips and
+    /// references instead of a meeting's decisions and action items.
+    @available(macOS 26.0, *)
+    static func makeVideoSchema() throws -> GenerationSchema {
+        let string = DynamicGenerationSchema(type: String.self)
+        let step = DynamicGenerationSchema(
+            name: "VideoStep",
+            properties: [
+                .init(name: "step", description: "A short instruction a viewer can follow", schema: string),
+                .init(name: "details", description: "The exact values, settings or commands shown", schema: string, isOptional: true),
+            ]
+        )
+        let tool = DynamicGenerationSchema(
+            name: "VideoTool",
+            properties: [
+                .init(name: "name", schema: string),
+                .init(name: "use", description: "What it is used for, or the setting chosen", schema: string, isOptional: true),
+            ]
+        )
+        let steps = DynamicGenerationSchema(arrayOf: .init(referenceTo: "VideoStep"), maximumElements: 15)
+        let tools = DynamicGenerationSchema(arrayOf: .init(referenceTo: "VideoTool"), maximumElements: 10)
+        let root = DynamicGenerationSchema(
+            name: "StructuredVideoNotes",
+            properties: [
+                .init(name: "title", schema: string),
+                .init(name: "tag", description: "The video's subject area, 1-4 words, without #", schema: string, isOptional: true),
+                .init(name: "theme", description: "The video's main topic, 2-5 words", schema: string, isOptional: true),
+                .init(name: "summary", schema: string),
+                .init(name: "topics", schema: strings(string, 8)),
+                .init(name: "steps", schema: steps),
+                .init(name: "key_points", schema: strings(string, 8)),
+                .init(name: "tools", schema: tools),
+                .init(name: "tips", schema: strings(string, 6)),
+                .init(name: "references", schema: strings(string, 8)),
+            ]
+        )
+        return try GenerationSchema(root: root, dependencies: [step, tool])
     }
 
     struct PreparedTranscript {

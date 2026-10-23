@@ -34,9 +34,9 @@ struct MediaImportDraft: Identifiable, Equatable {
 
     var canImport: Bool { problem == nil }
 
-    /// Slides from the author beat pictures of them; a video from a link has only its
-    /// audio downloaded for now.
-    var canCaptureScreens: Bool { isVideo && webVideo == nil && slidesURL == nil }
+    /// Slides from the author beat pictures of them. A video from a link gets its picture
+    /// downloaded for them, next to its sound.
+    var canCaptureScreens: Bool { isVideo && slidesURL == nil }
 
     var capturesScreens: Bool { canCaptureScreens && wantsScreens }
 }
@@ -51,11 +51,23 @@ struct MediaImportRequest: Identifiable, Equatable {
     var link: String?
 }
 
+/// The notes an import becomes, written to the sidecar's `profile.json` for `profiles.py`.
+enum NoteKind: String {
+    case worker
+    case student
+    /// A tutorial, a talk or a podcast: steps, key points and tools instead of decisions.
+    case video
+}
+
 /// Chosen once in the sheet for every file imported together.
 struct MediaImportOptions {
     var template = SummaryTemplateCatalog.auto
-    /// Lecture or work meeting, for someone who is both; nil decides from the title.
-    var profile: UserProfile?
+    /// Meeting, lecture or video notes; nil lets the pipeline decide (a link makes video
+    /// notes, a file is judged by its title).
+    var noteKind: NoteKind?
+    /// A video from a link is kept, sound and picture joined, in `MediaImporter.videosFolder`;
+    /// otherwise only its audio and screens stay. Settings → Import.
+    var keepDownloadedVideo = false
 }
 
 struct MediaImportJob: Identifiable, Equatable {
@@ -195,6 +207,9 @@ final class MediaImporter: ObservableObject {
     private var queue: [(draft: MediaImportDraft, options: MediaImportOptions, inbox: URL, jobID: UUID)] = []
     private var running = false
 
+    /// Where downloaded videos are kept when the user asked for it.
+    var videosFolder = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Movies/Meeting Pilot", isDirectory: true)
+
     init(historyURL: URL, toolsFolder: URL) {
         history = MediaImportHistory(url: historyURL)
         webVideos = WebVideoDownloader(folder: toolsFolder)
@@ -279,8 +294,8 @@ final class MediaImporter: ObservableObject {
         if options.template != SummaryTemplateCatalog.auto {
             MeetingSidecar.writeTemplateChoice(options.template, for: stagedAudio)
         }
-        if let profile = options.profile {
-            MeetingSidecar.writeProfileChoice(profile, for: stagedAudio)
+        if let noteKind = options.noteKind {
+            MeetingSidecar.writeNoteKind(noteKind.rawValue, for: stagedAudio)
         }
         if let slides = draft.slidesURL {
             try SlideDeck.write(slides, intoSidecarOf: stagedAudio)
@@ -289,11 +304,17 @@ final class MediaImporter: ObservableObject {
         if let video = draft.webVideo {
             let downloads = staging.appendingPathComponent("download", isDirectory: true)
             try fileManager.createDirectory(at: downloads, withIntermediateDirectories: true)
-            let downloaded = try await webVideos.download(video, into: downloads, progress: progress)
+            let wantsPicture = draft.capturesScreens || options.keepDownloadedVideo
+            // The sound, then the picture, then the screens share the bar.
+            let soundShare = wantsPicture ? 0.35 : 1
+            let downloaded = try await webVideos.download(video, into: downloads) { await progress($0 * soundShare) }
             if downloaded.pathExtension.lowercased() == "m4a" {
                 try fileManager.moveItem(at: downloaded, to: stagedAudio)
             } else {
-                try await Self.exportAudio(from: downloaded, to: stagedAudio, progress: progress)
+                try await Self.exportAudio(from: downloaded, to: stagedAudio) { await progress($0 * soundShare) }
+            }
+            if wantsPicture {
+                await addPicture(of: video, draft: draft, options: options, downloads: downloads, stagedAudio: stagedAudio, progress: progress)
             }
         } else if copyAsIs {
             // A clone on APFS: instant, and no extra space until one of them changes.
@@ -301,7 +322,7 @@ final class MediaImporter: ObservableObject {
         } else if draft.capturesScreens {
             // The soundtrack is most of the time; the screens take the rest of the bar.
             try await Self.exportAudio(from: draft.sourceURL, to: stagedAudio) { await progress($0 * 0.6) }
-            await captureScreens(of: draft, for: stagedAudio) { await progress(0.6 + $0 * 0.4) }
+            await captureScreens(from: draft.sourceURL, named: draft.fileName, for: stagedAudio) { await progress(0.6 + $0 * 0.4) }
         } else {
             try await Self.exportAudio(from: draft.sourceURL, to: stagedAudio, progress: progress)
         }
@@ -316,15 +337,110 @@ final class MediaImporter: ObservableObject {
     }
 
     /// A video whose screens cannot be read still imports, without them.
-    private func captureScreens(of draft: MediaImportDraft, for stagedAudio: URL, progress: @escaping (Double) async -> Void) async {
+    private func captureScreens(
+        from video: URL,
+        named name: String,
+        for stagedAudio: URL,
+        knownDuration: Double? = nil,
+        progress: @escaping (Double) async -> Void
+    ) async {
         let folder = MeetingSidecar.slidesDirectory(for: stagedAudio)
         do {
-            let count = try await VideoScreens.capture(from: draft.sourceURL, into: folder, progress: progress)
-            AppLog.append("Schermate del video \(draft.fileName): \(count)")
+            let count = try await VideoScreens.capture(from: video, into: folder, knownDuration: knownDuration, progress: progress)
+            AppLog.append("Schermate del video \(name): \(count)")
         } catch {
             try? FileManager.default.removeItem(at: folder)
-            AppLog.append("Schermate del video non riuscite (\(draft.fileName)): \(error.localizedDescription)")
+            AppLog.append("Schermate del video non riuscite (\(name)): \(error.localizedDescription)")
         }
+    }
+
+    /// The picture of a video from a link, for its screens and, when the user keeps videos,
+    /// joined with the sound into one playable file the note links. Without it the video
+    /// still imports with its audio; the downloaded picture goes with the staging folder.
+    private func addPicture(
+        of video: WebVideo,
+        draft: MediaImportDraft,
+        options: MediaImportOptions,
+        downloads: URL,
+        stagedAudio: URL,
+        progress: @escaping (Double) async -> Void
+    ) async {
+        let picture: URL
+        do {
+            picture = try await webVideos.downloadPicture(video, into: downloads) { await progress(0.35 + $0 * 0.35) }
+        } catch {
+            AppLog.append("Download del video per le schermate non riuscito (\(video.title)): \(error.localizedDescription)")
+            return
+        }
+        // The sound's length is the video's: its picture alone reads as twice as long.
+        let soundDuration = try? await AVURLAsset(url: stagedAudio).load(.duration).seconds
+        if draft.capturesScreens {
+            await captureScreens(from: picture, named: video.title, for: stagedAudio, knownDuration: soundDuration) {
+                await progress(0.7 + $0 * 0.3)
+            }
+        }
+        guard options.keepDownloadedVideo else { return }
+        do {
+            let kept = try await Self.joinedVideo(picture: picture, sound: stagedAudio, title: draft.title.isEmpty ? video.title : draft.title, in: videosFolder)
+            var info = Self.importInfo(for: draft)
+            info["original_path"] = SlideDeck.jsonSafe(kept.path)
+            try MeetingSidecar.writeImportInfo(info, for: stagedAudio)
+        } catch {
+            AppLog.append("Salvataggio del video non riuscito (\(video.title)): \(error.localizedDescription)")
+        }
+    }
+
+    /// Picture and sound in one MP4, copied as they are (no re-encoding, no ffmpeg).
+    static func joinedVideo(picture: URL, sound: URL, title: String, in folder: URL) async throws -> URL {
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let target = keptVideoURL(title: title, in: folder)
+        let pictureAsset = AVURLAsset(url: picture)
+        let soundAsset = AVURLAsset(url: sound)
+        guard let pictureTrack = try await pictureAsset.loadTracks(withMediaType: .video).first,
+              let soundTrack = try await soundAsset.loadTracks(withMediaType: .audio).first
+        else { throw MediaImportError.cannotExport(picture.lastPathComponent) }
+        let composition = AVMutableComposition()
+        guard let videoTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
+              let audioTrack = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
+        else { throw MediaImportError.cannotExport(picture.lastPathComponent) }
+        // YouTube's picture alone reads as twice its length (see VideoScreens.capture): the
+        // sound's length is the video's.
+        let soundDuration = try await soundAsset.load(.duration)
+        let pictureDuration = CMTimeMinimum(try await pictureAsset.load(.duration), soundDuration)
+        try videoTrack.insertTimeRange(CMTimeRange(start: .zero, duration: pictureDuration), of: pictureTrack, at: .zero)
+        videoTrack.preferredTransform = try await pictureTrack.load(.preferredTransform)
+        try audioTrack.insertTimeRange(CMTimeRange(start: .zero, duration: soundDuration), of: soundTrack, at: .zero)
+        guard let session = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough) else {
+            throw MediaImportError.cannotExport(picture.lastPathComponent)
+        }
+        if #available(macOS 15.0, *) {
+            try await session.export(to: target, as: .mp4)
+        } else {
+            session.outputURL = target
+            session.outputFileType = .mp4
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                session.exportAsynchronously { continuation.resume() }
+            }
+            guard session.status == .completed else {
+                throw MediaImportError.cannotExport(session.error?.localizedDescription ?? picture.lastPathComponent)
+            }
+        }
+        return target
+    }
+
+    /// `Title.mp4`, or `Title 2.mp4` when that is taken; characters the Finder cannot show
+    /// in a name become dashes.
+    static func keptVideoURL(title: String, in folder: URL) -> URL {
+        let cleaned = title.components(separatedBy: CharacterSet(charactersIn: "/:\\")).joined(separator: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let stem = cleaned.isEmpty ? "Video" : String(cleaned.prefix(120))
+        var candidate = folder.appendingPathComponent("\(stem).mp4")
+        var counter = 2
+        while FileManager.default.fileExists(atPath: candidate.path) {
+            candidate = folder.appendingPathComponent("\(stem) \(counter).mp4")
+            counter += 1
+        }
+        return candidate
     }
 
     static func importInfo(for draft: MediaImportDraft) -> [String: Any] {

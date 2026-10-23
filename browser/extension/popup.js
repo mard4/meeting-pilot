@@ -35,6 +35,7 @@ async function init() {
     sendToApp({ type: "hello" }),
     id ? sendToApp({ type: "status", url: tabUrl }) : Promise.resolve(null),
   ]);
+  if (reloadIfUpdated(hello)) return;
   const ready = hello.ok && hello.configured;
   $("connection").className = `connection ${ready ? "ready" : "missing"}`;
   $("connection-text").textContent = t(ready ? "statusReady" : "statusMissing");
@@ -117,4 +118,23 @@ function showSetup() {
   $("send").hidden = true;
   $("setup").hidden = false;
   $("fallback").hidden = !isYouTubeVideo(tabUrl);
+}
+
+/**
+ * Loaded unpacked, the extension runs the files as the browser read them; when the app has
+ * put a newer copy in their folder, it reloads itself (and this popup closes). The store's
+ * copy updates on its own. localStorage needs no permission and lasts across reloads.
+ */
+function reloadIfUpdated(hello) {
+  if (chrome.runtime.getManifest().update_url || !hello.extension_stamp) return false;
+  let seen = null;
+  try {
+    seen = localStorage.getItem("extensionStamp");
+    localStorage.setItem("extensionStamp", hello.extension_stamp);
+  } catch {
+    return false;
+  }
+  if (seen === null || seen === hello.extension_stamp) return false;
+  chrome.runtime.reload();
+  return true;
 }

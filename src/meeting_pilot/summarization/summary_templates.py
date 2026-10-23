@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..profiles import STUDENT, artifacts_profile
+from ..profiles import STUDENT, VIDEO, artifacts_profile
 from ..slides.deck import slide_outline
 
 AUTO = "auto"
@@ -174,9 +174,9 @@ def summary_guidance(config: object, artifacts: object) -> str:
             f"the Teams call: {', '.join(teams_names)}. Use them as participants and action item owners."
         )
     # The built-in templates describe work meetings (owners, blockers, clients); a lecture
-    # takes its structure from the study-notes schema. The user's own templates still apply.
-    lecture = artifacts_profile(config, artifacts) == STUDENT
-    if template.instructions and not (lecture and template in BUILTIN_TEMPLATES):
+    # or a video takes its structure from its own schema. The user's own templates still apply.
+    not_a_meeting = artifacts_profile(config, artifacts) in {STUDENT, VIDEO}
+    if template.instructions and not (not_a_meeting and template in BUILTIN_TEMPLATES):
         parts.append(f"Meeting type: {template.name}.\n{template.instructions}")
     notes = (getattr(artifacts, "user_notes", "") or "").strip()
     if notes:

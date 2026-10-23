@@ -12,6 +12,7 @@
 //
 // Compiled with Sources/Import/WebVideoLink.swift by Scripts/build_app.sh.
 
+import CryptoKit
 import Foundation
 
 let protocolVersion = 1
@@ -55,6 +56,24 @@ func importDate(of fingerprint: String) -> String? {
           let entries = try? JSONSerialization.jsonObject(with: data) as? [String: String]
     else { return nil }
     return entries[fingerprint]
+}
+
+/// What the copy of the extension in Application Support looks like now (its files, sizes
+/// and dates). The app replaces that copy when it updates, but a browser keeps running an
+/// unpacked extension as it loaded it; the popup compares this with what it last saw and
+/// reloads itself when it changed.
+func extensionStamp() -> String? {
+    let folder = configDirectory.appendingPathComponent("Browser Extension", isDirectory: true)
+    guard let files = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey]) else { return nil }
+    var lines: [String] = []
+    for case let file as URL in files {
+        guard let values = try? file.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey]), let size = values.fileSize else { continue }
+        let modified = values.contentModificationDate?.timeIntervalSince1970 ?? 0
+        lines.append("\(file.path.dropFirst(folder.path.count)):\(size):\(Int(modified))")
+    }
+    guard !lines.isEmpty else { return nil }
+    let digest = SHA256.hash(data: Data(lines.sorted().joined(separator: "\n").utf8))
+    return digest.prefix(8).map { String(format: "%02x", $0) }.joined()
 }
 
 func token() -> String? {
@@ -219,7 +238,9 @@ enum BrowserHost {
 
         switch message["type"] as? String {
         case "hello":
-            reply(["ok": true, "app_version": appVersion, "configured": token() != nil])
+            var hello: [String: Any] = ["ok": true, "app_version": appVersion, "configured": token() != nil]
+            if let stamp = extensionStamp() { hello["extension_stamp"] = stamp }
+            reply(hello)
 
         case "import":
             guard let link = WebVideoLink.youtube(message["url"] as? String ?? "") else { fail("not_a_video") }

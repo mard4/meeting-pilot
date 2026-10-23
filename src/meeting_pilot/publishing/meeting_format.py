@@ -148,6 +148,34 @@ def key_concepts(values: Any) -> list[tuple[str, str]]:
     return output
 
 
+def video_steps(values: Any) -> list[tuple[str, str]]:
+    """(step, details) pairs from a video's steps."""
+    output = []
+    for value in _as_list(values):
+        if isinstance(value, dict):
+            step = present(value.get("step") or value.get("text") or value.get("task"))
+            details = present(value.get("details") or value.get("detail"))
+        else:
+            step, details = present(value), ""
+        if step:
+            output.append((step, details))
+    return output
+
+
+def video_tools(values: Any) -> list[tuple[str, str]]:
+    """(name, use) pairs from the software, devices and commands a video uses."""
+    output = []
+    for value in _as_list(values):
+        if isinstance(value, dict):
+            name = present(value.get("name") or value.get("tool"))
+            use = present(value.get("use") or value.get("setting") or value.get("details"))
+        else:
+            name, use = present(value), ""
+        if name:
+            output.append((name, use))
+    return output
+
+
 def action_items(values: Any) -> list[dict[str, Any]]:
     """{'task', 'owner', 'due', 'done'} dicts. Lecture assignments use the same shape,
     without an owner."""

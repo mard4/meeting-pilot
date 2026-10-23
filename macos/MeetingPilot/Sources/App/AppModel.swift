@@ -106,6 +106,15 @@ final class AppModel: ObservableObject {
     @Published var runningAppPath = ""
     /// Files waiting in the import sheet; set by the Import button, a drop or the menu.
     @Published var importRequest: MediaImportRequest?
+    /// Settings → Import: whether a video starts with its screens on in the import sheet
+    /// (and for a link sent from the browser), and whether a video downloaded from a link
+    /// is kept. Only the app reads them, so they live in UserDefaults rather than `.env`.
+    @Published var videoScreensByDefault = UserDefaults.standard.object(forKey: "videoScreensByDefault") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(videoScreensByDefault, forKey: "videoScreensByDefault") }
+    }
+    @Published var keepDownloadedVideos = UserDefaults.standard.bool(forKey: "keepDownloadedVideos") {
+        didSet { UserDefaults.standard.set(keepDownloadedVideos, forKey: "keepDownloadedVideos") }
+    }
     var openDiaryWindow: (() -> Void)?
 
     let projectRoot: URL
@@ -1750,12 +1759,18 @@ final class AppModel: ObservableObject {
     func importLinkDirectly(_ link: (id: String, url: URL)) {
         let inbox = expandPath(recorderFolder.isEmpty ? defaultRecorderFolder(for: recorderMode) : recorderFolder)
         let importer = importer
+        let screens = videoScreensByDefault
+        var importOptions = MediaImportOptions()
+        importOptions.keepDownloadedVideo = keepDownloadedVideos
+        let options = importOptions
         Task {
             do {
                 let video = try await importer.webVideos.info(for: link)
                 await MainActor.run {
                     Self.notify(title: localized("Importazione da YouTube"), body: video.title)
-                    importer.start([MediaImportInspector.draft(for: video, history: importer.history)], options: MediaImportOptions(), inbox: inbox)
+                    var draft = MediaImportInspector.draft(for: video, history: importer.history)
+                    draft.wantsScreens = screens
+                    importer.start([draft], options: options, inbox: inbox)
                 }
             } catch {
                 AppLog.append("Importazione dal browser non riuscita (\(link.url.absoluteString)): \(error.localizedDescription)")
@@ -1789,6 +1804,8 @@ final class AppModel: ObservableObject {
     func importMedia(_ drafts: [MediaImportDraft], options: MediaImportOptions) {
         importRequest = nil
         let inbox = recorderFolder.isEmpty ? defaultRecorderFolder(for: recorderMode) : recorderFolder
+        var options = options
+        options.keepDownloadedVideo = keepDownloadedVideos
         importer.start(drafts, options: options, inbox: expandPath(inbox))
     }
 

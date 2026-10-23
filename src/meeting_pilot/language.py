@@ -22,6 +22,11 @@ LANGUAGE_NAMES = {
 # still writes the note body in that language.
 LABELS: dict[str, dict[str, str]] = {
     "it": {
+        "steps": "Passaggi",
+        "key_points": "Idee chiave",
+        "tools": "Strumenti e impostazioni",
+        "tips": "Consigli",
+        "video_subject": "Ambito",
         "summary": "Sintesi",
         "overview": "Overview",
         "topics": "Topic",
@@ -91,6 +96,11 @@ LABELS: dict[str, dict[str, str]] = {
         "chat_sources": "Fonti",
     },
     "en": {
+        "steps": "Steps",
+        "key_points": "Key points",
+        "tools": "Tools and settings",
+        "tips": "Tips",
+        "video_subject": "Subject",
         "summary": "Summary",
         "overview": "Overview",
         "topics": "Topics",
@@ -160,6 +170,11 @@ LABELS: dict[str, dict[str, str]] = {
         "chat_sources": "Sources",
     },
     "es": {
+        "steps": "Pasos",
+        "key_points": "Ideas clave",
+        "tools": "Herramientas y ajustes",
+        "tips": "Consejos",
+        "video_subject": "Ámbito",
         "summary": "Resumen",
         "overview": "Visión general",
         "topics": "Temas",
@@ -229,6 +244,11 @@ LABELS: dict[str, dict[str, str]] = {
         "chat_sources": "Fuentes",
     },
     "fr": {
+        "steps": "Étapes",
+        "key_points": "Idées clés",
+        "tools": "Outils et réglages",
+        "tips": "Conseils",
+        "video_subject": "Domaine",
         "summary": "Résumé",
         "overview": "Vue d'ensemble",
         "topics": "Thèmes",
@@ -298,6 +318,11 @@ LABELS: dict[str, dict[str, str]] = {
         "chat_sources": "Sources",
     },
     "de": {
+        "steps": "Schritte",
+        "key_points": "Kernaussagen",
+        "tools": "Werkzeuge und Einstellungen",
+        "tips": "Tipps",
+        "video_subject": "Themenbereich",
         "summary": "Zusammenfassung",
         "overview": "Überblick",
         "topics": "Themen",
@@ -367,6 +392,11 @@ LABELS: dict[str, dict[str, str]] = {
         "chat_sources": "Quellen",
     },
     "pt": {
+        "steps": "Passos",
+        "key_points": "Ideias-chave",
+        "tools": "Ferramentas e ajustes",
+        "tips": "Dicas",
+        "video_subject": "Área",
         "summary": "Resumo",
         "overview": "Visão geral",
         "topics": "Tópicos",
@@ -436,6 +466,11 @@ LABELS: dict[str, dict[str, str]] = {
         "chat_sources": "Fontes",
     },
     "nl": {
+        "steps": "Stappen",
+        "key_points": "Kernpunten",
+        "tools": "Tools en instellingen",
+        "tips": "Tips",
+        "video_subject": "Onderwerp",
         "summary": "Samenvatting",
         "overview": "Overzicht",
         "topics": "Onderwerpen",
