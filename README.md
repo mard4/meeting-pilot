@@ -7,6 +7,7 @@
 <h1 align="center">Meeting Pilot</h1>
 <p align="center">
   <a href="https://meetingpilotapp.com">🌐 Website</a> ·
+  <a href="https://meetingpilotapp.com/support/">☕ Support</a> ·
   <a href="https://github.com/mard4/meeting-pilot/releases/latest/download/MeetingPilot.dmg">⬇ Download</a> ·
   <a href="mailto:support@meetingpilotapp.com">@ Email</a>
 </p>
