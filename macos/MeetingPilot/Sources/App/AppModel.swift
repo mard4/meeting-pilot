@@ -1242,31 +1242,36 @@ final class AppModel: ObservableObject {
         let remoteKey = mode == "api" ? trimmedKey : remoteProviderAPIKey
         let localModel = mode == "local" ? trimmedModel : localProviderModel
         let remoteModel = mode == "api" ? trimmedModel : remoteProviderModel
-        EnvFile.update(
-            at: envURL,
-            values: [
-                "SUMMARY_PROVIDER_MODE": mode,
-                "LOCAL_MODELS_DIR": localModelsDir.trimmingCharacters(in: .whitespacesAndNewlines),
-                "SUMMARY_BASE_URL": activeBaseURL,
-                "LOCAL_SUMMARY_BASE_URL": savedLocalBaseURL,
-                "REMOTE_SUMMARY_BASE_URL": savedRemoteBaseURL,
-                "SUMMARY_MODEL": trimmedModel,
-                "LOCAL_SUMMARY_MODEL": localModel,
-                "REMOTE_SUMMARY_MODEL": remoteModel,
-                "SUMMARY_API_KEY": trimmedKey,
-                "LOCAL_SUMMARY_API_KEY": localKey,
-                "REMOTE_SUMMARY_API_KEY": remoteKey,
-                // The Meeting Pilot model always answers in JSON (builtin_model.py); the others follow the setting.
-                "SUMMARY_RESPONSE_FORMAT_JSON": mode == "builtin" ? "true" : (mode == "local" || mode == "apple" ? "false" : (jsonMode ? "true" : "false")),
-                "BUILTIN_SUMMARY_MODEL": mode == "builtin" ? trimmedModel : builtinSummaryModel,
-                "SUMMARY_PROMPT": (summaryPrompt ?? self.summaryPrompt).trimmingCharacters(in: .whitespacesAndNewlines),
-                "REMOTE_PROVIDER_KIND": remoteProviderKind ?? self.remoteProviderKind,
-                "LOCAL_SUMMARY_RUNTIME": localRuntime ?? self.localRuntime,
-                // Read by the pipeline only for local mode (e.g. Ollama's native API).
-                "SUMMARY_RUNTIME": mode == "local" ? (localRuntime ?? self.localRuntime) : "",
-                "APPLE_INTELLIGENCE_DEFAULT_APPLIED": "true"
-            ]
-        )
+        let values = [
+            "SUMMARY_PROVIDER_MODE": mode,
+            "LOCAL_MODELS_DIR": localModelsDir.trimmingCharacters(in: .whitespacesAndNewlines),
+            "SUMMARY_BASE_URL": activeBaseURL,
+            "LOCAL_SUMMARY_BASE_URL": savedLocalBaseURL,
+            "REMOTE_SUMMARY_BASE_URL": savedRemoteBaseURL,
+            "SUMMARY_MODEL": trimmedModel,
+            "LOCAL_SUMMARY_MODEL": localModel,
+            "REMOTE_SUMMARY_MODEL": remoteModel,
+            "SUMMARY_API_KEY": trimmedKey,
+            "LOCAL_SUMMARY_API_KEY": localKey,
+            "REMOTE_SUMMARY_API_KEY": remoteKey,
+            // The Meeting Pilot model always answers in JSON (builtin_model.py); the others follow the setting.
+            "SUMMARY_RESPONSE_FORMAT_JSON": mode == "builtin" ? "true" : (mode == "local" || mode == "apple" ? "false" : (jsonMode ? "true" : "false")),
+            "BUILTIN_SUMMARY_MODEL": mode == "builtin" ? trimmedModel : builtinSummaryModel,
+            "SUMMARY_PROMPT": (summaryPrompt ?? self.summaryPrompt).trimmingCharacters(in: .whitespacesAndNewlines),
+            "REMOTE_PROVIDER_KIND": remoteProviderKind ?? self.remoteProviderKind,
+            "LOCAL_SUMMARY_RUNTIME": localRuntime ?? self.localRuntime,
+            // Read by the pipeline only for local mode (e.g. Ollama's native API).
+            "SUMMARY_RUNTIME": mode == "local" ? (localRuntime ?? self.localRuntime) : "",
+            "APPLE_INTELLIGENCE_DEFAULT_APPLIED": "true"
+        ]
+        // The Pipeline page saves when it appears and when it is left. Restarting the
+        // watcher for that stopped a summary in progress, which then started over: with
+        // Apple Intelligence on a long meeting it never finished while the page was used.
+        let saved = EnvFile.load(from: envURL)
+        let changed = values.contains { saved[$0.key, default: ""] != $0.value }
+        if changed {
+            EnvFile.update(at: envURL, values: values)
+        }
         localProviderModel = localModel
         remoteProviderModel = remoteModel
         if mode == "builtin" { builtinSummaryModel = trimmedModel }
@@ -1274,7 +1279,7 @@ final class AppModel: ObservableObject {
         localProviderBaseURL = savedLocalBaseURL
         remoteProviderBaseURL = savedRemoteBaseURL
         providerBaseURL = activeBaseURL
-        watcher.restartIfRunning()
+        if changed { watcher.restartIfRunning() }
         // Settings autosave; a stale test result would describe the previous values.
         providerStatusMessage = ""
         refresh()
