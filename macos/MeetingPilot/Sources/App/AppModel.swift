@@ -301,6 +301,14 @@ final class AppModel: ObservableObject {
             return
         }
 
+        // A configuration deleted while the app runs comes back with its defaults, not
+        // just the few keys the repairs below write.
+        if !FileManager.default.fileExists(atPath: envURL.path) {
+            AppLog.append("Configurazione mancante, la ricreo: \(envURL.path)")
+            ConfigLocator.ensureConfigFile(at: envURL)
+            // The watcher read the missing file at startup and runs on built-in defaults.
+            watcher.restartIfRunning()
+        }
         var env = EnvFile.load(from: envURL)
         if EnvFile.sanitize(at: envURL) {
             env = EnvFile.load(from: envURL)
