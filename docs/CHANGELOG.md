@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.2] - 2026-10-23
+
+### Fixed
+- If the folder `~/Library/Application Support/Meeting Pilot` is deleted while the app is open, Meeting Pilot creates it again with its settings file, instead of failing to save the configuration every few seconds. Summaries with Apple Intelligence failed meanwhile, because the processing fell back to a local summary server that isn't running; it now restarts with the restored settings, and stops with a clear message if the settings file is missing.
+- ⌘, and Meeting Pilot → Settings open the Settings section of the main window. They used to open an empty window, which macOS could also bring back by itself after a relaunch, so it seemed to appear at random.
+
 ## [0.5.1] - 2026-10-22
 
 ### Added
