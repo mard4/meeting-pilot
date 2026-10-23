@@ -14,6 +14,7 @@
 "Trascrizione" = "Transcriptie";
 "Sintesi (AI)" = "Samenvatting (AI)";
 "Impostazioni" = "Instellingen";
+"Impostazioni…" = "Instellingen…";
 "Salva" = "Bewaar";
 "Ferma" = "Stop";
 "Pausa" = "Pauzeer";
@@ -953,3 +954,4 @@
 "Una foto di ogni schermata accanto a ciò che viene detto. Si può togliere per ogni video." = "Een afbeelding van elk scherm naast wat er gezegd werd. Per video uit te zetten.";
 "Tieni i video scaricati" = "Gedownloade video's bewaren";
 "I video da YouTube restano in Filmati › Meeting Pilot e la nota li apre. Spento: restano solo audio e schermate." = "YouTube-video's blijven in Films › Meeting Pilot en de notitie opent ze. Uit: alleen audio en schermen blijven.";
+"Video" = "Video";

@@ -76,7 +76,7 @@ def _note_body(config: Config, artifacts: MeetingArtifacts) -> str:
     if project or theme:
         parts.extend(["", t("classification")])
         if project:
-            parts.append(f"{t({STUDENT: 'course', VIDEO: 'subject'}.get(kind, 'project'))}: {project}")
+            parts.append(f"{t({STUDENT: 'course', VIDEO: 'video_subject'}.get(kind, 'project'))}: {project}")
         if theme:
             parts.append(f"{t('theme')}: {theme}")
     if _include(config, "summary"):

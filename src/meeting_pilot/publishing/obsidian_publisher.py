@@ -343,7 +343,7 @@ def _header_callout(artifacts: MeetingArtifacts, lang: str, kind: str = WORKER) 
     tags = [
         f"**{label(lang, key)}:** {value}"
         for key, value in (
-            ({STUDENT: "course", VIDEO: "subject"}.get(kind, "project"), metadata.get("project") or artifacts.frontmatter.get("project")),
+            ({STUDENT: "course", VIDEO: "video_subject"}.get(kind, "project"), metadata.get("project") or artifacts.frontmatter.get("project")),
             ("theme", metadata.get("theme") or artifacts.frontmatter.get("theme")),
         )
         if value

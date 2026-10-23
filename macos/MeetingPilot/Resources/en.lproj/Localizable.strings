@@ -14,6 +14,7 @@
 "Trascrizione" = "Transcription";
 "Sintesi (AI)" = "Summary (AI)";
 "Impostazioni" = "Settings";
+"Impostazioni…" = "Settings…";
 "Salva" = "Save";
 "Ferma" = "Stop";
 "Pausa" = "Pause";
@@ -953,3 +954,4 @@
 "Una foto di ogni schermata accanto a ciò che viene detto. Si può togliere per ogni video." = "A picture of each screen next to what was said. It can be turned off per video.";
 "Tieni i video scaricati" = "Keep downloaded videos";
 "I video da YouTube restano in Filmati › Meeting Pilot e la nota li apre. Spento: restano solo audio e schermate." = "YouTube videos stay in Movies › Meeting Pilot and the note opens them. Off: only the audio and screens stay.";
+"Video" = "Video";

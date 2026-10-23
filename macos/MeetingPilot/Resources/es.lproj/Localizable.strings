@@ -14,6 +14,7 @@
 "Trascrizione" = "Transcripción";
 "Sintesi (AI)" = "Resumen (IA)";
 "Impostazioni" = "Ajustes";
+"Impostazioni…" = "Ajustes…";
 "Salva" = "Guardar";
 "Ferma" = "Detener";
 "Pausa" = "Pausa";
@@ -953,3 +954,4 @@
 "Una foto di ogni schermata accanto a ciò che viene detto. Si può togliere per ogni video." = "Una imagen de cada pantalla junto a lo que se dijo. Se puede desactivar en cada vídeo.";
 "Tieni i video scaricati" = "Conservar los vídeos descargados";
 "I video da YouTube restano in Filmati › Meeting Pilot e la nota li apre. Spento: restano solo audio e schermate." = "Los vídeos de YouTube se quedan en Películas › Meeting Pilot y la nota los abre. Desactivado: solo quedan el audio y las pantallas.";
+"Video" = "Vídeo";

@@ -18,6 +18,7 @@
 "Trascrizione" = "Trascrizione";
 "Sintesi (AI)" = "Sintesi (AI)";
 "Impostazioni" = "Impostazioni";
+"Impostazioni…" = "Impostazioni…";
 "Salva" = "Salva";
 "Ferma" = "Ferma";
 "Pausa" = "Pausa";
@@ -933,3 +934,4 @@
 "Una foto di ogni schermata accanto a ciò che viene detto. Si può togliere per ogni video." = "Una foto di ogni schermata accanto a ciò che viene detto. Si può togliere per ogni video.";
 "Tieni i video scaricati" = "Tieni i video scaricati";
 "I video da YouTube restano in Filmati › Meeting Pilot e la nota li apre. Spento: restano solo audio e schermate." = "I video da YouTube restano in Filmati › Meeting Pilot e la nota li apre. Spento: restano solo audio e schermate.";
+"Video" = "Video";
