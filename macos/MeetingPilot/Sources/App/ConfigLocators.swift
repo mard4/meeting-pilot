@@ -532,6 +532,9 @@ enum EnvFile {
     @discardableResult
     private static func write(_ lines: [String], to url: URL) -> Bool {
         do {
+            // The folder can disappear while the app runs (a manual reset, a cleaner app):
+            // without it every save fails, so recreate it.
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
             restrictPermissions(of: url)
             return true
