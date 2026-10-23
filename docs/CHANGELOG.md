@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.4] - 2026-10-23
+
+### Fixed
+- Summaries no longer start over when the Pipeline page is opened or left. The page saved the summary settings each time, even unchanged, and every save restarted the processing, which stopped the summary in progress: with Apple Intelligence on a long meeting the app seemed stuck on Summary. The processing now restarts only when a setting really changes.
+- A video from YouTube gets its screens even when YouTube refuses the download of its picture the first time ("HTTP Error 403: Forbidden"): Meeting Pilot tries again a few seconds later. It used to import the video without screens.
+
+### Changed
+- Every line of the logs starts with its date and time: the processing's output and errors, the logs of each meeting's transcription and summary, and every line of a message in the app log, which kept the date on its first line only.
+- The app log says why the processing restarted, with the settings that changed, and the Log page shows the logs of the meeting being processed and of the last failed one, including the Apple Intelligence summary's log, where the reason for a failed summary is written.
+
 ## [0.5.3] - 2026-10-23
 
 ### Added
