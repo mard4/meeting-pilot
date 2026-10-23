@@ -27,6 +27,13 @@ struct MeetingPilotApp: App {
             EmptyView()
         }
         .commands {
+            // Settings live in the main window; the scene's own window above is empty.
+            CommandGroup(replacing: .appSettings) {
+                Button(localized("Impostazioni…")) {
+                    appDelegate.showSettings()
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
             CommandGroup(replacing: .newItem) {
                 Button(localized("Importa registrazioni…")) {
                     appDelegate.importFiles()
@@ -133,6 +140,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         // Before the model writes its first file, so every file it or its children create
         // is readable by this account only.
         AppLog.restrictAccess()
+        // Every window is rebuilt by the app itself (the main one keeps its frame through
+        // its autosave name); restored state only brought back the empty Settings scene
+        // window on Macs that keep windows when quitting.
+        UserDefaults.standard.set(false, forKey: "NSQuitAlwaysKeepsWindows")
         model = AppModel()
         super.init()
     }
@@ -147,6 +158,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         }
 #endif
         NSApp.setActivationPolicy(.regular)
+        closeEmptySettingsWindows()
         NSApp.appearance = model.appTheme.appearance
         ScreenSharingPrivacy.install()
         UNUserNotificationCenter.current().delegate = self
@@ -339,6 +351,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     @objc private func openFromMenu() {
         showMainWindow()
+    }
+
+    func showSettings() {
+        model.selectedSection = .settings
+        showMainWindow()
+    }
+
+    /// State saved before NSQuitAlwaysKeepsWindows was turned off can still restore the
+    /// Settings scene's window once.
+    private func closeEmptySettingsWindows() {
+        NSApp.windows
+            .filter { $0.identifier?.rawValue.contains("Settings") == true }
+            .forEach { $0.close() }
     }
 
     private func showMainWindow() {
