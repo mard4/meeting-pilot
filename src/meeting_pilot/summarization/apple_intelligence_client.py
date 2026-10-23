@@ -8,6 +8,7 @@ from typing import Any
 
 from ..artifacts import MeetingArtifacts
 from ..config import Config
+from ..log_lines import run_logged, unstamped
 from ..tag_catalog import catalog_values
 from ..language import config_language, language_name
 from ..profiles import STUDENT, WORKER
@@ -68,32 +69,22 @@ def summarize_with_apple_intelligence(
 
     command = [str(command_path), str(input_path), str(output_path)]
     timeout_seconds = _timeout_for_transcript(config.apple_intelligence_timeout_seconds, artifacts.transcript_text)
+    log_path.write_text("", encoding="utf-8")
     try:
-        with log_path.open("w", encoding="utf-8") as log:
-            log.write("$ " + " ".join(command) + "\n\n")
-            # Flushed first: the helper writes to the same file, so a buffered header would land after its output.
-            log.flush()
-            result = subprocess.run(
-                command,
-                stdout=log,
-                stderr=subprocess.STDOUT,
-                check=False,
-                text=True,
-                timeout=timeout_seconds,
-            )
+        returncode = run_logged(command, log_path, timeout=timeout_seconds)
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(
             f"Apple Intelligence summarization timed out after "
             f"{timeout_seconds} seconds. See {log_path}"
         ) from exc
-    if result.returncode != 0:
+    if returncode != 0:
         # The helper's last line says why; the log starts with the command line.
         lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
-        reason = next((line.strip() for line in reversed(lines) if line.strip()), "")
+        reason = next((unstamped(line).strip() for line in reversed(lines) if line.strip()), "")
         if "Apple Intelligence unavailable" in reason:
             raise AppleIntelligenceUnavailable(reason)
         raise RuntimeError(
-            f"Apple Intelligence summarization failed: {reason or f'exit code {result.returncode}'}. See {log_path}"
+            f"Apple Intelligence summarization failed: {reason or f'exit code {returncode}'}. See {log_path}"
         )
     try:
         data = json.loads(output_path.read_text(encoding="utf-8"))

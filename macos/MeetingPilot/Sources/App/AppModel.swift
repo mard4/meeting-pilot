@@ -316,7 +316,7 @@ final class AppModel: ObservableObject {
             AppLog.append("Configurazione mancante, la ricreo: \(envURL.path)")
             ConfigLocator.ensureConfigFile(at: envURL)
             // The watcher read the missing file at startup and runs on built-in defaults.
-            watcher.restartIfRunning()
+            watcher.restartIfRunning(reason: "configurazione ricreata")
         }
         var env = EnvFile.load(from: envURL)
         if EnvFile.sanitize(at: envURL) {
@@ -713,7 +713,7 @@ final class AppModel: ObservableObject {
         // summary, heading and Apple transcription language. Deferred out of the
         // settings view update.
         EnvFile.update(at: envURL, values: ["OUTPUT_LANGUAGE": selected, "TRANSCRIPTION_LOCALE": language.asrLanguageCode])
-        watcher.restartIfRunning()
+        watcher.restartIfRunning(reason: "lingua cambiata")
         statusMessage = language.updatedMessage
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
             relaunchApp()
@@ -1268,7 +1268,8 @@ final class AppModel: ObservableObject {
         // watcher for that stopped a summary in progress, which then started over: with
         // Apple Intelligence on a long meeting it never finished while the page was used.
         let saved = EnvFile.load(from: envURL)
-        let changed = values.contains { saved[$0.key, default: ""] != $0.value }
+        let changedKeys = values.filter { saved[$0.key, default: ""] != $0.value }.keys.sorted()
+        let changed = !changedKeys.isEmpty
         if changed {
             EnvFile.update(at: envURL, values: values)
         }
@@ -1279,7 +1280,7 @@ final class AppModel: ObservableObject {
         localProviderBaseURL = savedLocalBaseURL
         remoteProviderBaseURL = savedRemoteBaseURL
         providerBaseURL = activeBaseURL
-        if changed { watcher.restartIfRunning() }
+        if changed { watcher.restartIfRunning(reason: "impostazioni di sintesi cambiate (\(changedKeys.joined(separator: ", ")))") }
         // Settings autosave; a stale test result would describe the previous values.
         providerStatusMessage = ""
         refresh()
@@ -1292,14 +1293,14 @@ final class AppModel: ObservableObject {
         guard value != summaryPrompt else { return }
         EnvFile.update(at: envURL, values: ["SUMMARY_PROMPT": value])
         summaryPrompt = value
-        watcher.restartIfRunning()
+        watcher.restartIfRunning(reason: "istruzioni di sintesi cambiate")
     }
 
     func saveSummaryTemplate(_ id: String) {
         guard id != summaryTemplate else { return }
         EnvFile.update(at: envURL, values: ["SUMMARY_TEMPLATE": id])
         summaryTemplate = id
-        watcher.restartIfRunning()
+        watcher.restartIfRunning(reason: "modello di sintesi cambiato")
     }
 
     /// The pipeline re-reads this file for every meeting, so no watcher restart is needed.
@@ -1496,7 +1497,7 @@ final class AppModel: ObservableObject {
         userProfile = profile
         needsProfileChoice = false
         statusMessage = "Profilo salvato"
-        watcher.restartIfRunning()
+        watcher.restartIfRunning(reason: "profilo cambiato")
     }
 
     func saveKeepAudio(_ keep: Bool) {
@@ -1537,7 +1538,7 @@ final class AppModel: ObservableObject {
             ]
         )
         statusMessage = "Recorder salvato"
-        watcher.restartIfRunning { restarted in
+        watcher.restartIfRunning(reason: "registrazione cambiata") { restarted in
             if restarted { self.statusMessage = "Recorder salvato" }
         }
         recording.resetMeetingDetection()

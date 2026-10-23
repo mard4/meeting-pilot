@@ -25,12 +25,18 @@ func diagnosticLogText(meetingsRoot: URL) -> String {
         if !content.isEmpty { sections.append("===== \(title) =====\n\(content)") }
     }
 
-    if let failed = newestDirectory(in: meetingsRoot.appendingPathComponent("failed")) {
-        let candidates = ["apple_transcriber_command.log", "fluidaudio_command.log"]
+    // The meeting being processed now, then the last one that failed: what their helpers
+    // printed, the summary's included, which the pipeline log only points to.
+    let sessions = [
+        ("SESSIONE IN CORSO", newestDirectory(in: meetingsRoot.appendingPathComponent("processing"))),
+        ("ULTIMA SESSIONE FALLITA", newestDirectory(in: meetingsRoot.appendingPathComponent("failed"))),
+    ]
+    let candidates = ["audio_validation.log", "apple_transcriber_command.log", "fluidaudio_command.log", "apple_intelligence_summarizer.log"]
+    for case let (title, session?) in sessions {
         for name in candidates {
-            let content = readLogTail(failed.appendingPathComponent(name), maximumBytes: 32_000)
+            let content = readLogTail(session.appendingPathComponent(name), maximumBytes: 32_000)
             if !content.isEmpty {
-                sections.append("===== ULTIMA SESSIONE FALLITA · \(name) =====\n\(content)")
+                sections.append("===== \(title) · \(session.lastPathComponent) · \(name) =====\n\(content)")
             }
         }
     }

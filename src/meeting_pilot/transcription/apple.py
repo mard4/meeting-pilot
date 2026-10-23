@@ -18,6 +18,7 @@ from .fluid_audio import (
     diarize,
 )
 from .session import timeout_for_audio
+from ..log_lines import run_logged, stamped
 
 
 def run_apple_transcriber(config: Config, audio_file: Path) -> None:
@@ -109,40 +110,29 @@ def _transcribe(
     if glossary_file:
         command.append(glossary_file)
     try:
-        with log_file.open("a", encoding="utf-8") as log:
-            log.write("$ " + " ".join(command) + "\n\n")
-            # Flushed first: the helper writes to the same file, so a buffered header would land after its output.
-            log.flush()
-            result = subprocess.run(
-                command,
-                stdout=log,
-                stderr=subprocess.STDOUT,
-                check=False,
-                text=True,
-                timeout=timeout_seconds,
-            )
+        returncode = run_logged(command, log_file, timeout=timeout_seconds)
     except subprocess.TimeoutExpired as exc:
         with log_file.open("a", encoding="utf-8") as log:
-            log.write(f"\nTimed out after {timeout_seconds} seconds.\n")
+            log.write(stamped(f"Timed out after {timeout_seconds} seconds.\n"))
         raise RuntimeError(f"Apple On-Device transcription timed out after {timeout_seconds} seconds. See {log_file}") from exc
     transcript = (
         output_file.read_text(encoding="utf-8", errors="replace").strip() if output_file.is_file() else ""
     )
-    if result.returncode != 0:
+    if returncode != 0:
         # Apple Speech can write a complete transcript and still exit non-zero
         # when its first on-device pass falls back to automatic recognition.
         # Trust the artifact if it is usable; otherwise the UI reports a
         # transcription failure even though the transcript is already saved.
         if transcript:
             return transcript, _read_json_file(words_file), True
-        raise RuntimeError(f"Apple On-Device transcription failed with exit code {result.returncode}. See {log_file}")
+        raise RuntimeError(f"Apple On-Device transcription failed with exit code {returncode}. See {log_file}")
     return transcript, _read_json_file(words_file), False
 
 
 def _diarize(config: Config, session: Path, audio_file: Path, log_file: Path) -> dict:
     payload, log = diarize(config, audio_file, session / "fluidaudio_diarization.json")
     with log_file.open("a", encoding="utf-8") as handle:
-        handle.write("\n" + log + "\n")
+        handle.write("\n" + stamped(log + "\n"))
     return payload if payload.get("segments") else {}
 
 

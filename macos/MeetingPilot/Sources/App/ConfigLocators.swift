@@ -695,9 +695,12 @@ enum AppLog {
 
     static func append(_ message: String) {
         ensureDirectory()
-        let formatter = ISO8601DateFormatter()
-        let line = "[\(formatter.string(from: Date()))] \(message)\n"
-        guard let data = line.data(using: .utf8) else { return }
+        let stamp = "[\(ISO8601DateFormatter().string(from: Date()))] "
+        // Every line, so a command's output logged under a message keeps its date too.
+        let text = message.split(separator: "\n", omittingEmptySubsequences: false)
+            .map { $0.trimmingCharacters(in: .whitespaces).isEmpty ? String($0) : stamp + $0 }
+            .joined(separator: "\n") + "\n"
+        guard let data = text.data(using: .utf8) else { return }
         if !FileManager.default.fileExists(atPath: appURL.path) {
             try? data.write(to: appURL, options: .atomic)
             return

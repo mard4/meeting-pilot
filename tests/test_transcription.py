@@ -166,11 +166,19 @@ def _fake_apple_and_fluid(words_by_audio: dict[str, list[tuple[str, float, float
     return fake_run
 
 
+def _patch_runs(monkeypatch, fake_run) -> None:
+    """The Apple helper runs through `run_logged`, FluidAudio through `subprocess.run`."""
+    from meeting_pilot.transcription import apple
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(apple, "run_logged", lambda command, _log, **kwargs: fake_run(command, **kwargs).returncode)
+
+
 def test_apple_transcript_gets_speakers_from_fluid_audio_diarization(tmp_path: Path, monkeypatch) -> None:
     audio = tmp_path / "audio.m4a"
     audio.write_bytes(b"audio")
     calls: list = []
-    monkeypatch.setattr(subprocess, "run", _fake_apple_and_fluid(
+    _patch_runs(monkeypatch, _fake_apple_and_fluid(
         {"audio.m4a": [("Buongiorno", 0.0, 0.5), ("a", 0.5, 0.7), ("tutti.", 0.7, 1.0), ("Ciao!", 2.0, 2.4)]},
         [
             {"speakerId": "A", "startTimeSeconds": 0.0, "endTimeSeconds": 1.5},
@@ -195,7 +203,7 @@ def test_apple_transcript_keeps_plain_text_when_diarization_fails(tmp_path: Path
     audio = tmp_path / "audio.m4a"
     audio.write_bytes(b"audio")
     calls: list = []
-    monkeypatch.setattr(subprocess, "run", _fake_apple_and_fluid(
+    _patch_runs(monkeypatch, _fake_apple_and_fluid(
         {"audio.m4a": [("Buongiorno", 0.0, 0.5), ("a", 0.5, 0.7), ("tutti.", 0.7, 1.0)]},
         [],
         calls,
@@ -212,7 +220,7 @@ def test_apple_transcript_skips_diarization_when_disabled(tmp_path: Path, monkey
     audio = tmp_path / "audio.m4a"
     audio.write_bytes(b"audio")
     calls: list = []
-    monkeypatch.setattr(subprocess, "run", _fake_apple_and_fluid(
+    _patch_runs(monkeypatch, _fake_apple_and_fluid(
         {"audio.m4a": [("Buongiorno", 0.0, 0.5)]},
         [{"speakerId": "A", "startTimeSeconds": 0.0, "endTimeSeconds": 1.0}],
         calls,
@@ -232,7 +240,7 @@ def test_apple_transcribes_separate_tracks_and_labels_the_microphone(tmp_path: P
     (tracks / "me.m4a").write_bytes(b"me")
     (tracks / "them.m4a").write_bytes(b"them")
     calls: list = []
-    monkeypatch.setattr(subprocess, "run", _fake_apple_and_fluid(
+    _patch_runs(monkeypatch, _fake_apple_and_fluid(
         {
             "me.m4a": [("Ciao", 0.0, 0.4), ("Marco.", 0.4, 0.8)],
             "them.m4a": [("Ciao,", 3.0, 3.3), ("benvenuto.", 3.3, 3.8)],

@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Iterator
 
 from ..config import Config
+from ..log_lines import copy_stamped
 
 
 @dataclass(frozen=True)
@@ -179,11 +180,18 @@ class _Server:
         port = _free_port()
         command = server_command(config, port)
         log_path = path.parent / "llama-server.log"
-        with log_path.open("w") as log:
-            # The key goes through the environment, not argv, where `ps` would show it.
-            process = subprocess.Popen(
-                command, stdout=log, stderr=subprocess.STDOUT, env={**os.environ, "LLAMA_API_KEY": API_KEY}
-            )
+        log_path.write_text("", encoding="utf-8")
+        # The key goes through the environment, not argv, where `ps` would show it.
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            errors="replace",
+            env={**os.environ, "LLAMA_API_KEY": API_KEY},
+        )
+        assert process.stdout is not None
+        copy_stamped(process.stdout, log_path)
         # atexit doesn't run when this process is killed; the watchdog stops the server then.
         watchdog = subprocess.Popen(
             ["/bin/sh", "-c", 'while kill -0 "$1" 2>/dev/null; do sleep 5; done; kill "$2" 2>/dev/null', "sh",
