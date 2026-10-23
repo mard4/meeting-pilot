@@ -52,6 +52,10 @@ def main() -> None:
 
 def _main() -> None:
     env_path = _env_path()
+    # The app names its configuration; without it every setting falls back to a
+    # developer default (a local summary server, for one) and fails further on.
+    if os.environ.get("MEETING_PILOT_ENV_FILE") and not env_path.exists():
+        raise SystemExit(f"Configurazione mancante: {env_path}. Riapri Meeting Pilot per ricrearla.")
     _load_dotenv(env_path)
     parser = argparse.ArgumentParser(prog="meeting-pilot")
     subparsers = parser.add_subparsers(dest="command", required=True)
