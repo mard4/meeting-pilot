@@ -213,8 +213,7 @@ xcrun swiftc \
   "$APP_SRC/Scripts/teams_window_id.swift" \
   -o "$MACOS/TeamsWindowID"
 
-# The browser extension's native messaging host, and the extension itself, which Settings →
-# Browser copies to Application Support for loading unpacked.
+# The browser extension's native messaging host. The extension comes from the Chrome Web Store.
 xcrun swiftc \
   -target "$SWIFT_TARGET" \
   -O \
@@ -223,8 +222,6 @@ xcrun swiftc \
   "$APP_SRC/Scripts/browser_host.swift" \
   "$APP_SRC/Sources/Import/WebVideoLink.swift" \
   -o "$MACOS/MeetingPilotBrowserHost"
-rm -rf "$RESOURCES/BrowserExtension"
-cp -R "$ROOT_DIR/browser/extension" "$RESOURCES/BrowserExtension"
 
 # A fresh clone has no build environment yet: bootstrap it with uv (required above).
 PYTHON_BIN="$ROOT_DIR/.venv311/bin/python"
@@ -268,7 +265,6 @@ for required in \
   "$MACOS/TeamsOCR" \
   "$MACOS/TeamsWindowID" \
   "$MACOS/MeetingPilotBrowserHost" \
-  "$RESOURCES/BrowserExtension/manifest.json" \
   "$RESOURCES/MeetingPilotCLI/MeetingPilotCLI"; do
   if [[ ! -f "$required" ]]; then
     echo "Build incompleta: manca $required" >&2

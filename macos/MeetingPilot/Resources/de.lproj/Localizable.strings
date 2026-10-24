@@ -944,7 +944,6 @@
 "Estensione del browser" = "Browsererweiterung";
 "Browser" = "Browser";
 "Configura" = "Einrichten";
-"Mostra cartella" = "Ordner zeigen";
 "Browser scollegati da Meeting Pilot" = "Browser von Meeting Pilot getrennt";
 "Nessun browser Chromium trovato: installane uno e riprova." = "Kein Chromium-Browser gefunden: Installiere einen und versuch es noch einmal.";
 "Browser configurati" = "Browser eingerichtet";
@@ -952,9 +951,9 @@
 "Importazione da YouTube" = "Import von YouTube";
 "Importazione da YouTube non riuscita" = "Import von YouTube fehlgeschlagen";
 "I video di YouTube da Chrome, Edge, Brave o Arc, con un clic." = "YouTube-Videos aus Chrome, Edge, Brave oder Arc, mit einem Klick.";
+"Collegato: aggiungi l'estensione dal Chrome Web Store (anche per Edge, Brave e Arc)." = "Verbunden: Füge die Erweiterung aus dem Chrome Web Store hinzu (auch für Edge, Brave und Arc).";
 "Schermate del video" = "Bildschirme des Videos";
 "Una foto di ogni schermata del video accanto a ciò che viene detto, come le slide" = "Ein Bild jedes Bildschirms im Video neben dem Gesagten, wie Folien";
-"Installala dal Chrome Web Store, oppure: chrome://extensions › Modalità sviluppatore › Carica estensione non pacchettizzata › questa cartella" = "Füge sie aus dem Chrome Web Store hinzu, oder: chrome://extensions › Entwicklermodus › Entpackte Erweiterung laden › dieser Ordner";
 "Installa l'estensione dal Chrome Web Store" = "Erweiterung aus dem Chrome Web Store hinzufügen";
 "Schermate dei video" = "Bildschirme der Videos";
 "Una foto di ogni schermata accanto a ciò che viene detto. Si può togliere per ogni video." = "Ein Bild jedes Bildschirms neben dem Gesagten. Lässt sich pro Video ausschalten.";
