@@ -4,14 +4,14 @@ import SwiftUI
 
 /// Connects the browser extension (`browser/extension`) to the app. Setting up writes the
 /// native messaging manifest that lets Chromium browsers start `MeetingPilotBrowserHost`
-/// for the extension, the token the host uses to ask the app to import, and a copy of the
-/// extension to load unpacked from Application Support.
+/// for the extension and the token the host uses to ask the app to import. The extension
+/// itself comes from the Chrome Web Store.
 enum BrowserExtensionSetup {
-    /// The extension as the Chrome Web Store publishes it (submitted for review 2026-10-22).
+    /// The extension as the Chrome Web Store publishes it (published 2026-10-24).
     static let storeExtensionID = "ipnadmfmihedhmlppdjoldfnjpmjghen"
-    /// Loaded unpacked, fixed by the public `key` in the extension's manifest.json.
+    /// Loaded unpacked from the repo while developing, fixed by the public `key` in its manifest.json.
     static let unpackedExtensionID = "blgkijnmbiefebagnjlieceagflahnin"
-    /// Both may connect: the store's and one loaded by hand from the folder.
+    /// Both may connect: the store's and a development copy.
     static let extensionIDs = [storeExtensionID, unpackedExtensionID]
     static let storeURL = URL(string: "https://chromewebstore.google.com/detail/\(storeExtensionID)")!
     static let hostName = "com.meetingpilot.browser"
@@ -35,16 +35,8 @@ enum BrowserExtensionSetup {
         Bundle.main.executableURL?.deletingLastPathComponent().appendingPathComponent("MeetingPilotBrowserHost")
     }
 
-    /// The extension as shipped in the app, or the repo's copy in a development build.
-    static func bundledExtension(projectRoot: URL) -> URL? {
-        let candidates = [
-            Bundle.main.resourceURL?.appendingPathComponent("BrowserExtension", isDirectory: true),
-            projectRoot.appendingPathComponent("browser/extension", isDirectory: true),
-        ]
-        return candidates.compactMap { $0 }.first { FileManager.default.fileExists(atPath: $0.appendingPathComponent("manifest.json").path) }
-    }
-
-    static func installedExtension(configRoot: URL) -> URL {
+    /// Where earlier versions copied the extension for loading unpacked; removed at launch.
+    static func oldExtensionCopy(configRoot: URL) -> URL {
         configRoot.appendingPathComponent("Browser Extension", isDirectory: true)
     }
 
@@ -84,7 +76,7 @@ enum BrowserExtensionSetup {
 
     /// Returns the names of the browsers set up.
     @discardableResult
-    static func configure(configRoot: URL, projectRoot: URL, host: URL? = hostExecutable, support: URL = applicationSupport) throws -> [String] {
+    static func configure(configRoot: URL, host: URL? = hostExecutable, support: URL = applicationSupport) throws -> [String] {
         guard let host else { throw CocoaError(.fileNoSuchFile) }
         let fileManager = FileManager.default
         let token = tokenURL(configRoot: configRoot)
@@ -99,7 +91,6 @@ enum BrowserExtensionSetup {
             try fileManager.createDirectory(at: browser.manifest.deletingLastPathComponent(), withIntermediateDirectories: true)
             try data.write(to: browser.manifest, options: .atomic)
         }
-        try copyExtension(configRoot: configRoot, projectRoot: projectRoot)
         return browsers.map(\.name)
     }
 
@@ -111,12 +102,13 @@ enum BrowserExtensionSetup {
         try? FileManager.default.removeItem(at: tokenURL(configRoot: configRoot))
     }
 
-    /// At launch, once set up: a moved or updated app gets its manifests and its copy of the
-    /// extension refreshed, and a browser installed since then is added.
-    static func refreshIfConfigured(configRoot: URL, projectRoot: URL) {
+    /// At launch, once set up: a moved or updated app gets its manifests refreshed, and a
+    /// browser installed since then is added.
+    static func refreshIfConfigured(configRoot: URL) {
+        try? FileManager.default.removeItem(at: oldExtensionCopy(configRoot: configRoot))
         guard FileManager.default.fileExists(atPath: tokenURL(configRoot: configRoot).path) else { return }
         do {
-            try configure(configRoot: configRoot, projectRoot: projectRoot)
+            try configure(configRoot: configRoot)
         } catch {
             AppLog.append("Aggiornamento estensione del browser non riuscito: \(error.localizedDescription)")
         }
@@ -147,20 +139,6 @@ enum BrowserExtensionSetup {
         return trimmed.isEmpty ? nil : trimmed
     }
 
-    /// Replaced as a whole, so files dropped from a newer version do not linger.
-    private static func copyExtension(configRoot: URL, projectRoot: URL) throws {
-        guard let source = bundledExtension(projectRoot: projectRoot) else { return }
-        let fileManager = FileManager.default
-        let target = installedExtension(configRoot: configRoot)
-        let staging = configRoot.appendingPathComponent(".Browser Extension-\(UUID().uuidString)", isDirectory: true)
-        try fileManager.copyItem(at: source, to: staging)
-        if fileManager.fileExists(atPath: target.path) {
-            _ = try fileManager.replaceItemAt(target, withItemAt: staging)
-        } else {
-            try fileManager.moveItem(at: staging, to: target)
-        }
-    }
-
     private static func newToken() -> String {
         var bytes = [UInt8](repeating: 0, count: 32)
         _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
@@ -177,7 +155,7 @@ struct BrowserExtensionRow: View {
         SettingsLine(
             title: "Browser",
             detail: configured
-                ? "Installala dal Chrome Web Store, oppure: chrome://extensions › Modalità sviluppatore › Carica estensione non pacchettizzata › questa cartella"
+                ? "Collegato: aggiungi l'estensione dal Chrome Web Store (anche per Edge, Brave e Arc)."
                 : "I video di YouTube da Chrome, Edge, Brave o Arc, con un clic.",
             icon: SettingsIcon(symbol: "globe")
         ) {
@@ -188,10 +166,6 @@ struct BrowserExtensionRow: View {
                     }
                     .buttonStyle(CompactButtonStyle())
                     .help(localized("Installa l'estensione dal Chrome Web Store"))
-                    Button(localized("Mostra cartella")) {
-                        NSWorkspace.shared.activateFileViewerSelecting([BrowserExtensionSetup.installedExtension(configRoot: model.configRoot)])
-                    }
-                    .buttonStyle(CompactButtonStyle())
                     Button(localized("Scollega")) {
                         BrowserExtensionSetup.remove(configRoot: model.configRoot)
                         configured = false
@@ -205,18 +179,19 @@ struct BrowserExtensionRow: View {
                     .buttonStyle(CompactButtonStyle())
                 }
             }
+            .fixedSize()
         }
         .onAppear { configured = BrowserExtensionSetup.isConfigured(configRoot: model.configRoot) }
     }
 
     private func configure() {
         do {
-            let browsers = try BrowserExtensionSetup.configure(configRoot: model.configRoot, projectRoot: model.projectRoot)
+            let browsers = try BrowserExtensionSetup.configure(configRoot: model.configRoot)
             configured = !browsers.isEmpty
             model.statusMessage = browsers.isEmpty
                 ? localized("Nessun browser Chromium trovato: installane uno e riprova.")
                 : localized("Browser configurati") + ": " + browsers.joined(separator: ", ")
-            NSWorkspace.shared.activateFileViewerSelecting([BrowserExtensionSetup.installedExtension(configRoot: model.configRoot)])
+            if !browsers.isEmpty { NSWorkspace.shared.open(BrowserExtensionSetup.storeURL) }
         } catch {
             AppLog.append("Configurazione dei browser non riuscita: \(error.localizedDescription)")
             model.statusMessage = localized("Configurazione dei browser non riuscita") + ": " + error.localizedDescription

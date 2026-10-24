@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# The browser extension as a zip for the GitHub release, next to the DMG:
+# The browser extension as a zip to upload to the Chrome Web Store (build-current is git-ignored):
 #   build-current/MeetingPilot-Browser-Extension-X.Y.Z.zip
-# Its version must be the app's, since the app copies the same folder to Application Support.
+# Its version must be the app's.
 set -euo pipefail
 
 APP_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -19,6 +19,5 @@ fi
 mkdir -p "$OUT_DIR"
 ZIP="$OUT_DIR/MeetingPilot-Browser-Extension-$APP_VERSION.zip"
 rm -f "$ZIP"
-# The folder inside the zip is what "Load unpacked" is pointed at.
 (cd "$ROOT_DIR/browser" && /usr/bin/ditto -c -k --keepParent --norsrc extension "$ZIP")
 echo "$ZIP"

@@ -168,7 +168,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         model.startAutoRefresh()
         model.openDiaryWindow = { [weak self] in self?.showDiaryWindow() }
         model.openMainWindow = { [weak self] in self?.showMainWindow() }
-        BrowserExtensionSetup.refreshIfConfigured(configRoot: model.configRoot, projectRoot: model.projectRoot)
+        BrowserExtensionSetup.refreshIfConfigured(configRoot: model.configRoot)
 #if DEBUG
         // Marketing recording of the chat: no detection, watcher or permission prompts.
         let demoChat = ProcessInfo.processInfo.environment["MEETING_PILOT_DEMO_CHAT"].map { !$0.isEmpty } ?? false

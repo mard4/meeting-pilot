@@ -1,4 +1,4 @@
-"""The browser extension in browser/extension, loaded unpacked and copied by the app."""
+"""The browser extension in browser/extension, published on the Chrome Web Store."""
 from __future__ import annotations
 
 import base64
