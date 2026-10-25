@@ -185,16 +185,26 @@ struct BrowserExtensionRow: View {
     }
 
     private func configure() {
+        configured = BrowserExtensionSetup.connect(model: model)
+    }
+}
+
+extension BrowserExtensionSetup {
+    /// Sets up every installed Chromium browser and opens the extension's store page, from
+    /// Settings or the welcome tour. Returns whether at least one browser was set up.
+    @MainActor
+    static func connect(model: AppModel) -> Bool {
         do {
-            let browsers = try BrowserExtensionSetup.configure(configRoot: model.configRoot)
-            configured = !browsers.isEmpty
+            let browsers = try configure(configRoot: model.configRoot)
             model.statusMessage = browsers.isEmpty
                 ? localized("Nessun browser Chromium trovato: installane uno e riprova.")
                 : localized("Browser configurati") + ": " + browsers.joined(separator: ", ")
-            if !browsers.isEmpty { NSWorkspace.shared.open(BrowserExtensionSetup.storeURL) }
+            if !browsers.isEmpty { NSWorkspace.shared.open(storeURL) }
+            return !browsers.isEmpty
         } catch {
             AppLog.append("Configurazione dei browser non riuscita: \(error.localizedDescription)")
             model.statusMessage = localized("Configurazione dei browser non riuscita") + ": " + error.localizedDescription
+            return false
         }
     }
 }

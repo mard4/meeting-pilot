@@ -378,7 +378,7 @@ private struct WelcomeCapturePage: View {
     let profile: UserProfile
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 12) {
             WelcomePageHeader(
                 eyebrow: "Come iniziare",
                 title: "Registra dal vivo o importa un file",
@@ -397,12 +397,13 @@ private struct WelcomeCapturePage: View {
                     symbol: "square.and.arrow.down",
                     title: "Importa",
                     shortcut: "⌘I",
-                    text: "Trascina nella finestra un video, un podcast o una registrazione fatta altrove. Aggiungi il PDF delle slide: la trascrizione si divide slide per slide.",
-                    examples: examples(student: ["Video della lezione + slide", "Podcast"], worker: ["Webinar registrato", "Registrazione di una call"]),
+                    text: "Trascina un video, un podcast o una registrazione, o incolla un link di YouTube. Aggiungi il PDF delle slide, o fai fotografare le schermate del video: la trascrizione si divide slide per slide.",
+                    examples: examples(student: ["Lezione su YouTube", "Video della lezione + slide"], worker: ["Webinar su YouTube", "Registrazione di una call"]),
                     effect: .bounce
                 )
             }
             .fixedSize(horizontal: false, vertical: true)
+            WelcomeBrowserRow()
         }
     }
 
@@ -474,6 +475,45 @@ private struct WelcomeCaptureCard: View {
             // A file lands in the tray as the page appears.
             image.symbolEffect(.bounce.down, options: .repeat(2), value: appeared)
         }
+    }
+}
+
+/// The browser extension: the YouTube video being watched goes to Meeting Pilot in one
+/// click. Adding it sets the browsers up like Settings → Browser, then opens the store.
+private struct WelcomeBrowserRow: View {
+    @EnvironmentObject private var model: AppModel
+    @State private var connected = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "globe")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(MeetingPilotDesign.accent)
+                .frame(width: 34, height: 34)
+                .background(RoundedRectangle(cornerRadius: MPRadius.control, style: .continuous).fill(MeetingPilotDesign.accentTint))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(localized("Dal browser")).font(MPFont.body(.semibold))
+                Text(localized("Con l'estensione per Chrome, Edge, Brave e Arc mandi a Meeting Pilot il video di YouTube che stai guardando, con un clic."))
+                    .font(MPFont.caption())
+                    .foregroundStyle(MeetingPilotDesign.textDimColor)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            if connected {
+                Button(localized("Chrome Web Store")) { NSWorkspace.shared.open(BrowserExtensionSetup.storeURL) }
+                    .buttonStyle(MPSecondaryButtonStyle(compact: true))
+                    .help(localized("Installa l'estensione dal Chrome Web Store"))
+            } else {
+                Button(localized("Aggiungi")) { connected = BrowserExtensionSetup.connect(model: model) }
+                    .buttonStyle(MPSecondaryButtonStyle(compact: true))
+                    .help(localized("Collega i browser a Meeting Pilot e apre l'estensione nel Chrome Web Store"))
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(RoundedRectangle(cornerRadius: MPRadius.panel, style: .continuous).fill(MeetingPilotDesign.surfaceColor))
+        .overlay(RoundedRectangle(cornerRadius: MPRadius.panel, style: .continuous).strokeBorder(MeetingPilotDesign.lineColor, lineWidth: 1))
+        .onAppear { connected = BrowserExtensionSetup.isConfigured(configRoot: model.configRoot) }
     }
 }
 

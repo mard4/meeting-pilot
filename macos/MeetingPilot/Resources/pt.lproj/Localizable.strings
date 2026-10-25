@@ -754,7 +754,12 @@
 "Lezione online" = "Aula online";
 "Call Teams" = "Chamada do Teams";
 "Riunione in presenza" = "Reunião presencial";
-"Trascina nella finestra un video, un podcast o una registrazione fatta altrove. Aggiungi il PDF delle slide: la trascrizione si divide slide per slide." = "Arraste para a janela um vídeo, um podcast ou uma gravação feita em outro lugar. Adicione o PDF dos slides: a transcrição é dividida slide a slide.";
+"Trascina un video, un podcast o una registrazione, o incolla un link di YouTube. Aggiungi il PDF delle slide, o fai fotografare le schermate del video: la trascrizione si divide slide per slide." = "Arraste um vídeo, um podcast ou uma gravação, ou cole um link do YouTube. Adicione o PDF dos slides, ou deixe que ele fotografe cada tela do vídeo: a transcrição é dividida slide por slide.";
+"Lezione su YouTube" = "Aula no YouTube";
+"Webinar su YouTube" = "Webinar no YouTube";
+"Dal browser" = "Pelo navegador";
+"Con l'estensione per Chrome, Edge, Brave e Arc mandi a Meeting Pilot il video di YouTube che stai guardando, con un clic." = "Com a extensão para Chrome, Edge, Brave e Arc, você envia ao Meeting Pilot o vídeo do YouTube que está assistindo, com um clique.";
+"Collega i browser a Meeting Pilot e apre l'estensione nel Chrome Web Store" = "Conecta seus navegadores ao Meeting Pilot e abre a extensão na Chrome Web Store";
 "Video della lezione + slide" = "Vídeo da aula + slides";
 "Podcast" = "Podcast";
 "Webinar registrato" = "Webinar gravado";

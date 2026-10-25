@@ -754,7 +754,12 @@
 "Lezione online" = "Online college";
 "Call Teams" = "Teams-call";
 "Riunione in presenza" = "Fysieke vergadering";
-"Trascina nella finestra un video, un podcast o una registrazione fatta altrove. Aggiungi il PDF delle slide: la trascrizione si divide slide per slide." = "Sleep een video, podcast of elders gemaakte opname naar het venster. Voeg de pdf met dia's toe: het transcript wordt per dia opgedeeld.";
+"Trascina un video, un podcast o una registrazione, o incolla un link di YouTube. Aggiungi il PDF delle slide, o fai fotografare le schermate del video: la trascrizione si divide slide per slide." = "Sleep een video, podcast of opname hierheen, of plak een YouTube-link. Voeg de pdf van de dia's toe, of laat elk scherm van de video fotograferen: het transcript wordt per dia verdeeld.";
+"Lezione su YouTube" = "College op YouTube";
+"Webinar su YouTube" = "Webinar op YouTube";
+"Dal browser" = "Vanuit de browser";
+"Con l'estensione per Chrome, Edge, Brave e Arc mandi a Meeting Pilot il video di YouTube che stai guardando, con un clic." = "Met de extensie voor Chrome, Edge, Brave en Arc stuur je de YouTube-video die je bekijkt met één klik naar Meeting Pilot.";
+"Collega i browser a Meeting Pilot e apre l'estensione nel Chrome Web Store" = "Verbindt je browsers met Meeting Pilot en opent de extensie in de Chrome Web Store";
 "Video della lezione + slide" = "Collegevideo + dia's";
 "Podcast" = "Podcast";
 "Webinar registrato" = "Opgenomen webinar";

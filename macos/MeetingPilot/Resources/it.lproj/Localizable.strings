@@ -734,7 +734,12 @@
 "Lezione online" = "Lezione online";
 "Call Teams" = "Call Teams";
 "Riunione in presenza" = "Riunione in presenza";
-"Trascina nella finestra un video, un podcast o una registrazione fatta altrove. Aggiungi il PDF delle slide: la trascrizione si divide slide per slide." = "Trascina nella finestra un video, un podcast o una registrazione fatta altrove. Aggiungi il PDF delle slide: la trascrizione si divide slide per slide.";
+"Trascina un video, un podcast o una registrazione, o incolla un link di YouTube. Aggiungi il PDF delle slide, o fai fotografare le schermate del video: la trascrizione si divide slide per slide." = "Trascina un video, un podcast o una registrazione, o incolla un link di YouTube. Aggiungi il PDF delle slide, o fai fotografare le schermate del video: la trascrizione si divide slide per slide.";
+"Lezione su YouTube" = "Lezione su YouTube";
+"Webinar su YouTube" = "Webinar su YouTube";
+"Dal browser" = "Dal browser";
+"Con l'estensione per Chrome, Edge, Brave e Arc mandi a Meeting Pilot il video di YouTube che stai guardando, con un clic." = "Con l'estensione per Chrome, Edge, Brave e Arc mandi a Meeting Pilot il video di YouTube che stai guardando, con un clic.";
+"Collega i browser a Meeting Pilot e apre l'estensione nel Chrome Web Store" = "Collega i browser a Meeting Pilot e apre l'estensione nel Chrome Web Store";
 "Video della lezione + slide" = "Video della lezione + slide";
 "Podcast" = "Podcast";
 "Webinar registrato" = "Webinar registrato";
